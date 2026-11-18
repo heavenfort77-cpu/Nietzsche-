@@ -1,0 +1,42 @@
+FILE viewer/index.html  lines=514  scripts=1  styles=1
+RESULT PASS  fails=0 warns=0
+PASS draw calls <= 3 with the outline | calls 3, triangles 33780
+PASS outline bound to the body skeleton
+PASS blouse found in albedo render | 6275 pixels
+PASS stage: blouse hue 20-70 | hue 32, sat 0.12, value 0.77
+PASS stage: blouse readable (value >= 0.55) | 0.77
+PASS mirror: blouse hue 170-250 | hue 187, sat 0.06, value 0.70
+PASS mirror: blouse readable (value >= 0.55) | 0.70
+PASS shine shows, never on the blouse | 27 pixels shine, 0 on the blouse
+PASS paint amount changes the face | 190 pixels
+PASS flake 0.5 removes 0.25-0.75 of the paint | 0.66
+PASS outline stays on the body: idle 0.5s | 0 of 23951 outline pixels outside
+PASS outline stays on the body: walk 0.25s | 0 of 25890 outline pixels outside
+PASS outline stays on the body: walk 0.75s | 0 of 25885 outline pixels outside
+PASS outline stays on the body: slap 0.45s | 0 of 22951 outline pixels outside
+PASS restart x2 via newRun
+PASS no page or console errors
+RESULT 16 of 16 pass
+PASS mutation statichull -> "outline stays on the body: walk 0.25s" fires | FAIL outline stays on the body: walk 0.25s | 482 of 26540 outline pixels outside
+PASS mutation unbound -> "outline bound to the body skeleton" fires | FAIL outline bound to the body skeleton
+PASS mutation warmmirror -> "mirror: blouse hue" fires | FAIL mirror: blouse hue 170-250 | hue 161, sat 0.03, value 0.69
+PASS mutation darkmirror -> "mirror: blouse readable" fires | FAIL mirror: blouse readable (value >= 0.55) | 0.41
+PASS mutation speceverywhere -> "shine shows, never on the blouse" fires | FAIL shine shows, never on the blouse | 459 pixels shine, 194 on the blouse
+PASS mutation paintignored -> "paint amount changes the face" fires | FAIL paint amount changes the face | 0 pixels
+PASS mutation noflake -> "flake 0.5 removes" fires | FAIL flake 0.5 removes 0.25-0.75 of the paint | 0.00
+PASS mutation extradraw -> "draw calls <= 3" fires | FAIL draw calls <= 3 with the outline | calls 4, triangles 50670
+PASS real page: RESULT 16 of 16 pass
+RESULT mutations 8 of 8 fired
+[phone-portrait] 390x844  canvases=[{"w":585,"h":1032,"cw":390,"ch":688}]  headless-fps=12  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/phone-portrait.png
+[phone-landscape] 844x390  canvases=[{"w":1266,"h":426,"cw":844,"ch":284}]  headless-fps=18  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/phone-landscape.png
+[laptop] 1366x768  canvases=[{"w":1366,"h":712,"cw":1366,"ch":712}]  headless-fps=12  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/laptop.png
+[ultrawide] 2560x1080  canvases=[{"w":2560,"h":1024,"cw":2560,"ch":1024}]  headless-fps=9  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/ultrawide.png
+RESULT PASS  fails=0
+PASS GLB loads: 2 skinned meshes | skinned 2, triangles 16890
+PASS clips idle, slap, walk | idle 2.000s, slap 1.200s, walk 0.967s
+PASS clip idle plays (right hand moves, no NaN) | hand moved up to 1.1 cm
+PASS clip slap plays (right hand moves, no NaN) | hand moved up to 32.4 cm
+PASS clip walk plays (right hand moves, no NaN) | hand moved up to 41.9 cm
+PASS draw calls <= 3 (body, face; hull not added yet) | calls 2, triangles 16890
+PASS face cell swap changes the face (texture.offset) | sad 0.0, smile 9.2, startle 22.9, wince 10.6
+PAGE ERRORS: Failed to load resource: the server responded with a status of 404 (Not Found)
