@@ -4,13 +4,15 @@ import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import numpy as np
 import bpy
+from chars.common import current
+C = current()
 
 # CONFIG ---------------------------------------------------------------
 CONFIG = dict(
+    # allowed character height, metres (from the character module)
+    height_min=C.CHECK['height'][0],
     # allowed character height, metres
-    height_min=1.70,
-    # allowed character height, metres
-    height_max=1.90,
+    height_max=C.CHECK['height'][1],
     # feet must touch the floor within this, metres
     floor_tol=0.01,
     # head mesh centre must lie within this distance of the head bone, metres

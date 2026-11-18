@@ -8,6 +8,8 @@ APPROVED = os.environ.get('APPROVED', '/home/claude/pack/Clown-and-the-Mirror-se
 sys.path.insert(0, APPROVED)
 import numpy as np
 import bpy
+from chars.common import current
+C = current()
 from mathutils.bvhtree import BVHTree
 
 # CONFIG ---------------------------------------------------------------
@@ -94,13 +96,13 @@ for name in CLIPS:
             # which parts lost every contact
             lost += [part_bones[a] for a in keys if not any(a in pr for pr in still) and any(a in pr for pr in pairs)]
         worst_c = max(worst_c, cnum)
-        if name == 'idle':
+        if name == 'idle' and C.CHECK.get('idle_head_down'):
             # (bug) idle head tipped back: the off-stage pose has the head down, so the head bone leans forward (-y)
             hd = arm.pose.bones['head']; lean = ((hd.tail - hd.head).normalized()).y
             head_up = max(head_up, lean)
     gate(f'{name}: edge stretch p99.9 <= {CONFIG["stretch_max"]}', p999 <= CONFIG['stretch_max'],
          f'p99.9 {p999:.2f}, max {worst_s:.2f} on part [{worst_part}]')
-    if name == 'idle':
+    if name == 'idle' and C.CHECK.get('idle_head_down'):
         gate('idle: head tipped forward (looks down) on every sample', head_up < -0.1, f'least forward lean y = {head_up:.2f}')
     gate(f'{name}: nothing floats free (part groups stay {c0})', worst_c == c0, f'max groups {worst_c}; parts with no contact: {sorted(set(lost))[:5]}')
 

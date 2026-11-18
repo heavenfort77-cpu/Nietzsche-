@@ -10,7 +10,8 @@ import numpy as np
 import bpy, bmesh
 from mathutils import Vector
 from palette import RAMPS
-import s2_build as B
+from chars.common import current
+C = current()
 
 # CONFIG ---------------------------------------------------------------
 CONFIG = dict(
@@ -32,8 +33,6 @@ CONFIG = dict(
     ao_samples=64,
     # ambient occlusion reach (approved units)
     ao_dist=3.0,
-    # ramps that get a hard specular glint in the game shader (nose, buttons, shoes)
-    spec_ramps=('RED', 'SHOE'),
     # 3D noise scale for hue variation (per approved unit)
     noise_scale=0.15,
     # uniform scale to metres at the end (59.5 units -> 1.79 m)
@@ -201,6 +200,9 @@ def main():
     col = new_img('body_col', N)
     for m in L.data.materials:
         tn = m.node_tree.nodes.new('ShaderNodeTexImage'); tn.image = col; m.node_tree.nodes.active = tn
+        # (bug) the DIFFUSE colour pass is base x (1 - metallic): gold and silver baked dark and were read as other ramps
+        for nd in m.node_tree.nodes:
+            if nd.type == 'BSDF_PRINCIPLED': nd.inputs['Metallic'].default_value = 0.0
     dt = bake('DIFFUSE', L, (), samples=1)
     ao = new_img('body_ao', N); ao.colorspace_settings.name = 'Non-Color'; bake_target_mat(L, ao, 'bake_ao')
     dt2 = bake('AO', L, (), samples=CONFIG['ao_samples'], visible=[hd])
@@ -208,13 +210,24 @@ def main():
     dt3 = bake('EMIT', L)
     gate('body bakes (colour, AO, edge/top/noise)', True, f'{dt:.1f}s / {dt2:.1f}s / {dt3:.1f}s')
     body_ramps = sorted({o['ramp'] for o in parts})
-    C, A, E = img_np(col), img_np(ao), img_np(emi)
-    for n, a in (('body_col', C), ('body_ao', A), ('body_emi', E)): save_np(a, os.path.join(D, n + '.png'))
-    out, idx, names = paint(C, A, E, body_ramps, [])
+    BC, A, E = img_np(col), img_np(ao), img_np(emi)
+    for n, a in (('body_col', BC), ('body_ao', A), ('body_emi', E)): save_np(a, os.path.join(D, n + '.png'))
+    out, idx, names = paint(BC, A, E, body_ramps, [])
     save_np(out, os.path.join(D, 'body_1024.png'))
     # region check: every ramp used by a part gets texels
     cnt = {n: int((idx == i).sum()) for i, n in enumerate(names)}
     gate('body regions: every part ramp present in the atlas', all(v > 200 for v in cnt.values()), cnt)
+    # (bug) each part's faces must read back as that part's ramp (metal once baked dark and was read as another ramp)
+    pf = np.zeros(len(L.data.polygons), np.int32); L.data.attributes['part'].data.foreach_get('value', pf)
+    uvl = L.data.uv_layers.active.data; hit, tot = {}, {}
+    for poly in L.data.polygons:
+        u = sum(uvl[k].uv[0] for k in poly.loop_indices) / poly.loop_total
+        w = sum(uvl[k].uv[1] for k in poly.loop_indices) / poly.loop_total
+        rp = parts[pf[poly.index]]['ramp']
+        got = names[idx[min(int(w * N), N - 1), min(int(u * N), N - 1)]]
+        tot[rp] = tot.get(rp, 0) + 1; hit[rp] = hit.get(rp, 0) + (got == rp)
+    share = {rp: round(hit[rp] / tot[rp], 3) for rp in tot}
+    gate('body regions: faces of each ramp read back as that ramp (>= 95%)', all(v >= 0.95 for v in share.values()), share)
     # ---------------- face bakes, one per expression
     Fc = CONFIG['face_cell']
     hd_ao = new_img('face_ao', Fc); hd_ao.colorspace_settings.name = 'Non-Color'; bake_target_mat(hd, hd_ao, 'f_ao')
@@ -225,9 +238,10 @@ def main():
     patlas = np.zeros((2 * Fc, 2 * Fc, 4), np.float32)
     mag = bpy.data.materials.new('magenta'); mag.use_nodes = True
     mag.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (1, 0, 1, 1)
-    face_flats = ['#1E1714', '#3D332D', '#7A2E26', '#F4F4F2']
-    paint_flats = ['#F4F4F2', '#E88A72', B.CONFIG['smile_color']]
-    cells = dict(sad=(0, 0), smile=(1, 0), startle=(0, 1), wince=(1, 1))   # (column, row from top)
+    face_flats = C.FACE_FLATS
+    paint_flats = C.PAINT_FLATS
+    # atlas cells (column, row from top) in the character's expression order; the first is the default face
+    cells = dict(zip(C.EXPR, ((0, 0), (1, 0), (0, 1), (1, 1))))
     for e, (cx, cy) in cells.items():
         feats = [o for o in sc.objects if o.get('group') == 'face_' + e]
         for coll in bpy.data.collections: coll.hide_render = False
@@ -236,7 +250,7 @@ def main():
         im = new_img('face_' + e, Fc); bake_target_mat(hd, im, 'f_' + e)
         dt = bake('DIFFUSE', hd, hs, CONFIG['face_extrude'], CONFIG['face_ray'], 1)
         FC = img_np(im)
-        out, idx, names = paint(FC, FA, FE, ['SKIN', 'SKIN_LID'], face_flats)
+        out, idx, names = paint(FC, FA, FE, C.HEAD_RAMPS, face_flats)
         # pixels arrays are bottom-up; atlas rows from top: flip when placing
         atlas[(1 - cy) * Fc:(2 - cy) * Fc, cx * Fc:(cx + 1) * Fc] = out
         feat_px = int((idx >= 1).sum())
@@ -253,7 +267,7 @@ def main():
         pout, _, _ = paint(PC, FA, FE, [], paint_flats)
         cell = np.concatenate([pout, alpha[..., None]], -1)
         patlas[(1 - cy) * Fc:(2 - cy) * Fc, cx * Fc:(cx + 1) * Fc] = cell
-        gate(f'paint layer {e}: paint present, eyes cut it', alpha.mean() > 0.01, f'{alpha.mean() * 100:.1f}% of the cell painted')
+        gate(f'paint layer {e}: paint present, eyes cut it', alpha.mean() > C.PAINT_MIN, f'{alpha.mean() * 100:.1f}% of the cell painted')
         for o in hs: bpy.data.objects.remove(o)
     save_np(atlas, os.path.join(D, 'face_atlas.png'))
     save_np(patlas[..., :3], os.path.join(D, 'face_paint.png'), patlas[..., 3])
@@ -273,7 +287,7 @@ def main():
         m.node_tree.links.new(t.outputs['Color'], b.inputs['Base Color'])
         o.data.materials.clear(); o.data.materials.append(m)
     # shine mask as custom attribute _SPEC (not a vertex colour: three.js multiplies vertex colours into the texture)
-    spec_parts = {i for i, o in enumerate(parts) if o['ramp'] in CONFIG['spec_ramps']}
+    spec_parts = {i for i, o in enumerate(parts) if o['ramp'] in C.SPEC_RAMPS}
     fp = np.zeros(len(L.data.polygons), np.int32); L.data.attributes['part'].data.foreach_get('value', fp)
     for o, shiny in ((L, fp), (hd, None)):
         ca = o.data.attributes.new('_SPEC', 'FLOAT', 'POINT')
@@ -305,7 +319,8 @@ def main():
     json.dump(G, open(os.path.join(D, 'gates_step2.json'), 'w'), indent=1)
 
 def cull_hidden(objs, eps=0.04):
-    """Delete faces of each part whose centre and corners all lie inside other (closed) parts.
+    """Delete faces of each part whose centre and corners all lie inside other (closed) parts that carry every
+    bone of that part (so they move together and the faces stay buried in every pose).
     Inside test: ray parity against the other part's BVH."""
     from mathutils.bvhtree import BVHTree
     trees = []
@@ -327,7 +342,9 @@ def cull_hidden(objs, eps=0.04):
     removed = 0
     for i, o in enumerate(objs):
         me = o.data; dead = []
-        others = [j for j in range(len(objs)) if j != i]
+        # (bug) sleeves buried in the smock at bind pose were cut, then showed a hole when the arm rose
+        own = set(o['bones'].split(','))
+        others = [j for j in range(len(objs)) if j != i and own <= set(objs[j]['bones'].split(','))]
         for p in me.polygons:
             pts = [p.center + p.normal * eps] + [me.vertices[v].co + p.normal * eps for v in p.vertices]
             if all(any(inside(q, j) for j in others) for q in pts): dead.append(p.index)
@@ -359,7 +376,8 @@ def make_head(src):
     for p in h.data.polygons: p.use_smooth = True
     return h
 
-HCEN = (0, 0, 47.2)   # approved head centre
+# head centre of the chosen character (approved units)
+HCEN = C.HC
 
 def face_uv(h):
     """Seam at the back (+y). tanh spacing gives the front of the face most of the texels."""

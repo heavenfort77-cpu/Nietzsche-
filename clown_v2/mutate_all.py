@@ -29,11 +29,11 @@ CASES = [
     ('walklen', 'rig', 'glb', 'clip lengths match the plates'),
     ('vcolor', 'apply', 'glb', 'no vertex colours'),
 ]
-# old-build patches for the rig script: the idle head bug as first written, and a wrong walk constant
+# old-build patches: (file, old text, new text): the idle head bug as first written, and a wrong walk constant
 RIG_PATCH = dict(
-    headup=("rotw('neck', (1, 0, 0), 6); rotw('head', (0, 0, 1), -12 + 1.5 * math.sin(p + 1)); rotw('head', (1, 0, 0), 9 + 1.2 * math.sin(p))",
-            "rotw('neck', (1, 0, 0), -6); rotw('head', (0, 0, 1), -12 + 1.5 * math.sin(p + 1)); rotw('head', (1, 0, 0), -7 + 1.2 * math.sin(p))"),
-    walklen=("    walk_n=12,", "    walk_n=10,"),
+    headup=('chars/clown.py', "K.rotw('neck', (1, 0, 0), 6); K.rotw('head', (0, 0, 1), -12 + 1.5 * math.sin(p + 1)); K.rotw('head', (1, 0, 0), 9 + 1.2 * math.sin(p))",
+            "K.rotw('neck', (1, 0, 0), -6); K.rotw('head', (0, 0, 1), -12 + 1.5 * math.sin(p + 1)); K.rotw('head', (1, 0, 0), -7 + 1.2 * math.sin(p))"),
+    walklen=('s3_rig.py', "    walk_n=12,", "    walk_n=10,"),
 )
 
 def sha(d):
@@ -66,10 +66,11 @@ def make(mut, how):
         subprocess.run(PY + ['mut_apply.py', os.path.join(OUT, 'rigged.blend'), d, mut, os.path.join(OUT, 'face_atlas.png')],
                        cwd=HERE, capture_output=True, timeout=600, check=True)
     else:
-        a, b = RIG_PATCH[mut]; src = open(os.path.join(HERE, 's3_rig.py')).read(); assert a in src, mut
-        rd = os.path.join(d, 'rigcode'); os.makedirs(rd)
-        for f in ('s2_build.py', 's2_shell.py'): shutil.copy(os.path.join(HERE, f), rd)
-        open(os.path.join(rd, 's3_rig.py'), 'w').write(src.replace(a, b))
+        f, a, b = RIG_PATCH[mut]
+        rd = os.path.join(d, 'rigcode')
+        shutil.copytree(HERE, rd, ignore=shutil.ignore_patterns('out*', 'chk', '__pycache__', '*.blend', '*.glb', '*.png'))
+        src = open(os.path.join(rd, f)).read(); assert a in src, mut
+        open(os.path.join(rd, f), 'w').write(src.replace(a, b))
         shutil.copy(os.path.join(OUT, 'low.blend'), d)
         subprocess.run(PY + [os.path.join(rd, 's3_rig.py'), d], capture_output=True, timeout=600, check=True)
     return d

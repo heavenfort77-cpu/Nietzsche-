@@ -164,8 +164,49 @@ jobs:
             web/shot_*.png
             web/runtime/*.png
 
+  cast:
+    # step 6: the other humanoid characters through the same scripts (chars/<name>.py), every gate per character
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        char: [whiteface, performer]
+    env:
+      CHAR: ${{ matrix.char }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - name: Blender and image libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1 > /dev/null
+          pip install -q bpy==5.3.0 numpy pillow pyflakes
+      - name: Build, gates, pose sheets
+        run: |
+          cd clown_v2
+          python -m pyflakes chars/*.py
+          O=out_${CHAR}
+          python -I s2_build.py $O | tee log.txt
+          python -I s2_shell.py $O | tee -a log.txt
+          python -I s3_rig.py $O | tee -a log.txt
+          python -I check_model.py $O/rigged.blend $O/face_atlas.png | tee -a log.txt
+          python -I check_glb.py $O/clown_v2.glb | tee -a log.txt
+          python -I s3_check.py $O --sheet | tee -a log.txt
+          if [ "$CHAR" = whiteface ]; then python -I mutate_shell.py $O | tee -a log.txt; fi
+          mkdir -p ../cast_out/$CHAR
+          cp log.txt $O/*.glb $O/*.png $O/*.jpg $O/*.gif $O/gates_*.json ../cast_out/$CHAR/
+          ! grep -q '^FAIL' log.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cast_${{ matrix.char }}
+          path: cast_out
+          retention-days: 3
+
   collect:
-    needs: [build, ring, gates, renders, web]
+    needs: [build, ring, gates, renders, web, cast]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -174,7 +215,7 @@ jobs:
       - name: Commit results to ci-out/run-<n>
         run: |
           cd results
-          echo "run ${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA} build=${{ needs.build.result }} ring=${{ needs.ring.result }} gates=${{ needs.gates.result }} renders=${{ needs.renders.result }} web=${{ needs.web.result }}" > SUMMARY.txt
+          echo "run ${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA} build=${{ needs.build.result }} ring=${{ needs.ring.result }} gates=${{ needs.gates.result }} renders=${{ needs.renders.result }} web=${{ needs.web.result }} cast=${{ needs.cast.result }}" > SUMMARY.txt
           git init -q -b results && git add -A
           git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "results run ${GITHUB_RUN_NUMBER}"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" results:ci-out/run-${GITHUB_RUN_NUMBER}

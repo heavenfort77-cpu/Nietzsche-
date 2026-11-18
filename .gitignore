@@ -5,3 +5,5 @@ web/viewer/lib/
 web/viewer/assets/
 web/*.glb
 __pycache__/
+clown_v2/out_*/
+__pycache__/
