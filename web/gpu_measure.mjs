@@ -1,6 +1,8 @@
 // Real-GPU frame times on GitHub's Apple-silicon Mac runner (Metal through Chrome's ANGLE). node gpu_measure.mjs <dir> [page]
-// First proves the route (Chrome reports a hardware WebGL renderer, not SwiftShader), then times real frames on the
-// default tier with vsync off, so the time is the frame's cost, not the screen's refresh. Governor locked during timing.
+// First proves the route (Chrome reports a hardware WebGL renderer, not SwiftShader), then times frames on the default
+// tier through to GPU completion (draw, then read one pixel back), so the time is the frame's real cost.
+// (Timing requestAnimationFrame with vsync off measured how fast Chrome accepted frames, not the GPU: AO made no difference.)
+// Governor locked during timing; the animation clock still runs.
 import http from 'http'; import fs from 'fs'; import path from 'path';
 import puppeteer from 'puppeteer-core';
 
@@ -25,7 +27,8 @@ const srv = http.createServer((q, s) => {
 }).listen(0);
 const b = await puppeteer.launch({
   executablePath: CONFIG.chrome, headless: 'new', protocolTimeout: 900000,
-  args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-gpu-vsync', '--disable-frame-rate-limit'],
+  // EXTRA_ARGS: extra Chrome flags for a local dry run (software GPU); the Mac run needs none
+  args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', ...(process.env.EXTRA_ARGS || '').split(' ').filter(Boolean)],
 });
 const p = await b.newPage();
 p.setDefaultTimeout(300000);
@@ -42,22 +45,22 @@ const gl = await p.evaluate(() => {
   return x ? { vendor: g.getParameter(x.UNMASKED_VENDOR_WEBGL), renderer: g.getParameter(x.UNMASKED_RENDERER_WEBGL) } : { renderer: 'none' };
 });
 gate('route: Chrome draws WebGL on the GPU, not in software', !/SwiftShader|llvmpipe|software|none/i.test(gl.renderer), gl);
-// times n real frames (the game's own loop runs; this only reads timestamps)
-const timeFrames = (n, warm) => p.evaluate((n, warm) => new Promise((res) => {
-  const t = []; let k = 0, last = 0;
-  const f = (now) => {
-    if (k > warm) t.push(now - last);
-    last = now;
-    if (++k < n + warm + 1) requestAnimationFrame(f); else res(t);
-  };
-  requestAnimationFrame(f);
-}), n, warm);
+// times n frames, each drawn and waited for on the GPU
+const timeFrames = (n, warm) => p.evaluate((n, warm) => {
+  const api = window.__game.api, t = [];
+  for (let k = 0; k < n + warm; k++) {
+    api.time(k / 60);
+    const ms = api.renderSynced();
+    if (k >= warm) t.push(ms);
+  }
+  return t;
+}, n, warm);
 const stats = (t) => { const s = [...t].sort((x, y) => x - y); const q = (v) => s[Math.min(s.length - 1, Math.floor(v * s.length))]; return { median: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), max: +s[s.length - 1].toFixed(2) }; };
 const rows = [];
 for (const [w, h, sf, label] of CONFIG.setups) {
   await p.setViewport({ width: w, height: h, deviceScaleFactor: sf });
   await p.waitForFunction(() => { const c = document.getElementById('view'); return c.width === Math.round(c.clientWidth * Math.min(devicePixelRatio, 1.25)); });
-  await p.evaluate(() => { const a = window.__game.api; a.governor(false); a.resetGovernor(); a.set({ paused: false }); });
+  await p.evaluate(() => { const a = window.__game.api; a.governor(false); a.resetGovernor(); });
   for (const ao of [true, false]) {
     await p.evaluate((on) => window.__game.api.aoEnabled(on), ao);
     const s = stats(await timeFrames(CONFIG.frames, CONFIG.warm));
@@ -66,7 +69,9 @@ for (const [w, h, sf, label] of CONFIG.setups) {
     if (ao) gate(`${label} (${px}, default tier, AO on): frame p95 <= ${CONFIG.budgetMs} ms`, s.p95 <= CONFIG.budgetMs, s);
   }
 }
-console.log('frame times, ms (vsync off, real GPU):');
+const aoCost = rows.filter((r) => r.ao).map((r, i) => r.median - rows.filter((x) => !x.ao)[i].median);
+gate('timing sees GPU work: AO on costs more than AO off at every setup', aoCost.every((d) => d > 0), aoCost.map((d) => +d.toFixed(2)));
+console.log('frame times, ms (each frame waited for on the real GPU):');
 for (const r of rows) console.log(`  ${r.setup.padEnd(14)} ${r.pixels.padEnd(10)} AO ${r.ao ? 'on ' : 'off'}  median ${r.median}  p95 ${r.p95}  max ${r.max}`);
 gate('no page or console errors', errs.length === 0, errs.slice(0, 3));
 console.log(`RESULT gpu ${pass} of ${pass + fail} pass`);

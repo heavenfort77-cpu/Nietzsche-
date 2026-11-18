@@ -386,7 +386,7 @@ void main() {
 // BOOT    boot(); test hook window.__game = { newRun, state, api } when ?test
 // TEST    api.mode(0 lit, 1 texture colour, 2 blouse mask), api.bg(hex), api.isolate(on), api.direct(on: no post),
 //         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on), api.counts(),
-//         api.governor(on), api.aoEnabled(on), api.dprLevel(i), api.loseContext(lose), api.lost(), api.feedFrames(ms, n), api.resetGovernor(), api.audit() (read-only performance audit)
+//         api.governor(on), api.aoEnabled(on), api.dprLevel(i), api.loseContext(lose), api.lost(), api.renderSynced(), api.feedFrames(ms, n), api.resetGovernor(), api.audit() (read-only performance audit)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -1094,6 +1094,8 @@ function showOnly(names) {
 }
 // the lose-context extension is unreachable once the context is lost, so the test keeps it
 let loseExt = null;
+// one pixel read back after a frame: waits for the GPU, so the timing is the frame's real cost
+const syncPx = new Uint8Array(4);
 function testApi() {
   return {
     set(o) { Object.assign(view, o); applyWorld(); applyFace(); },
@@ -1121,6 +1123,11 @@ function testApi() {
     dprLevel(i) { gov.level = i; resize(); return currentDpr(); },
     loseContext(lose) { if (lose) { loseExt = renderer.getContext().getExtension('WEBGL_lose_context'); loseExt.loseContext(); } else loseExt.restoreContext(); },
     lost() { return view.lost === true; },
+    renderSynced() {
+      const g = renderer.getContext(), t0 = performance.now();
+      draw(); g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, syncPx);
+      return performance.now() - t0;
+    },
     feedFrames(ms, n) { for (let k = 0; k < n; k++) govStep(ms / 1000); return { dpr: currentDpr(), level: gov.level, cap: gov.cap, ao: parts.ao.enabled }; },
     resetGovernor() { govInit(); parts.ao.enabled = true; resize(); return { dpr: currentDpr(), level: gov.level }; },
     audit() {
