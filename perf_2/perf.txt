@@ -1,0 +1,2 @@
+PASS mutation latefetch -> "9. no requests during play" fires | FAIL 9. no requests during play | ["http://localhost:33807/assets/ring_layout.json","http://localhost:33807/assets/ring_layout.json","http:/
+PASS mutation hudevery -> "10. per frame" fires | FAIL 10. per frame: HUD written at most 0.1 times, no matchMedia calls | {"frames":60,"hudWrites":60,"matchMedia":0}

@@ -1,0 +1,13 @@
+PASS route: Chrome draws WebGL on the GPU, not in software | {"vendor":"Google Inc. (Apple)","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple Paravirtual device, Unspecified Version)"}
+PASS 1080p desktop (1920x1024, default tier, AO on): frame p95 <= 20 ms | {"median":0.9,"p95":12.3,"max":15.3}
+PASS retina laptop (1800x1055, default tier, AO on): frame p95 <= 20 ms | {"median":0.5,"p95":12.7,"max":40.7}
+PASS 1440p desktop (2560x1384, default tier, AO on): frame p95 <= 20 ms | {"median":1.2,"p95":12.4,"max":25.7}
+frame times, ms (vsync off, real GPU):
+  1080p desktop  1920x1024  AO on   median 0.9  p95 12.3  max 15.3
+  1080p desktop  1920x1024  AO off  median 1.4  p95 11.9  max 13.4
+  retina laptop  1800x1055  AO on   median 0.5  p95 12.7  max 40.7
+  retina laptop  1800x1055  AO off  median 1.6  p95 11.8  max 13.3
+  1440p desktop  2560x1384  AO on   median 1.2  p95 12.4  max 25.7
+  1440p desktop  2560x1384  AO off  median 2.1  p95 12.5  max 15.3
+PASS no page or console errors | []
+RESULT gpu 5 of 5 pass
