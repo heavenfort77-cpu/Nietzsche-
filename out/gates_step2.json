@@ -1,0 +1,92 @@
+[
+ {
+  "name": "body: parts joined, hidden faces removed",
+  "ok": true,
+  "info": "128 parts, 24464 tris before, 4944 hidden faces removed, 15798 tris, 0.9s"
+ },
+ {
+  "name": "body UVs: no overlaps",
+  "ok": true,
+  "info": "0 overlapping faces, 276 islands"
+ },
+ {
+  "name": "head UV: one island",
+  "ok": true,
+  "info": "1 islands"
+ },
+ {
+  "name": "body bakes (colour, AO, edge/top/noise)",
+  "ok": true,
+  "info": "1.1s / 62.2s / 0.6s"
+ },
+ {
+  "name": "body regions: every part ramp present in the atlas",
+  "ok": true,
+  "info": "{'HAT': 204909, 'OCHRE': 167922, 'PAINT': 84955, 'RED': 8241, 'RUST_DARK': 82689, 'RUST_HAIR': 118833, 'SHOE': 39244, 'SKIN': 51737, 'WARM_WHITE': 290046}"
+ },
+ {
+  "name": "body regions: faces of each ramp read back as that ramp (>= 95%)",
+  "ok": true,
+  "info": "{'SHOE': 1.0, 'HAT': 1.0, 'OCHRE': 1.0, 'WARM_WHITE': 1.0, 'RED': 1.0, 'SKIN': 1.0, 'PAINT': 1.0, 'RUST_HAIR': 1.0, 'RUST_DARK': 1.0}"
+ },
+ {
+  "name": "face bake sad",
+  "ok": true,
+  "info": "0.8s, feature texels 30561"
+ },
+ {
+  "name": "paint layer sad: paint present, eyes cut it",
+  "ok": true,
+  "info": "5.3% of the cell painted"
+ },
+ {
+  "name": "face bake smile",
+  "ok": true,
+  "info": "0.8s, feature texels 27186"
+ },
+ {
+  "name": "paint layer smile: paint present, eyes cut it",
+  "ok": true,
+  "info": "5.4% of the cell painted"
+ },
+ {
+  "name": "face bake startle",
+  "ok": true,
+  "info": "0.8s, feature texels 31045"
+ },
+ {
+  "name": "paint layer startle: paint present, eyes cut it",
+  "ok": true,
+  "info": "4.2% of the cell painted"
+ },
+ {
+  "name": "face bake wince",
+  "ok": true,
+  "info": "0.7s, feature texels 25861"
+ },
+ {
+  "name": "paint layer wince: paint present, eyes cut it",
+  "ok": true,
+  "info": "6.2% of the cell painted"
+ },
+ {
+  "name": "spec mask: some body vertices shine, most do not",
+  "ok": true,
+  "info": "557 of 9502 vertices"
+ },
+ {
+  "name": "triangles <= 30k (body + head)",
+  "ok": true,
+  "info": "15798 + 2208 = 18006"
+ },
+ {
+  "name": "materials (= draw calls before hull) <= 2",
+  "ok": true,
+  "info": "['body', 'face']"
+ },
+ {
+  "name": "total time",
+  "ok": true,
+  "info": "114s"
+ }
+]

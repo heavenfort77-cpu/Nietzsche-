@@ -1,0 +1,92 @@
+[
+ {
+  "name": "body: parts joined, hidden faces removed",
+  "ok": true,
+  "info": "90 parts, 20820 tris before, 4120 hidden faces removed, 13666 tris, 0.7s"
+ },
+ {
+  "name": "body UVs: no overlaps",
+  "ok": true,
+  "info": "0 overlapping faces, 236 islands"
+ },
+ {
+  "name": "head UV: one island",
+  "ok": true,
+  "info": "1 islands"
+ },
+ {
+  "name": "body bakes (colour, AO, edge/top/noise)",
+  "ok": true,
+  "info": "0.9s / 58.8s / 0.5s"
+ },
+ {
+  "name": "body regions: every part ramp present in the atlas",
+  "ok": true,
+  "info": "{'M_DARK': 335073, 'M_MID': 331242, 'M_PALE': 370978, 'PAINT': 7036, 'RED': 4247}"
+ },
+ {
+  "name": "body regions: faces of each ramp read back as that ramp (>= 95%)",
+  "ok": true,
+  "info": "{'M_DARK': 1.0, 'M_MID': 1.0, 'M_PALE': 1.0, 'PAINT': 1.0, 'RED': 1.0}"
+ },
+ {
+  "name": "face bake grin",
+  "ok": true,
+  "info": "0.4s, feature texels 24515"
+ },
+ {
+  "name": "paint layer grin: paint present, eyes cut it",
+  "ok": true,
+  "info": "15.5% of the cell painted"
+ },
+ {
+  "name": "face bake mock",
+  "ok": true,
+  "info": "0.4s, feature texels 20941"
+ },
+ {
+  "name": "paint layer mock: paint present, eyes cut it",
+  "ok": true,
+  "info": "16.9% of the cell painted"
+ },
+ {
+  "name": "face bake rage",
+  "ok": true,
+  "info": "0.4s, feature texels 19881"
+ },
+ {
+  "name": "paint layer rage: paint present, eyes cut it",
+  "ok": true,
+  "info": "18.2% of the cell painted"
+ },
+ {
+  "name": "face bake sad",
+  "ok": true,
+  "info": "0.4s, feature texels 23780"
+ },
+ {
+  "name": "paint layer sad: paint present, eyes cut it",
+  "ok": true,
+  "info": "16.4% of the cell painted"
+ },
+ {
+  "name": "spec mask: some body vertices shine, most do not",
+  "ok": true,
+  "info": "146 of 8220 vertices"
+ },
+ {
+  "name": "triangles <= 30k (body + head)",
+  "ok": true,
+  "info": "13666 + 2208 = 15874"
+ },
+ {
+  "name": "materials (= draw calls before hull) <= 2",
+  "ok": true,
+  "info": "['body', 'face']"
+ },
+ {
+  "name": "total time",
+  "ok": true,
+  "info": "105s"
+ }
+]

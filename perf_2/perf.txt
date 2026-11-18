@@ -1,0 +1,7 @@
+PASS mutation latefetch -> "9. no requests during play" fires | FAIL 9. no requests during play | ["http://localhost:45977/assets/ring_layout.json","http://localhost:45977/assets/ring_layout.json","http:/
+PASS mutation hudevery -> "10. per frame" fires | FAIL 10. per frame: HUD written at most 0.1 times, no matchMedia calls | {"frames":60,"hudWrites":60,"matchMedia":0}
+PASS mutation mmframe -> "10. per frame" fires | FAIL 10. per frame: HUD written at most 0.1 times, no matchMedia calls | {"frames":60,"hudWrites":10,"matchMedia":60}
+PASS mutation nowarm -> "11. no shader compiles" fires | FAIL 11. no shader compiles or texture uploads after loading (warm-up covers every state) | {"programs":[25,26],"textures":[44,44]}
+PASS mutation crowdnocull -> "4. frustum culling" fires | FAIL 4. frustum culling: no mesh skips it | [{"name":"Mesh","tris":1030}]
+FAIL mutation noctx -> "12. WebGL context" fires | PASS 12. WebGL context lost and restored: the game draws again | {"calls":48,"tris":139720}
+RESULT perf mutations 5 of 6 fired
