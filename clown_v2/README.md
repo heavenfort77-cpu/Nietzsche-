@@ -73,3 +73,11 @@ Superseded by the game page `web/game/index.html`, which carries the same shader
 - **Live:** shadow-only spotlight onto a shadow plane on the ring floor, a soft blob shadow, an additive light cone with drifting dust, fog in the backdrop colour, 411 crowd cards (8 silhouettes from behind, rim lit, bobbing by an excitement value; 0 freezes the house), 2,500 confetti pieces (fall, spin, lie flat when landed, never below the floor), 220 sparkles, 264 bulbs, bloom on HDR only, N8AO, vignette, grain, AgX, SMAA.
 - **Camera** behind the back rows on the near side, an aisle on the camera line. The clown's key light dims outside the spotlight pool.
 - **Budget (desktop, measured headless):** 46 draw calls per frame all passes (gate 150), about 90,000 triangles.
+
+## Ring density pass (desktop first; the phone tier is dialled down from it in step 9)
+
+- Top layer: the spotlight's lamp, two trapezes (bars at about 5–6 m, in the desktop frame), a rope ladder, three garlands of bunting and bulbs across the ring between the king poles.
+- Midground: a hoop stand and striped barrels on the far side.
+- Ground: 1,600 straw pieces and 500 peanut shells, instanced, lit to match the baked spotlight pool.
+- Crowd: 515 figures (seat spacing 0.44 m), 12 silhouette variants at 256 × 384 (adults, children, bowler, top hat, bun, pigtails, raised arm), each with its own shade.
+- Desktop: 48 draw calls per frame, about 136,000 triangles. Gate: crowd ≥ 500, scatter ≥ 2,000, confetti ≥ 2,500, bulbs ≥ 250.

@@ -25,6 +25,8 @@ const CONFIG = {
   beamMin: 1000,
   // shadow: floor pixels that change when the clown casts, at least
   shadowMin: 200,
+  // desktop density floors: crowd figures, floor scatter, confetti, bulbs
+  density: { crowd: 500, scatter: 2000, confetti: 2500, bulbs: 250 },
   // confetti times checked, seconds
   confettiTimes: [0, 2.5, 5, 7.5, 10, 12.5, 13.9],
 };
@@ -48,7 +50,7 @@ try {
   await p.evaluate(installHelpers, CONFIG);
   for (const [n, ok, i] of await p.evaluate(runGates, CONFIG)) out.push(`${ok ? 'PASS' : 'FAIL'} ${n}${i !== undefined ? ' | ' + i : ''}`);
   if (shot) {
-    await p.evaluate(() => { const a = window.__game.api; a.direct(false); a.only(['body', 'face', 'hull', 'set', 'crowd', 'confetti', 'sparkles', 'bulbs', 'beam', 'shadowFloor', 'blob']); a.bg(null); a.place(0, 0); a.time(5); a.pose('idle', 0.5); a.render(); });
+    await p.evaluate(() => { const a = window.__game.api; a.direct(false); a.only(['body', 'face', 'hull', 'set', 'crowd', 'scatter', 'confetti', 'sparkles', 'bulbs', 'beam', 'shadowFloor', 'blob']); a.bg(null); a.place(0, 0); a.time(5); a.pose('idle', 0.5); a.render(); });
     await p.screenshot({ path: `${shot}_ring.png` });
   }
 } catch (e) { out.push('FAIL run | ' + String(e).slice(0, 300)); }
@@ -83,11 +85,13 @@ function installHelpers(C) {
 }
 function runGates(C) {
   const api = window.__game.api, K = window.__chk, R = [];
-  const ALL = ['body', 'face', 'hull', 'set', 'crowd', 'confetti', 'sparkles', 'bulbs', 'beam', 'shadowFloor', 'blob'];
+  const ALL = ['body', 'face', 'hull', 'set', 'crowd', 'scatter', 'confetti', 'sparkles', 'bulbs', 'beam', 'shadowFloor', 'blob'];
   api.isolate(false); api.direct(false); api.only(ALL); api.place(0, 0); api.time(5); api.pose('idle', 0.5);
   const info = api.render();
   R.push([`draw calls per frame <= ${C.maxCalls} (all passes)`, info.calls <= C.maxCalls, `${info.calls} calls`]);
   R.push([`triangles per frame <= ${C.maxTris}`, info.triangles <= C.maxTris, `${info.triangles}`]);
+  const cn = api.counts(), low = Object.entries(C.density).filter(([k, v]) => !(cn[k] >= v));
+  R.push(['desktop density: crowd, floor scatter, confetti, bulbs at their floors', low.length === 0, JSON.stringify(cn)]);
   // clown readable in the spot: his pixels found on a black backdrop with nothing else drawn, then read in the full scene
   api.direct(true); api.bg('#000000'); api.only(['body', 'face', 'hull']); const m = K.snap();
   api.only(ALL); api.bg(null); api.direct(false); const full = K.snap();
@@ -111,6 +115,9 @@ function runGates(C) {
   for (const t of C.confettiTimes) { api.time(t); below += K.drawn(K.snap()); }
   api.clipBelowFloor(false); api.time(5); const seen = K.drawn(K.snap());
   R.push(['confetti never below the floor', below === 0 && seen > 200, `${below} pixels below, ${seen} visible`]);
+  // floor scatter drawn
+  api.only(['scatter']); const sc = K.drawn(K.snap());
+  R.push(['straw and shells drawn on the ring floor', sc > 300, `${sc} pixels`]);
   // beam visible
   api.only(['beam']); api.time(5); const beam = K.drawn(K.snap());
   R.push([`light beam visible (>= ${C.beamMin} pixels)`, beam >= C.beamMin, beam]);

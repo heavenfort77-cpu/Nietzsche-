@@ -159,15 +159,18 @@ void main() {
 #include <fog_pars_vertex>
 attribute float aCell;
 attribute float aPhase;
+attribute float aShade;
 uniform float uTime;
 uniform float uExcite;
 uniform float uBob;
 uniform float uSway;
 varying vec2 vUv;
 varying float vCell;
+varying float vShade;
 void main() {
   vUv = uv;
   vCell = aCell;
+  vShade = aShade;
   vec3 p = position;
   float beat = abs(sin(uTime * 7.0 + aPhase * 6.2832));
   p.y += beat * uBob * uExcite;
@@ -186,10 +189,11 @@ uniform vec3 uDark;
 uniform vec3 uRim;
 varying vec2 vUv;
 varying float vCell;
+varying float vShade;
 void main() {
   vec4 c = texture2D(uCards, vec2((vCell + vUv.x) / uCells, vUv.y));
   if (c.a < 0.5) discard;
-  vec3 col = uDark * c.r + uRim * c.g;
+  vec3 col = uDark * c.r * vShade + uRim * c.g;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -372,7 +376,7 @@ void main() {
 // CONFIG  CONFIG (worlds, shader, outline, faces, clips, cam, ring: spot, beam, fog, crowd, confetti, sparkles, bulbs, post)
 // ASSETS  ASSETS, loadTex(), loadAll()
 // STATE   view, newRun()
-// RENDER  makeToon(), makeHull(), setupClown(), setupSet(), makeCrowd(), makeConfetti(), makeSparkles(), makeBulbs(),
+// RENDER  makeToon(), makeHull(), setupClown(), setupSet(), makeCrowd(), makeScatter(), scatterLayer(), makeConfetti(), makeSparkles(), makeBulbs(),
 //         makeBeam(), makeShadows(), makePost(), applyWorld(), applyFace(), setConfetti(), resize(), fitCamera(), draw()
 // INPUT   bindInput(), onKey()
 // UI      buildBar(), onPick(), markActive(), syncInputs(), drawHud()
@@ -380,7 +384,7 @@ void main() {
 // LOOP    frame()
 // BOOT    boot(); test hook window.__game = { newRun, state, api } when ?test
 // TEST    api.mode(0 lit, 1 texture colour, 2 blouse mask), api.bg(hex), api.isolate(on), api.direct(on: no post),
-//         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on)
+//         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on), api.counts()
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -523,6 +527,18 @@ const CONFIG = Object.freeze({
     rimCol: '#7A5638',
     // crowd excitement at start (0 freezes the whole house)
     excite: 0.6,
+    // straw pieces on the ring floor (desktop)
+    straw: 1600,
+    // straw piece length, metres
+    strawLen: 0.11,
+    // straw colours: OCHRE light, GOLD light, OCHRE base
+    strawCols: ['#D7B06A', '#F0D27A', '#B68C45'],
+    // peanut shells on the ring floor (desktop)
+    shells: 500,
+    // shell colours: OCHRE base, OCHRE shadow
+    shellCols: ['#B68C45', '#86642E'],
+    // scatter brightness outside the spotlight pool (matches the baked floor, about 0.25 of the centre)
+    scatterDark: 0.25,
     // confetti pieces (desktop)
     confetti: 2500,
     // confetti cycle length, seconds
@@ -608,7 +624,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(CONFIG.cam.fov, 1, 0.1, 80);
-const parts = { root: null, body: null, face: null, hull: null, mixer: null, clips: {}, set: null, crowd: null, confetti: null, sparkles: null, bulbs: null, beam: null, shadowFloor: null, blob: null, spot: null, composer: null, bloom: null };
+const parts = { root: null, body: null, face: null, hull: null, mixer: null, clips: {}, set: null, crowd: null, scatter: null, confetti: null, sparkles: null, bulbs: null, beam: null, shadowFloor: null, blob: null, spot: null, composer: null, bloom: null };
 const shared = {
   uKeyDir: { value: new THREE.Vector3() }, uKeyCol: { value: new THREE.Color() }, uFillDir: { value: new THREE.Vector3() },
   uFillCol: { value: new THREE.Color() }, uRimCol: { value: new THREE.Color() }, uShadow: { value: new THREE.Color() },
@@ -665,30 +681,32 @@ function setupSet(a) {
   });
   scene.add(parts.set);
   scene.fog = new THREE.FogExp2(a.layout.fog, CONFIG.ring.fogDensity);
-  parts.crowd = makeCrowd(a.layout.seats, a.cards); scene.add(parts.crowd);
+  parts.crowd = makeCrowd(a.layout.seats, a.cards, a.layout.card_cells); scene.add(parts.crowd);
+  parts.scatter = makeScatter(a.layout.ring_r); scene.add(parts.scatter);
   parts.confetti = makeConfetti(a.layout.ring_r); scene.add(parts.confetti);
   parts.sparkles = makeSparkles(a.layout); scene.add(parts.sparkles);
   parts.bulbs = makeBulbs(a.layout.bulbs, a.layout.spot.color); scene.add(parts.bulbs);
   parts.beam = makeBeam(a.layout.spot); scene.add(parts.beam);
   makeShadows(a.layout);
 }
-function makeCrowd(seats, cards) {
+function makeCrowd(seats, cards, cells) {
   const r = CONFIG.ring;
   const geo = new THREE.PlaneGeometry(r.cardW, r.cardH); geo.translate(0, r.cardH / 2, 0);
-  const cell = new Float32Array(seats.length), phase = new Float32Array(seats.length);
+  const cell = new Float32Array(seats.length), phase = new Float32Array(seats.length), shade = new Float32Array(seats.length);
   const mesh = new THREE.InstancedMesh(geo, null, seats.length);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
   seats.forEach((s, i) => {
     const [x, y, z] = s.p;
     q.setFromAxisAngle(up, Math.atan2(-x, -z));
     m.compose(new THREE.Vector3(x, y, z), q, one); mesh.setMatrixAt(i, m);
-    cell[i] = (i * 5 + s.tier * 3) % 8; phase[i] = ((i * 0.618) % 1);
+    cell[i] = (i * 5 + s.tier * 3) % cells; phase[i] = ((i * 0.618) % 1); shade[i] = 0.75 + 0.5 * ((i * 0.7548) % 1);
   });
   geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(cell, 1));
   geo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phase, 1));
+  geo.setAttribute('aShade', new THREE.InstancedBufferAttribute(shade, 1));
   mesh.material = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
-      uCards: { value: cards }, uCells: { value: 8 }, uExcite: { value: r.excite }, uBob: { value: r.bob }, uSway: { value: r.sway },
+      uCards: { value: cards }, uCells: { value: cells }, uExcite: { value: r.excite }, uBob: { value: r.bob }, uSway: { value: r.sway },
       uDark: { value: new THREE.Color(r.dark) }, uRim: { value: new THREE.Color(r.rimCol) },
     }]),
     vertexShader: shaderText('crowdVert'), fragmentShader: shaderText('crowdFrag'), side: THREE.DoubleSide, fog: true,
@@ -696,6 +714,29 @@ function makeCrowd(seats, cards) {
   mesh.material.uniforms.uTime = shared.uTime;
   mesh.frustumCulled = false;
   return mesh;
+}
+function scatterLayer(geo, n, ringR, cols, rnd) {
+  const r = CONFIG.ring;
+  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ fog: true }), n);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(1, 1, 1), c = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2, d = ringR * (0.25 + 0.72 * Math.sqrt(rnd()));
+    e.set((rnd() - 0.5) * 0.3, rnd() * Math.PI * 2, (rnd() - 0.5) * 0.3); q.setFromEuler(e);
+    m.compose(new THREE.Vector3(Math.cos(a) * d, 0.006, Math.sin(a) * d), q, sc); mesh.setMatrixAt(i, m);
+    const lit = r.scatterDark + (1 - r.scatterDark) * (1 - THREE.MathUtils.smoothstep(d, r.poolR * 0.8, r.poolR * 1.25));
+    mesh.setColorAt(i, c.set(cols[i % cols.length]).multiplyScalar(lit));
+  }
+  return mesh;
+}
+function makeScatter(ringR) {
+  const r = CONFIG.ring;
+  let seed = 11;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const group = new THREE.Group();
+  group.add(scatterLayer(new THREE.BoxGeometry(r.strawLen, 0.004, 0.008), r.straw, ringR, r.strawCols, rnd));
+  const shell = new THREE.SphereGeometry(0.022, 6, 4); shell.scale(1.5, 0.7, 1);
+  group.add(scatterLayer(shell, r.shells, ringR, r.shellCols, rnd));
+  return group;
 }
 function makeConfetti(ringR) {
   const r = CONFIG.ring, n = r.confetti;
@@ -956,7 +997,7 @@ function frame(now) {
 }
 
 // ===== BOOT =====
-const EFFECTS = ['set', 'crowd', 'confetti', 'sparkles', 'bulbs', 'beam', 'shadowFloor', 'blob'];
+const EFFECTS = ['set', 'crowd', 'scatter', 'confetti', 'sparkles', 'bulbs', 'beam', 'shadowFloor', 'blob'];
 function showOnly(names) {
   const on = new Set(names);
   parts.body.visible = on.has('body'); parts.face.visible = on.has('face'); parts.hull.visible = on.has('hull') && view.outline;
@@ -983,6 +1024,7 @@ function testApi() {
       renderer.info.autoReset = false; draw();
       return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, w: canvas.width, h: canvas.height, textures: renderer.info.memory.textures };
     },
+    counts() { return { crowd: parts.crowd.count, scatter: parts.scatter.children.reduce((n, m) => n + m.count, 0), confetti: parts.confetti.geometry.instanceCount, bulbs: parts.bulbs.count, sparkles: parts.sparkles.geometry.instanceCount }; },
     hullBoundToBody() { return parts.hull.isSkinnedMesh === true && parts.hull.skeleton === parts.body.skeleton; },
   };
 }

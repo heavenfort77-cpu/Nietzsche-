@@ -13,6 +13,7 @@ const CASES = {
   nobeam: ['uStrength: { value: CONFIG.ring.beamStrength }', 'uStrength: { value: 0.0 }', 'light beam visible'],
   keynodim: ['multiplyScalar(r.poolMin + (1 - r.poolMin) * inPool)', 'multiplyScalar(1.0)', 'key light dims at the ring edge'],
   darkclown: ['    keyS: 1.0,', '    keyS: 0.15,', 'clown readable in the spot'],
+  noscatter: ['    straw: 1600,', '    straw: 0,', 'desktop density'],
   nowrap: ['.bar__group { display: flex; flex-wrap: wrap;', '.bar__group { display: flex; flex-wrap: nowrap;', 'controls on screen at 390x844'],
 };
 let fired = 0;

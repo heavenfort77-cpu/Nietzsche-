@@ -32,7 +32,7 @@ CONFIG = dict(
     # gaps in the seating (degrees, centre and half-width): camera aisle, entrance, two pole aisles
     gaps=((-90, 6), (90, 26), (0, 5), (180, 5)),
     # crowd seat spacing along a bench, metres
-    seat_gap=0.55,
+    seat_gap=0.44,
     # tent wall radius and height, roof peak height, stripes round the tent
     tent_r=14.5,
     wall_h=5.0,
@@ -64,10 +64,12 @@ CONFIG = dict(
     light_blur=1.5,
     # UV emphasis before packing: floor and curb get more texels, roof fewer
     uv_gain=dict(floor=2.2, curb=1.6, roof=0.45, wall=0.7, boards=0.4),
-    # crowd card atlas: cells across, cell size in pixels
-    card_cells=8,
-    card_w=128,
-    card_h=192,
+    # crowd card atlas: figure variants across
+    card_cells=12,
+    # crowd card cell width in pixels (sharp enough for the front rows at desktop size)
+    card_w=256,
+    # crowd card cell height in pixels
+    card_h=384,
 )
 COL = dict(stage_spot='#FBD190', stage_wood='#DA9F69', backdrop='#1E1418')
 G = []
@@ -250,6 +252,57 @@ def build_entrance():
     for sx in (-1, 1):
         keep(cyl(0.14, 4.0, (sx * 2.1, y0 - 0.15, 2.0), 12), ramp('GOLD'), 'entrance')
 
+def rod(p, q, r, mat_, part, n=8):
+    """A thin cylinder from p to q (ropes, bars, rungs)."""
+    p, q = Vector(p), Vector(q); d = q - p
+    bpy.ops.mesh.primitive_cylinder_add(vertices=n, radius=r, depth=d.length, location=(p + q) / 2)
+    o = bpy.context.active_object; o.rotation_mode = 'QUATERNION'; o.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(d)
+    return keep(o, mat_, part)
+
+def build_rigging():
+    """Top layer: the spotlight's lamp, two trapezes, a rope ladder and the garlands between the poles."""
+    c = CONFIG; rope = ramp('WARM_WHITE', 2); bar = ramp('GOLD')
+    keep(cyl(0.38, 0.7, (0, 0, c['spot_z'] + 0.45), 20), ramp('BLACK'), 'rigging')
+    rod((-0.6, 0, c['spot_z'] + 0.9), (0.6, 0, c['spot_z'] + 0.9), 0.05, ramp('BLACK'), 'rigging')
+    for (x, y, z0, z1) in ((-2.2, 2.0, 11.8, 5.2), (2.5, 3.2, 11.8, 5.9)):
+        for dx in (-0.45, 0.45):
+            rod((x + dx, y, z0), (x + dx, y, z1), 0.018, rope, 'rigging')
+        rod((x - 0.5, y, z1), (x + 0.5, y, z1), 0.035, bar, 'rigging')
+    lx, ly = 7.6, 2.6
+    for dx in (-0.22, 0.22):
+        rod((lx + dx, ly, 11.5), (lx + dx, ly, 1.6), 0.018, rope, 'rigging')
+    for k in range(27):
+        z = 2.0 + k * 0.35
+        rod((lx - 0.22, ly, z), (lx + 0.22, ly, z), 0.02, bar, 'rigging')
+
+def build_garlands():
+    """Bunting and bulbs across the ring between the two king poles. Returns bulb positions."""
+    c = CONFIG; bulbs = []; cols = ['CRIMSON', 'GOLD', 'WARM_WHITE', 'OCHRE']
+    (ax, ay), (bx, by) = c['poles']
+    for dz, dy, sag in ((-0.6, 0.0, 2.2), (-1.0, 1.2, 2.6), (-1.0, -1.2, 2.6)):
+        p = Vector((ax, ay + dy * 0.2, c['pole_h'] + dz)); q = Vector((bx, by + dy * 0.2, c['pole_h'] + dz))
+        mid = Vector((0, dy, 0))
+        pts = [v + mid * (4 * t * (1 - t)) for t, v in ((i / 30, w) for i, w in enumerate(catenary(p, q, sag, 30)))]
+        d = (q - p).normalized()
+        for i, v in enumerate(pts):
+            if i % 2: bulbs.append(list(v + Vector((0, 0, 0.1)))); continue
+            me = bpy.data.meshes.new('flag'); me.from_pydata([v - d * 0.2, v + d * 0.2, v + Vector((0, 0, -0.42))], [], [(0, 1, 2)])
+            o = bpy.data.objects.new('flag', me); bpy.context.scene.collection.objects.link(o)
+            keep(o, ramp(cols[(i // 2) % 4], 0), 'flags')
+    return bulbs
+
+def build_more_props():
+    """Midground: a hoop stand and a cluster of striped barrels on the far side of the ring."""
+    hx, hy = -2.6, 5.0
+    rod((hx, hy, 0.0), (hx, hy, 1.5), 0.04, ramp('WARM_WHITE', 2), 'props')
+    for k, (z, r) in enumerate(((1.25, 0.42), (0.95, 0.36), (0.68, 0.3))):
+        bpy.ops.mesh.primitive_torus_add(major_radius=r, minor_radius=0.025, location=(hx + 0.1 * k, hy - 0.05, z), rotation=(math.pi / 2, 0, 0.3 * k))
+        keep(bpy.context.active_object, ramp('GOLD') if k % 2 else ramp('CRIMSON'), 'props')
+    for (x, y, h) in ((2.8, 5.3, 0.8), (3.5, 5.0, 0.8), (3.15, 5.25, 1.6)):
+        keep(cyl(0.3, 0.75, (x, y, h - 0.4), 20), ramp('OCHRE', 2), 'props')
+        for dz in (-0.25, 0.25):
+            keep(cyl(0.31, 0.06, (x, y, h - 0.4 + dz), 20), ramp('CRIMSON'), 'props')
+
 def build_props():
     """Pedestals, a ladder and a prop cart at the ring edge, away from the camera line."""
     for i, (x, y) in enumerate(((-4.4, 2.6), (4.6, 2.2))):
@@ -356,32 +409,41 @@ def bake_set(S, glow_objs):
 
 # ---------------------------------------------------------------- crowd cards
 def crowd_cards(path):
-    """8 seated figures seen from behind (the camera is behind the back rows): head, hair or hat, shoulders.
-    RGBA: R = body shade, G = rim (top edges, lit from the ring), A = coverage."""
+    """12 seated figures seen from behind (the camera is behind the back rows): adults, children, hats, hair,
+    a raised arm. RGBA: R = body shade, G = rim (top edges, lit from the ring), A = coverage."""
     c = CONFIG; W, H, n = c['card_w'], c['card_h'], c['card_cells']
     rng = np.random.default_rng(7)
     img = np.zeros((H, W * n, 4), np.float32)
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    def ell(cx, cy, rx, ry): return ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 < 1
+    def rect(x0, x1, y0, y1): return (xx > x0) & (xx < x1) & (yy > y0) & (yy < y1)
     for k in range(n):
-        s = 0.8 + 0.25 * rng.random() if k % 4 else 0.62
-        cx = W / 2 + rng.uniform(-6, 6)
-        sh_w = W * 0.42 * s; sh_top = H * (1 - 0.48 * s)
-        body = ((np.abs(xx - cx) < sh_w * (0.75 + 0.25 * (yy - sh_top) / max(H - sh_top, 1))) & (yy > sh_top)).astype(np.float32)
-        hr = W * 0.16 * s; hy = sh_top - hr * 0.7
-        head = (((xx - cx) / hr) ** 2 + ((yy - hy) / (hr * 1.15)) ** 2 < 1).astype(np.float32)
-        hat = np.zeros_like(head)
-        kind = k % 4
+        child = k in (3, 8)
+        s = (0.6 if child else 0.82 + 0.2 * rng.random())
+        cx = W / 2 + rng.uniform(-10, 10)
+        sh_w = W * 0.42 * s; sh_top = H * (1 - 0.5 * s)
+        body = (np.abs(xx - cx) < sh_w * (0.72 + 0.28 * np.clip((yy - sh_top) / max(H - sh_top, 1), 0, 1))) & (yy > sh_top + 6)
+        body |= ell(cx - sh_w * 0.62, sh_top + 14, sh_w * 0.42, 18) | ell(cx + sh_w * 0.62, sh_top + 14, sh_w * 0.42, 18)
+        hr = W * 0.15 * s; hy = sh_top - hr * 0.75
+        fig = body | ell(cx, hy, hr, hr * 1.15) | rect(cx - hr * 0.45, cx + hr * 0.45, hy, sh_top + 8)
+        kind = k % 6
         if kind == 1:
-            hat = ((np.abs(xx - cx) < hr * 1.5) & (np.abs(yy - (hy - hr * 0.7)) < 2.5)) | ((np.abs(xx - cx) < hr * 0.9) & (yy > hy - hr * 1.6) & (yy < hy - hr * 0.6))
+            fig |= rect(cx - hr * 1.5, cx + hr * 1.5, hy - hr * 0.75, hy - hr * 0.6) | ell(cx, hy - hr * 0.8, hr * 0.85, hr * 0.7)
         elif kind == 2:
-            hat = ((xx - cx) / (hr * 0.6)) ** 2 + ((yy - (hy - hr * 1.1)) / (hr * 0.5)) ** 2 < 1
+            fig |= ell(cx, hy - hr * 1.1, hr * 0.55, hr * 0.48)
         elif kind == 3:
-            hat = ((xx - cx) / (hr * 1.25)) ** 2 + ((yy - (hy + hr * 0.2)) / (hr * 1.1)) ** 2 < 1
-        a = np.clip(body + head + hat.astype(np.float32), 0, 1)
-        sh = np.roll(a, 4, axis=0); sh[:4] = 0
+            fig |= ell(cx, hy + hr * 0.15, hr * 1.3, hr * 1.2)
+        elif kind == 4:
+            fig |= rect(cx - hr * 1.1, cx + hr * 1.1, hy - hr * 0.55, hy - hr * 0.45) | rect(cx - hr * 0.8, cx + hr * 0.8, hy - hr * 2.1, hy - hr * 0.5)
+        elif kind == 5:
+            fig |= ell(cx - hr * 1.05, hy + hr * 0.35, hr * 0.35, hr * 0.6) | ell(cx + hr * 1.05, hy + hr * 0.35, hr * 0.35, hr * 0.6)
+        if k in (5, 10):
+            ax = cx + sh_w * 0.7; fig |= rect(ax - 9, ax + 9, hy - hr * 2.4, sh_top + 20) | ell(ax, hy - hr * 2.5, 13, 15)
+        a = fig.astype(np.float32)
+        sh = np.roll(a, 6, axis=0); sh[:6] = 0
         rim = np.clip(a - sh, 0, 1)
-        cell = np.stack([0.75 + 0.25 * rng.random() * a, rim, np.zeros_like(a), a], -1)
-        img[:, k * W:(k + 1) * W] = cell
+        shade = 0.72 + 0.28 * rng.random()
+        img[:, k * W:(k + 1) * W] = np.stack([shade * a, rim, np.zeros_like(a), a], -1)
     im = bpy.data.images.new('cards', W * n, H, alpha=True)
     im.pixels.foreach_set(np.flipud(img).ravel())
     im.filepath_raw = path; im.file_format = 'PNG'; im.save()
@@ -393,6 +455,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     build_floor(); build_curb(); seats = build_tiers(); build_tent(); bulbs = build_strings(); build_entrance(); build_props()
+    build_rigging(); build_more_props(); bulbs += build_garlands()
     glow = bake_lights(bulbs)
     S, names, sp, ov = join_and_uv()
     tris = sum(len(p.vertices) - 2 for p in S.data.polygons)
@@ -414,15 +477,15 @@ def main():
     bpy.ops.object.select_all(action='DESELECT'); S.select_set(True)
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, 'ring_set.glb'), export_format='GLB', use_selection=True, export_attributes=False)
     cards = crowd_cards(os.path.join(OUT, 'crowd_cards.png'))
-    gate('crowd cards: 8 figures, each covers 15-60% of its cell', all(0.15 < cards[:, k * CONFIG['card_w']:(k + 1) * CONFIG['card_w'], 3].mean() < 0.6 for k in range(CONFIG['card_cells'])))
+    gate(f'crowd cards: {CONFIG["card_cells"]} figures, each covers 15-60% of its cell', all(0.15 < cards[:, k * CONFIG['card_w']:(k + 1) * CONFIG['card_w'], 3].mean() < 0.6 for k in range(CONFIG['card_cells'])))
     lay = dict(
         seats=[dict(p=to_three((s['x'], s['y'], s['z'])), tier=s['tier']) for s in seats],
         bulbs=[to_three(b) for b in bulbs],
         spot=dict(pos=to_three((0, 0, CONFIG['spot_z'])), angle_deg=CONFIG['spot_deg'], penumbra=CONFIG['spot_blend'], color=COL['stage_spot']),
-        ring_r=CONFIG['ring_r'], tent_r=CONFIG['tent_r'], fog=COL['backdrop'],
+        ring_r=CONFIG['ring_r'], tent_r=CONFIG['tent_r'], fog=COL['backdrop'], card_cells=CONFIG['card_cells'],
     )
     json.dump(lay, open(os.path.join(OUT, 'ring_layout.json'), 'w'))
-    gate('layout: seats and bulbs', len(lay['seats']) >= 300 and len(lay['bulbs']) >= 100, f'{len(lay["seats"])} seats, {len(lay["bulbs"])} bulbs')
+    gate('layout: seats >= 500 and bulbs >= 250 (desktop density)', len(lay['seats']) >= 500 and len(lay['bulbs']) >= 250, f'{len(lay["seats"])} seats, {len(lay["bulbs"])} bulbs')
     json.dump(G, open(os.path.join(OUT, 'gates_ring.json'), 'w'), indent=1)
 
 def spot_pool_check(S, names, sp, px):
