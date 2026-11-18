@@ -1,7 +1,7 @@
 // Break each step 4 rule in a copy of the viewer page and require its gate to FAIL; then the real page must pass.
 // node mutate_step4.mjs
 import fs from 'fs'; import { execFileSync } from 'child_process';
-const DIR = 'viewer';
+const DIR = 'game';
 const SRC = fs.readFileSync(`${DIR}/index.html`, 'utf8');
 // name -> [old text, new text, gate that must fail]
 const CASES = {

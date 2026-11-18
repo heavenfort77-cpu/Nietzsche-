@@ -58,7 +58,7 @@ Run order (needs `pip install bpy`, Blender 5.3): `python3 -I s2_build.py out`, 
 
 # Step 4: shader, outlines, stage and Mirror light
 
-`step4/viewer/index.html` is a single-file page (game-code-clean rules: one style and one script block, MAP, frozen CONFIG with a comment above each value, test hook on `?test`). It loads `out/` copies from `step4/viewer/assets/` and a bundled three.js r187 from `step4/viewer/lib/`. `index_cdn.html` is the same page loading three.js from jsDelivr, for hosting as a page.
+Superseded by the game page `web/game/index.html`, which carries the same shader and outline code. Originally `step4/viewer/index.html`, a single-file page (game-code-clean rules: one style and one script block, MAP, frozen CONFIG with a comment above each value, test hook on `?test`). It loads `out/` copies from `step4/viewer/assets/` and a bundled three.js r187 from `step4/viewer/lib/`. `index_cdn.html` is the same page loading three.js from jsDelivr, for hosting as a page.
 
 - **Shader** (`toonVert` / `toonFrag`): skinned; half-Lambert into two soft bands; the shadow side takes a chosen colour (`shadow`), not grey; fill light; rim from behind (directional, so only edges facing it catch); hard glint only where `_SPEC` = 1 (nose, buttons, shoes).
 - **Light values** are the style study's, divided by the stage key strength 3.2. Mirror adds a cold grade (`gradeAmt` 0.6 toward M_PALE), the plan's cold LUT done in the shader: without it a warm-white shirt under cold light stays warm (measured hue 35).
@@ -66,3 +66,10 @@ Run order (needs `pip install bpy`, Blender 5.3): `python3 -I s2_build.py out`, 
 - **Outline**: body + head merged into one skinned inverted hull, 6 mm, on the body's skeleton: 3 draw calls in all. Stage outline colour (#1E1714) is almost the stage backdrop (#1E1418), so the outer edge only shows against lit things; the inner lines (ruff, hands, hat) show everywhere.
 - **Controls**: buttons for world, clip, face; paint and flake sliders; outline toggle; drag to turn; keys 1–3, M, arrows. FPS counter top left.
 - Checks: `node check_step4.mjs viewer`, `node mutate_step4.mjs`, `node check-static.cjs viewer/index.html`, `node check-runtime.cjs viewer/index.html out 4` (needs `npm i puppeteer-core playwright-core acorn acorn-walk`; uses /usr/bin/google-chrome). Results in `BUILD-LOG.md`.
+
+# Step 5: the ring (see `ring/s5_ring.py` and `web/game/index.html`)
+
+- **Set:** procedural big top in the approved palette (sawdust ring floor with confetti, crimson and white curb with gold trim, five tiers of benches with aisles, striped tent wall and roof, two king poles, bunting, the entrance drapes in a gold arch, pedestals, ladder, prop cart). One mesh, about 11,000 triangles, one 2048² atlas: light baked at 1024² (spotlight #FBD190, bulb glow, dim tent) and blurred, times colour at 2048².
+- **Live:** shadow-only spotlight onto a shadow plane on the ring floor, a soft blob shadow, an additive light cone with drifting dust, fog in the backdrop colour, 411 crowd cards (8 silhouettes from behind, rim lit, bobbing by an excitement value; 0 freezes the house), 2,500 confetti pieces (fall, spin, lie flat when landed, never below the floor), 220 sparkles, 264 bulbs, bloom on HDR only, N8AO, vignette, grain, AgX, SMAA.
+- **Camera** behind the back rows on the near side, an aisle on the camera line. The clown's key light dims outside the spotlight pool.
+- **Budget (desktop, measured headless):** 46 draw calls per frame all passes (gate 150), about 90,000 triangles.

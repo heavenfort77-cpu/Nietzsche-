@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Clown and the Mirror: ring</title>
+<!-- ===== HTML SHELL ===== -->
+<style>
+/* ===== CSS: BASE ===== */
+:root { --bg: #1e1418; --ink: #f2ebdd; --panel: #2a2024; --accent: #c9604a; --gap: 6px; --radius: 6px; }
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.3 system-ui, sans-serif; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+/* ===== CSS: LAYOUT ===== */
+.stage { position: relative; flex: 1; min-height: 0; }
+.stage__canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+.bar { display: flex; flex-wrap: wrap; gap: var(--gap); justify-content: center; padding: var(--gap) var(--gap) calc(env(safe-area-inset-bottom) + var(--gap)); background: var(--panel); }
+.bar__group { display: flex; gap: var(--gap); align-items: center; }
+/* ===== CSS: UI ===== */
+.bar__button { min-width: 44px; min-height: 44px; padding: 0 10px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--ink); border-radius: var(--radius); }
+.bar__slider { width: 110px; min-height: 44px; }
+.bar__label { font-size: 12px; }
+.hud { position: fixed; top: calc(env(safe-area-inset-top) + 6px); left: 8px; pointer-events: none; font-size: 12px; }
+/* ===== CSS: STATES ===== */
+.is-active { background: var(--accent); }
+.is-hidden { display: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./lib/build/three.module.js",
+  "three/addons/": "./lib/examples/jsm/",
+  "three/examples/jsm/": "./lib/examples/jsm/",
+  "postprocessing": "./lib/postprocessing/index.js",
+  "n8ao": "./lib/n8ao/N8AO.js"
+} }
+</script>
+<script type="x-shader/x-vertex" id="toonVert">
+#include <common>
+#include <skinning_pars_vertex>
+#include <fog_pars_vertex>
+attribute float _spec;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vView;
+varying float vSpec;
+void main() {
+  vUv = uv;
+  vSpec = _spec;
+  #include <beginnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+  #include <begin_vertex>
+  #include <skinning_vertex>
+  #include <project_vertex>
+  #include <fog_vertex>
+  vNormal = normalize(transformedNormal);
+  vView = normalize(-mvPosition.xyz);
+}
+</script>
+<script type="x-shader/x-fragment" id="toonFrag">
+#include <common>
+#include <fog_pars_fragment>
+uniform sampler2D uMap;
+uniform sampler2D uPaint;
+uniform float uHasPaint;
+uniform vec2 uCell;
+uniform float uPaintAmt;
+uniform float uFlake;
+uniform float uFlakeScale;
+uniform vec3 uKeyDir;
+uniform vec3 uKeyCol;
+uniform vec3 uFillDir;
+uniform vec3 uFillCol;
+uniform vec3 uRimCol;
+uniform vec3 uRimDir;
+uniform vec3 uGradeTint;
+uniform float uGradeAmt;
+uniform vec3 uShadow;
+uniform float uBand1;
+uniform float uBand2;
+uniform float uSoft;
+uniform float uRimPow;
+uniform float uSpecPow;
+uniform float uSpecCut;
+uniform float uSpecOn;
+uniform float uMode;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vView;
+varying float vSpec;
+float hash12(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x), mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+void main() {
+  vec2 uv = vUv + uCell;
+  vec3 albedo = texture2D(uMap, uv).rgb;
+  if (uHasPaint > 0.5) {
+    vec4 p = texture2D(uPaint, uv);
+    float keep = step(uFlake, vnoise(vUv * uFlakeScale));
+    albedo = mix(albedo, p.rgb, p.a * uPaintAmt * keep);
+  }
+  vec3 n = normalize(vNormal);
+  vec3 v = normalize(vView);
+  float h = dot(n, uKeyDir) * 0.5 + 0.5;
+  float ramp = 0.5 * smoothstep(uBand1 - uSoft, uBand1 + uSoft, h) + 0.5 * smoothstep(uBand2 - uSoft, uBand2 + uSoft, h);
+  vec3 col = albedo * mix(uShadow, uKeyCol, ramp);
+  col += albedo * uFillCol * max(dot(n, uFillDir), 0.0);
+  float rim = pow(1.0 - max(dot(n, v), 0.0), uRimPow) * smoothstep(0.0, 0.4, dot(n, uRimDir));
+  col += albedo * uRimCol * rim;
+  float glint = step(uSpecCut, pow(max(dot(n, normalize(uKeyDir + v)), 0.0), uSpecPow));
+  col += uKeyCol * glint * vSpec * uSpecOn;
+  float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  col = mix(col, luma * uGradeTint, uGradeAmt);
+  col = mix(col, albedo, step(0.5, uMode) * step(uMode, 1.5));
+  vec3 wl = vec3(0.888, 0.831, 0.723);
+  vec3 ws = vec3(0.451, 0.381, 0.262);
+  float t = clamp(dot(albedo - ws, wl - ws) / dot(wl - ws, wl - ws), 0.0, 1.0);
+  float isBlouse = step(length(albedo - mix(ws, wl, t)), 0.035);
+  col = mix(col, vec3(0.0, isBlouse, 0.0), step(1.5, uMode));
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="hullVert">
+#include <common>
+#include <skinning_pars_vertex>
+#include <fog_pars_vertex>
+uniform float uThick;
+void main() {
+  #include <beginnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <begin_vertex>
+  #include <skinning_vertex>
+  transformed += normalize(objectNormal) * uThick;
+  #include <project_vertex>
+  #include <fog_vertex>
+}
+</script>
+<script type="x-shader/x-fragment" id="hullFrag">
+#include <common>
+#include <fog_pars_fragment>
+uniform vec3 uColor;
+void main() {
+  gl_FragColor = vec4(uColor, 1.0);
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="crowdVert">
+#include <common>
+#include <fog_pars_vertex>
+attribute float aCell;
+attribute float aPhase;
+uniform float uTime;
+uniform float uExcite;
+uniform float uBob;
+uniform float uSway;
+varying vec2 vUv;
+varying float vCell;
+void main() {
+  vUv = uv;
+  vCell = aCell;
+  vec3 p = position;
+  float beat = abs(sin(uTime * 7.0 + aPhase * 6.2832));
+  p.y += beat * uBob * uExcite;
+  p.x += sin(uTime * 2.3 + aPhase * 9.0) * uSway * uExcite * uv.y;
+  vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}
+</script>
+<script type="x-shader/x-fragment" id="crowdFrag">
+#include <common>
+#include <fog_pars_fragment>
+uniform sampler2D uCards;
+uniform float uCells;
+uniform vec3 uDark;
+uniform vec3 uRim;
+varying vec2 vUv;
+varying float vCell;
+void main() {
+  vec4 c = texture2D(uCards, vec2((vCell + vUv.x) / uCells, vUv.y));
+  if (c.a < 0.5) discard;
+  vec3 col = uDark * c.r + uRim * c.g;
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="confettiVert">
+#include <common>
+#include <fog_pars_vertex>
+#include <clipping_planes_pars_vertex>
+attribute vec3 aStart;
+attribute vec4 aMotion;
+attribute vec3 aColor;
+uniform float uTime;
+uniform float uCycle;
+uniform float uFall;
+uniform float uFloor;
+uniform float uExt;
+varying vec3 vColor;
+mat3 spin(vec3 axis, float a) {
+  float c = cos(a), s = sin(a), t = 1.0 - c;
+  vec3 n = normalize(axis);
+  return mat3(t * n.x * n.x + c, t * n.x * n.y + s * n.z, t * n.x * n.z - s * n.y,
+              t * n.x * n.y - s * n.z, t * n.y * n.y + c, t * n.y * n.z + s * n.x,
+              t * n.x * n.z + s * n.y, t * n.y * n.z - s * n.x, t * n.z * n.z + c);
+}
+void main() {
+  vColor = aColor;
+  float t = mod(uTime + aMotion.w * uCycle, uCycle);
+  float landT = (aStart.y - uFloor - uExt) / uFall;
+  float tf = min(t, landT);
+  vec3 c = aStart;
+  c.y -= uFall * tf;
+  c.x += sin(tf * 1.7 + aMotion.w * 40.0) * aMotion.x;
+  c.z += cos(tf * 1.3 + aMotion.w * 25.0) * aMotion.y;
+  float landed = step(landT, t);
+  mat3 r = spin(vec3(aMotion.x + 0.3, 1.0, aMotion.y + 0.2), tf * aMotion.z);
+  mat3 lieFlat = mat3(1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0);
+  vec3 p = mix(r * position, lieFlat * position, landed);
+  c.y = mix(max(c.y, uFloor + uExt), uFloor, landed);
+  vec4 mvPosition = modelViewMatrix * vec4(c + p, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <clipping_planes_vertex>
+  #include <fog_vertex>
+}
+</script>
+<script type="x-shader/x-fragment" id="confettiFrag">
+#include <common>
+#include <fog_pars_fragment>
+#include <clipping_planes_pars_fragment>
+varying vec3 vColor;
+void main() {
+  #include <clipping_planes_fragment>
+  vec3 col = gl_FrontFacing ? vColor : vColor * 0.55;
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="sparkVert">
+#include <common>
+#include <fog_pars_vertex>
+attribute vec3 aPos;
+attribute float aPhase;
+uniform float uTime;
+uniform float uSize;
+varying vec2 vUv;
+varying float vTw;
+void main() {
+  vUv = uv;
+  vTw = pow(max(sin(uTime * 2.6 + aPhase * 6.2832), 0.0), 6.0);
+  vec4 mvPosition = modelViewMatrix * vec4(aPos, 1.0);
+  mvPosition.xy += position.xy * uSize * (0.4 + vTw);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}
+</script>
+<script type="x-shader/x-fragment" id="sparkFrag">
+#include <common>
+uniform vec3 uColor;
+varying vec2 vUv;
+varying float vTw;
+void main() {
+  vec2 d = abs(vUv - 0.5) * 2.0;
+  float star = max(1.0 - d.x * 6.0 - d.y, 0.0) + max(1.0 - d.y * 6.0 - d.x, 0.0);
+  float glow = max(1.0 - length(vUv - 0.5) * 2.0, 0.0);
+  float a = (star + glow * 0.3) * vTw;
+  gl_FragColor = vec4(uColor * a, a);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="beamVert">
+#include <common>
+#include <fog_pars_vertex>
+varying vec3 vN;
+varying vec3 vV;
+varying float vH;
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  vH = uv.y;
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  vN = normalize(normalMatrix * normal);
+  vV = normalize(-mvPosition.xyz);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}
+</script>
+<script type="x-shader/x-fragment" id="beamFrag">
+#include <common>
+uniform vec3 uColor;
+uniform float uStrength;
+uniform float uTime;
+varying vec3 vN;
+varying vec3 vV;
+varying float vH;
+varying vec2 vUv;
+float h21(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 13758.5453); }
+float n2(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+void main() {
+  float facing = pow(abs(dot(normalize(vN), normalize(vV))), 2.0);
+  float along = smoothstep(0.0, 0.25, vH) * smoothstep(1.0, 0.7, vH);
+  float dust = 0.75 + 0.5 * n2(vec2(vUv.x * 40.0, vUv.y * 6.0 - uTime * 0.15));
+  float a = facing * along * dust * uStrength;
+  gl_FragColor = vec4(uColor * a, a);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}
+</script>
+<script type="x-shader/x-fragment" id="blobFrag">
+#include <common>
+uniform float uOpacity;
+varying vec2 vUv;
+void main() {
+  float d = length(vUv - 0.5) * 2.0;
+  float a = (1.0 - smoothstep(0.2, 1.0, d)) * uOpacity;
+  gl_FragColor = vec4(0.0, 0.0, 0.0, a);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="plainVert">
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+</head>
+<body>
+<main class="stage">
+  <canvas id="view" class="stage__canvas" aria-label="Circus ring"></canvas>
+</main>
+<p id="hud" class="hud">loading</p>
+<nav class="bar" aria-label="Controls">
+  <div class="bar__group" data-group="world"></div>
+  <div class="bar__group" data-group="clip"></div>
+  <div class="bar__group" data-group="face"></div>
+  <div class="bar__group">
+    <label class="bar__label" for="paint">Paint</label>
+    <input id="paint" class="bar__slider" type="range" min="0" max="1" step="0.01" value="1">
+    <label class="bar__label" for="flake">Flake</label>
+    <input id="flake" class="bar__slider" type="range" min="0" max="1" step="0.01" value="0">
+    <label class="bar__label" for="excite">Crowd</label>
+    <input id="excite" class="bar__slider" type="range" min="0" max="1" step="0.01" value="0.6">
+    <button id="outline" class="bar__button is-active" type="button">Outline</button>
+    <button id="confetti" class="bar__button is-active" type="button">Confetti</button>
+  </div>
+</nav>
+<script type="module">
+'use strict';
+// ===== MAP =====
+// CONFIG  CONFIG (worlds, shader, outline, faces, clips, cam, ring: spot, beam, fog, crowd, confetti, sparkles, bulbs, post)
+// ASSETS  ASSETS, loadTex(), loadAll()
+// STATE   view, newRun()
+// RENDER  makeToon(), makeHull(), setupClown(), setupSet(), makeCrowd(), makeConfetti(), makeSparkles(), makeBulbs(),
+//         makeBeam(), makeShadows(), makePost(), applyWorld(), applyFace(), setConfetti(), resize(), fitCamera(), draw()
+// INPUT   bindInput(), onKey()
+// UI      buildBar(), onPick(), markActive(), syncInputs(), drawHud()
+// SYSTEMS playClip(), stepFps(), tickEffects()
+// LOOP    frame()
+// BOOT    boot(); test hook window.__game = { newRun, state, api } when ?test
+// TEST    api.mode(0 lit, 1 texture colour, 2 blouse mask), api.bg(hex), api.isolate(on), api.direct(on: no post),
+//         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on)
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { EffectComposer, RenderPass, EffectPass, BloomEffect, VignetteEffect, ToneMappingEffect, ToneMappingMode, SMAAEffect, NoiseEffect, BlendFunction } from 'postprocessing';
+import { N8AOPostPass } from 'n8ao';
+
+// ===== CONFIG =====
+const CONFIG = Object.freeze({
+  // light values from the approved style study, divided by the stage key strength (3.2) so the stage key is 1
+  worlds: Object.freeze({
+    stage: Object.freeze({
+      // backdrop colour
+      bg: '#1E1418',
+      // key light direction, toward the light (top-left, in front)
+      keyDir: [-0.55, 0.75, 0.6],
+      // key light colour (study: 1.0, 0.86, 0.66)
+      key: [1.0, 0.86, 0.66],
+      // key strength (study 3.2, the reference)
+      keyS: 1.0,
+      // fill light direction: low from the right
+      fillDir: [0.8, 0.2, 0.5],
+      // fill colour (study: 0.55, 0.45, 0.45)
+      fill: [0.55, 0.45, 0.45],
+      // fill strength (study 0.7 / 3.2)
+      fillS: 0.22,
+      // rim colour (study: 1.0, 0.8, 0.6)
+      rim: [1.0, 0.8, 0.6],
+      // rim strength (study 2.2 / 3.2)
+      rimS: 0.69,
+      // rim light direction: from behind and above (study rim sun)
+      rimDir: [0.2, 0.5, -0.9],
+      // colour grade toward one tint: none on stage
+      gradeAmt: 0.0,
+      // grade tint (unused on stage)
+      gradeTint: '#FFFFFF',
+      // colour multiplied into the shadow side (a chosen shade, not grey ambient)
+      shadow: [0.46, 0.36, 0.42],
+      // outline colour (study: dark warm brown)
+      outline: '#1E1714',
+    }),
+    mirror: Object.freeze({
+      // backdrop colour
+      bg: '#11272B',
+      // key light direction (same as stage)
+      keyDir: [-0.55, 0.75, 0.6],
+      // key light colour (study: 0.72, 0.86, 0.95)
+      key: [0.72, 0.86, 0.95],
+      // key strength (study 2.4 / 3.2)
+      keyS: 0.75,
+      // fill light direction
+      fillDir: [0.8, 0.2, 0.5],
+      // fill colour (study: 0.35, 0.5, 0.55)
+      fill: [0.35, 0.5, 0.55],
+      // fill strength (study 0.6 / 3.2)
+      fillS: 0.19,
+      // rim colour (study: 0.75, 0.92, 1.0)
+      rim: [0.75, 0.92, 1.0],
+      // rim strength (study 2.6 / 3.2)
+      rimS: 0.81,
+      // rim light direction: from behind and above
+      rimDir: [0.2, 0.5, -0.9],
+      // cold grade amount: warm colours read cold in the Mirror World (the plan's cold LUT)
+      gradeAmt: 0.6,
+      // grade tint: Mirror figure colour M_PALE (hue about 190)
+      gradeTint: '#9DB5BB',
+      // shadow side colour
+      shadow: [0.22, 0.32, 0.40],
+      // outline colour (study: Mirror contour)
+      outline: '#071315',
+    }),
+  }),
+  shader: Object.freeze({
+    // half-Lambert value where the shadow band ends
+    band1: 0.42,
+    // half-Lambert value where the light band starts
+    band2: 0.68,
+    // softness of band edges
+    soft: 0.04,
+    // rim sharpness (pow(1 - N.V, rimPow))
+    rimPow: 2.0,
+    // glint sharpness (nose, buttons, shoes only)
+    specPow: 60.0,
+    // glint cut-off: the glint is on or off, no gradient
+    specCut: 0.5,
+    // flake noise scale across a face cell
+    flakeScale: 90.0,
+  }),
+  // outline thickness in metres
+  outlineThick: 0.006,
+  // face cells in the 2 x 2 atlas: uv offset from the sad cell
+  faces: Object.freeze({ sad: [0, 0], smile: [0.5, 0], startle: [0, -0.5], wince: [0.5, -0.5] }),
+  // clips in the GLB
+  clips: ['idle', 'walk', 'slap'],
+  cam: Object.freeze({
+    // camera position behind the back rows on the near side (metres)
+    pos: [0, 3.0, 13.2],
+    // look-at point: the clown's chest at ring centre
+    look: [0, 1.15, 0],
+    // vertical field of view on wide screens, degrees
+    fov: 30,
+    // horizontal field of view never narrower than this (portrait phones), degrees
+    hfovMin: 34,
+    // isolated view (checks, close look): camera distance, metres
+    isoDist: 5.2,
+    // isolated view: camera and look-at height, metres
+    isoY: 0.95,
+  }),
+  ring: Object.freeze({
+    // fog density per metre (fog colour is the stage backdrop)
+    fogDensity: 0.03,
+    // shadow map size of the shadow-only spotlight (the set's light is baked)
+    shadowMap: 2048,
+    // shadow camera near plane, metres
+    shadowNear: 8,
+    // shadow camera far plane, metres
+    shadowFar: 16,
+    // shadow darkness on the ring floor (0..1)
+    shadowOpacity: 0.45,
+    // soft blob shadow under the clown: radius, metres
+    blobR: 0.55,
+    // blob shadow darkness (0..1)
+    blobOpacity: 0.55,
+    // spotlight pool radius on the floor, metres: the clown's key light dims outside it
+    poolR: 3.4,
+    // key light left on the clown well outside the pool (0..1)
+    poolMin: 0.35,
+    // light beam: strength of the additive cone
+    beamStrength: 0.12,
+    // crowd card width, metres
+    cardW: 0.62,
+    // crowd card height, metres (a seated figure)
+    cardH: 0.93,
+    // crowd bob height at full excitement, metres
+    bob: 0.07,
+    // crowd sway at full excitement, metres
+    sway: 0.03,
+    // crowd body colour (dark silhouette)
+    dark: '#140E11',
+    // crowd rim colour: edges lit by the ring light
+    rimCol: '#7A5638',
+    // crowd excitement at start (0 freezes the whole house)
+    excite: 0.6,
+    // confetti pieces (desktop)
+    confetti: 2500,
+    // confetti cycle length, seconds
+    cycle: 14,
+    // confetti fall speed, metres per second
+    fall: 0.85,
+    // confetti spawn height range, metres
+    spawnY: [6.5, 11.5],
+    // confetti spread radius over the ring, metres
+    spread: 5.8,
+    // confetti piece width and height, metres
+    piece: [0.035, 0.05],
+    // confetti colours: palette lights (CRIMSON, GOLD, M_PALE, WARM_WHITE, RED)
+    confettiCols: ['#C24A52', '#F0D27A', '#C9D5D7', '#F2EBDD', '#E88A72'],
+    // sparkle count
+    sparkles: 220,
+    // sparkle size, metres
+    sparkSize: 0.16,
+    // sparkle brightness multiplier (above the bloom threshold)
+    sparkGain: 3.0,
+    // bulb radius, metres
+    bulbR: 0.07,
+    // bulb brightness multiplier (above the bloom threshold)
+    bulbGain: 4.0,
+  }),
+  post: Object.freeze({
+    // bloom strength
+    bloom: 1.1,
+    // bloom luminance threshold: above the lit blouse (up to about 1.1), so only HDR bulbs and sparkles glow
+    bloomThreshold: 1.2,
+    // ambient occlusion radius, metres (desktop tier)
+    aoRadius: 0.8,
+    // ambient occlusion strength
+    aoIntensity: 2.0,
+    // vignette darkness
+    vignette: 0.55,
+    // film grain opacity
+    grain: 0.035,
+  }),
+  // tone mapping exposure
+  exposure: 1.15,
+  // pixel-ratio cap on desktop and laptop
+  dprDesktop: 2,
+  // pixel-ratio cap on touch devices
+  dprTouch: 1.5,
+  // drag sensitivity: radians per pixel
+  turnPerPx: 0.01,
+  // longest frame step used for animation, seconds
+  dtMax: 0.05,
+});
+
+// ===== ASSETS =====
+const ASSETS = Object.freeze({
+  glb: './assets/clown_v2.glb', face: './assets/face_atlas.png', paint: './assets/face_paint.png',
+  set: './assets/ring_set.glb', layout: './assets/ring_layout.json', cards: './assets/crowd_cards.png',
+});
+async function loadTex(url, flipY) {
+  const t = await new THREE.TextureLoader().loadAsync(url);
+  t.flipY = flipY; t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true;
+  return t;
+}
+async function loadAll() {
+  const gl = new GLTFLoader();
+  const [gltf, face, paint, set, layout, cards] = await Promise.all([
+    gl.loadAsync(ASSETS.glb), loadTex(ASSETS.face, false), loadTex(ASSETS.paint, false),
+    gl.loadAsync(ASSETS.set), fetch(ASSETS.layout).then((r) => r.json()), loadTex(ASSETS.cards, true),
+  ]);
+  return { gltf, face, paint, set, layout, cards };
+}
+
+// ===== STATE =====
+const view = { world: 'stage', clip: 'idle', face: 'sad', paint: 1, flake: 0, outline: true, yaw: 0, fps: 0, paused: false, excite: CONFIG.ring.excite, confetti: true, time: 0, iso: false, direct: false };
+function newRun() {
+  Object.assign(view, { world: 'stage', clip: 'idle', face: 'sad', paint: 1, flake: 0, outline: true, yaw: 0, paused: false, excite: CONFIG.ring.excite, confetti: true, time: 0 });
+  applyWorld(); applyFace(); setConfetti(true); playClip(view.clip); syncInputs();
+}
+
+// ===== RENDER =====
+const canvas = document.getElementById('view');
+const isTest = new URLSearchParams(location.search).has('test');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, preserveDrawingBuffer: isTest });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(CONFIG.cam.fov, 1, 0.1, 80);
+const parts = { root: null, body: null, face: null, hull: null, mixer: null, clips: {}, set: null, crowd: null, confetti: null, sparkles: null, bulbs: null, beam: null, shadowFloor: null, blob: null, spot: null, composer: null, bloom: null };
+const shared = {
+  uKeyDir: { value: new THREE.Vector3() }, uKeyCol: { value: new THREE.Color() }, uFillDir: { value: new THREE.Vector3() },
+  uFillCol: { value: new THREE.Color() }, uRimCol: { value: new THREE.Color() }, uShadow: { value: new THREE.Color() },
+  uRimDir: { value: new THREE.Vector3() }, uGradeTint: { value: new THREE.Color() }, uGradeAmt: { value: 0 },
+  uSpecOn: { value: 1 }, uMode: { value: 0 }, uTime: { value: 0 },
+};
+const keyWorld = new THREE.Vector3();
+const fillWorld = new THREE.Vector3();
+const rimWorld = new THREE.Vector3();
+const keyBase = new THREE.Color();
+function shaderText(id) { return document.getElementById(id).textContent; }
+function makeToon(map, paint) {
+  const s = CONFIG.shader;
+  const uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+    uMap: { value: map }, uPaint: { value: paint || map }, uHasPaint: { value: paint ? 1 : 0 }, uCell: { value: new THREE.Vector2() },
+    uPaintAmt: { value: 1 }, uFlake: { value: 0 }, uFlakeScale: { value: s.flakeScale }, uBand1: { value: s.band1 }, uBand2: { value: s.band2 },
+    uSoft: { value: s.soft }, uRimPow: { value: s.rimPow }, uSpecPow: { value: s.specPow }, uSpecCut: { value: s.specCut },
+  }]);
+  Object.assign(uniforms, shared);
+  return new THREE.ShaderMaterial({ uniforms, vertexShader: shaderText('toonVert'), fragmentShader: shaderText('toonFrag'), fog: true });
+}
+function makeHull(body, face) {
+  const strip = (g) => { const c = g.clone(); for (const k of Object.keys(c.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k)) c.deleteAttribute(k); return c; };
+  const hullGeo = mergeGeometries([strip(body.geometry), strip(face.geometry)], false);
+  const hullMat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uThick: { value: CONFIG.outlineThick }, uColor: { value: new THREE.Color() } }]),
+    vertexShader: shaderText('hullVert'), fragmentShader: shaderText('hullFrag'), side: THREE.BackSide, fog: true,
+  });
+  const hull = new THREE.SkinnedMesh(hullGeo, hullMat);
+  hull.bind(body.skeleton, body.bindMatrix);
+  hull.frustumCulled = false;
+  hull.position.copy(body.position); hull.quaternion.copy(body.quaternion); hull.scale.copy(body.scale);
+  return hull;
+}
+function setupClown(a) {
+  parts.root = a.gltf.scene; scene.add(parts.root);
+  parts.root.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    if (o.material.name === 'face') parts.face = o; else parts.body = o;
+  });
+  parts.body.material = makeToon(parts.body.material.map, null);
+  parts.face.material = makeToon(a.face, a.paint);
+  parts.body.castShadow = true; parts.face.castShadow = true;
+  parts.hull = makeHull(parts.body, parts.face);
+  parts.body.parent.add(parts.hull);
+  parts.mixer = new THREE.AnimationMixer(parts.root);
+  for (const c of a.gltf.animations) parts.clips[c.name] = c;
+}
+function setupSet(a) {
+  parts.set = a.set.scene;
+  parts.set.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = new THREE.MeshBasicMaterial({ map: o.material.map, fog: true, side: THREE.DoubleSide });
+  });
+  scene.add(parts.set);
+  scene.fog = new THREE.FogExp2(a.layout.fog, CONFIG.ring.fogDensity);
+  parts.crowd = makeCrowd(a.layout.seats, a.cards); scene.add(parts.crowd);
+  parts.confetti = makeConfetti(a.layout.ring_r); scene.add(parts.confetti);
+  parts.sparkles = makeSparkles(a.layout); scene.add(parts.sparkles);
+  parts.bulbs = makeBulbs(a.layout.bulbs, a.layout.spot.color); scene.add(parts.bulbs);
+  parts.beam = makeBeam(a.layout.spot); scene.add(parts.beam);
+  makeShadows(a.layout);
+}
+function makeCrowd(seats, cards) {
+  const r = CONFIG.ring;
+  const geo = new THREE.PlaneGeometry(r.cardW, r.cardH); geo.translate(0, r.cardH / 2, 0);
+  const cell = new Float32Array(seats.length), phase = new Float32Array(seats.length);
+  const mesh = new THREE.InstancedMesh(geo, null, seats.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
+  seats.forEach((s, i) => {
+    const [x, y, z] = s.p;
+    q.setFromAxisAngle(up, Math.atan2(-x, -z));
+    m.compose(new THREE.Vector3(x, y, z), q, one); mesh.setMatrixAt(i, m);
+    cell[i] = (i * 5 + s.tier * 3) % 8; phase[i] = ((i * 0.618) % 1);
+  });
+  geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(cell, 1));
+  geo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phase, 1));
+  mesh.material = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+      uCards: { value: cards }, uCells: { value: 8 }, uExcite: { value: r.excite }, uBob: { value: r.bob }, uSway: { value: r.sway },
+      uDark: { value: new THREE.Color(r.dark) }, uRim: { value: new THREE.Color(r.rimCol) },
+    }]),
+    vertexShader: shaderText('crowdVert'), fragmentShader: shaderText('crowdFrag'), side: THREE.DoubleSide, fog: true,
+  });
+  mesh.material.uniforms.uTime = shared.uTime;
+  mesh.frustumCulled = false;
+  return mesh;
+}
+function makeConfetti(ringR) {
+  const r = CONFIG.ring, n = r.confetti;
+  const base = new THREE.PlaneGeometry(r.piece[0], r.piece[1]);
+  const geo = new THREE.InstancedBufferGeometry(); geo.index = base.index;
+  geo.setAttribute('position', base.getAttribute('position'));
+  const start = new Float32Array(n * 3), motion = new Float32Array(n * 4), col = new Float32Array(n * 3);
+  const cols = r.confettiCols.map((h) => new THREE.Color(h));
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * Math.min(r.spread, ringR);
+    start.set([Math.cos(a) * d, r.spawnY[0] + rnd() * (r.spawnY[1] - r.spawnY[0]), Math.sin(a) * d], i * 3);
+    motion.set([0.1 + rnd() * 0.25, 0.1 + rnd() * 0.25, 2 + rnd() * 6, rnd()], i * 4);
+    const c = cols[i % cols.length]; col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute('aStart', new THREE.InstancedBufferAttribute(start, 3));
+  geo.setAttribute('aMotion', new THREE.InstancedBufferAttribute(motion, 4));
+  geo.setAttribute('aColor', new THREE.InstancedBufferAttribute(col, 3));
+  geo.instanceCount = n;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uCycle: { value: r.cycle }, uFall: { value: r.fall }, uFloor: { value: 0.004 }, uExt: { value: Math.hypot(r.piece[0], r.piece[1]) / 2 } }]),
+    vertexShader: shaderText('confettiVert'), fragmentShader: shaderText('confettiFrag'), side: THREE.DoubleSide, fog: true, clipping: true,
+  });
+  mat.uniforms.uTime = shared.uTime;
+  const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false;
+  return mesh;
+}
+function makeSparkles(layout) {
+  const r = CONFIG.ring, n = r.sparkles;
+  const base = new THREE.PlaneGeometry(1, 1);
+  const geo = new THREE.InstancedBufferGeometry(); geo.index = base.index;
+  geo.setAttribute('position', base.getAttribute('position')); geo.setAttribute('uv', base.getAttribute('uv'));
+  const pos = new Float32Array(n * 3), ph = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const b = layout.bulbs[(i * 7) % layout.bulbs.length];
+    const inBeam = i % 3 === 0;
+    const a = i * 2.39996, d = (i % 11) / 11 * 2.6;
+    pos.set(inBeam ? [Math.cos(a) * d, 0.6 + (i % 17) / 17 * 8, Math.sin(a) * d] : [b[0], b[1] - 0.15, b[2]], i * 3);
+    ph[i] = (i * 0.381966) % 1;
+  }
+  geo.setAttribute('aPos', new THREE.InstancedBufferAttribute(pos, 3));
+  geo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(ph, 1));
+  geo.instanceCount = n;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uSize: { value: r.sparkSize }, uColor: { value: new THREE.Color(layout.spot.color).multiplyScalar(r.sparkGain) }, ...THREE.UniformsLib.fog },
+    vertexShader: shaderText('sparkVert'), fragmentShader: shaderText('sparkFrag'),
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  mat.uniforms.uTime = shared.uTime;
+  const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false;
+  return mesh;
+}
+function makeBulbs(list, hex) {
+  const r = CONFIG.ring;
+  const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(hex).multiplyScalar(r.bulbGain), fog: false });
+  const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(r.bulbR, 8, 6), mat, list.length);
+  const m = new THREE.Matrix4();
+  list.forEach((p, i) => { m.makeTranslation(p[0], p[1], p[2]); mesh.setMatrixAt(i, m); });
+  return mesh;
+}
+function makeBeam(spot) {
+  const h = spot.pos[1], rad = Math.tan(THREE.MathUtils.degToRad(spot.angle_deg / 2)) * h;
+  const geo = new THREE.ConeGeometry(rad, h, 48, 1, true); geo.translate(0, h / 2, 0);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(spot.color) }, uStrength: { value: CONFIG.ring.beamStrength }, uTime: shared.uTime },
+    vertexShader: shaderText('beamVert'), fragmentShader: shaderText('beamFrag'),
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+function makeShadows(layout) {
+  const r = CONFIG.ring, s = layout.spot;
+  const spot = new THREE.SpotLight(s.color, 0, 0, THREE.MathUtils.degToRad(s.angle_deg / 2), s.penumbra);
+  spot.position.fromArray(s.pos); spot.target.position.set(0, 0, 0);
+  spot.castShadow = true; spot.shadow.mapSize.set(r.shadowMap, r.shadowMap);
+  spot.shadow.camera.near = r.shadowNear; spot.shadow.camera.far = r.shadowFar; spot.shadow.bias = -0.0005;
+  scene.add(spot, spot.target); parts.spot = spot;
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(layout.ring_r, 64), new THREE.ShadowMaterial({ opacity: r.shadowOpacity }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = 0.006; floor.receiveShadow = true;
+  scene.add(floor); parts.shadowFloor = floor;
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(r.blobR * 2, r.blobR * 2), new THREE.ShaderMaterial({
+    uniforms: { uOpacity: { value: r.blobOpacity } }, vertexShader: shaderText('plainVert'), fragmentShader: shaderText('blobFrag'),
+    transparent: true, depthWrite: false,
+  }));
+  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.008; scene.add(blob); parts.blob = blob;
+}
+function makePost() {
+  const p = CONFIG.post;
+  const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
+  composer.addPass(new RenderPass(scene, camera));
+  const ao = new N8AOPostPass(scene, camera, 1, 1);
+  ao.configuration.aoRadius = p.aoRadius; ao.configuration.intensity = p.aoIntensity; ao.configuration.halfRes = true;
+  ao.setQualityMode('Medium');
+  composer.addPass(ao);
+  parts.bloom = new BloomEffect({ mipmapBlur: true, intensity: p.bloom, luminanceThreshold: p.bloomThreshold });
+  const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
+  const grain = new NoiseEffect({ blendFunction: BlendFunction.OVERLAY }); grain.blendMode.opacity.value = p.grain;
+  composer.addPass(new EffectPass(camera, parts.bloom, new VignetteEffect({ darkness: p.vignette }), grain, tone));
+  composer.addPass(new EffectPass(camera, new SMAAEffect()));
+  parts.composer = composer;
+}
+function applyWorld() {
+  const w = CONFIG.worlds[view.world];
+  scene.background = new THREE.Color(w.bg);
+  keyWorld.fromArray(w.keyDir).normalize(); fillWorld.fromArray(w.fillDir).normalize();
+  keyBase.fromArray(w.key).multiplyScalar(w.keyS);
+  shared.uKeyCol.value.copy(keyBase);
+  shared.uFillCol.value.fromArray(w.fill).multiplyScalar(w.fillS);
+  shared.uRimCol.value.fromArray(w.rim).multiplyScalar(w.rimS);
+  shared.uShadow.value.fromArray(w.shadow);
+  rimWorld.fromArray(w.rimDir).normalize();
+  const tint = new THREE.Color(w.gradeTint);
+  shared.uGradeTint.value.copy(tint).multiplyScalar(1 / Math.max(tint.r * 0.2126 + tint.g * 0.7152 + tint.b * 0.0722, 1e-3));
+  shared.uGradeAmt.value = w.gradeAmt;
+  if (parts.hull) parts.hull.material.uniforms.uColor.value.set(w.outline);
+  markActive('world', view.world);
+}
+function applyFace() {
+  const u = parts.face.material.uniforms;
+  u.uCell.value.fromArray(CONFIG.faces[view.face]);
+  u.uPaintAmt.value = view.paint; u.uFlake.value = view.flake;
+  parts.hull.visible = view.outline;
+  parts.crowd.material.uniforms.uExcite.value = view.excite;
+  markActive('face', view.face);
+  document.getElementById('outline').classList.toggle('is-active', view.outline);
+}
+function setConfetti(on) {
+  view.confetti = on;
+  parts.confetti.visible = on && !view.iso;
+  document.getElementById('confetti').classList.toggle('is-active', on);
+}
+function resize() {
+  const touch = matchMedia('(pointer: coarse)').matches;
+  const dpr = Math.min(devicePixelRatio || 1, touch ? CONFIG.dprTouch : CONFIG.dprDesktop);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width === Math.round(w * dpr) && canvas.height === Math.round(h * dpr)) return;
+  renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
+  if (parts.composer) parts.composer.setSize(w, h);
+  fitCamera();
+}
+function fitCamera() {
+  const w = canvas.clientWidth, h = Math.max(canvas.clientHeight, 1), c = CONFIG.cam;
+  camera.aspect = w / h;
+  const hfov = THREE.MathUtils.degToRad(c.hfovMin);
+  camera.fov = Math.max(c.fov, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / camera.aspect)));
+  if (view.iso) {
+    const fit = camera.aspect < 0.8 ? 0.8 / camera.aspect : 1;
+    camera.fov = c.fov; camera.position.set(0, c.isoY, c.isoDist * fit); camera.lookAt(0, c.isoY, 0);
+  } else {
+    camera.position.fromArray(c.pos); camera.lookAt(...c.look);
+  }
+  camera.updateProjectionMatrix();
+}
+function draw() {
+  camera.updateMatrixWorld();
+  shared.uKeyDir.value.copy(keyWorld).transformDirection(camera.matrixWorldInverse);
+  shared.uFillDir.value.copy(fillWorld).transformDirection(camera.matrixWorldInverse);
+  shared.uRimDir.value.copy(rimWorld).transformDirection(camera.matrixWorldInverse);
+  if (parts.root) parts.root.rotation.y = view.yaw;
+  renderer.info.reset();
+  if (view.iso || view.direct) { renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = CONFIG.exposure; renderer.render(scene, camera); return; }
+  renderer.toneMapping = THREE.NoToneMapping; renderer.toneMappingExposure = CONFIG.exposure;
+  parts.composer.render();
+}
+
+// ===== INPUT =====
+let dragX = null;
+function bindInput() {
+  canvas.addEventListener('pointerdown', (e) => { dragX = e.clientX; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', (e) => { if (dragX === null) return; view.yaw += (e.clientX - dragX) * CONFIG.turnPerPx; dragX = e.clientX; });
+  addEventListener('pointerup', () => { dragX = null; });
+  addEventListener('blur', () => { dragX = null; });
+  addEventListener('keydown', onKey);
+  document.getElementById('paint').addEventListener('input', (e) => { view.paint = Number(e.target.value); applyFace(); });
+  document.getElementById('flake').addEventListener('input', (e) => { view.flake = Number(e.target.value); applyFace(); });
+  document.getElementById('excite').addEventListener('input', (e) => { view.excite = Number(e.target.value); applyFace(); });
+  document.getElementById('outline').addEventListener('click', () => { view.outline = !view.outline; applyFace(); });
+  document.getElementById('confetti').addEventListener('click', () => setConfetti(!view.confetti));
+}
+function onKey(e) {
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  const map = { Digit1: 'idle', Digit2: 'walk', Digit3: 'slap' };
+  if (map[e.code]) playClip(map[e.code]);
+  if (e.code === 'KeyM') { view.world = view.world === 'stage' ? 'mirror' : 'stage'; applyWorld(); }
+  if (e.code === 'ArrowLeft') view.yaw -= 0.2;
+  if (e.code === 'ArrowRight') view.yaw += 0.2;
+}
+
+// ===== UI =====
+const hud = document.getElementById('hud');
+function buildBar() {
+  const groups = { world: Object.keys(CONFIG.worlds), clip: CONFIG.clips, face: Object.keys(CONFIG.faces) };
+  for (const [g, names] of Object.entries(groups)) {
+    const box = document.querySelector(`[data-group="${g}"]`);
+    for (const n of names) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'bar__button'; b.textContent = n; b.dataset.name = n;
+      b.addEventListener('click', () => onPick(g, n));
+      box.appendChild(b);
+    }
+  }
+}
+function onPick(group, name) {
+  if (group === 'clip') { playClip(name); return; }
+  view[group] = name;
+  if (group === 'world') applyWorld(); else applyFace();
+}
+function markActive(group, name) {
+  for (const b of document.querySelectorAll(`[data-group="${group}"] .bar__button`)) b.classList.toggle('is-active', b.dataset.name === name);
+}
+function syncInputs() {
+  document.getElementById('paint').value = String(view.paint);
+  document.getElementById('flake').value = String(view.flake);
+  document.getElementById('excite').value = String(view.excite);
+}
+function drawHud() {
+  const i = renderer.info.render;
+  hud.textContent = `${view.fps.toFixed(0)} fps · ${i.calls} draws · ${i.triangles} tris · ${view.world} · ${view.clip}`;
+}
+
+// ===== SYSTEMS =====
+function playClip(name) {
+  if (!parts.mixer) return;
+  parts.mixer.stopAllAction();
+  parts.mixer.clipAction(parts.clips[name]).reset().play();
+  view.clip = name; markActive('clip', name);
+}
+let fpsAcc = 0, fpsN = 0;
+function stepFps(dt) {
+  fpsAcc += dt; fpsN++;
+  if (fpsAcc < 0.5) return;
+  view.fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
+}
+const tmpV = new THREE.Vector3();
+function tickEffects(dt) {
+  view.time += dt;
+  shared.uTime.value = view.time;
+  if (!parts.body || !parts.blob) return;
+  parts.body.skeleton.bones[0].getWorldPosition(tmpV);
+  parts.blob.position.x = tmpV.x; parts.blob.position.z = tmpV.z;
+  const r = CONFIG.ring, d = Math.hypot(tmpV.x, tmpV.z);
+  const inPool = view.iso ? 1 : 1 - THREE.MathUtils.smoothstep(d, r.poolR * 0.8, r.poolR * 1.2);
+  shared.uKeyCol.value.copy(keyBase).multiplyScalar(r.poolMin + (1 - r.poolMin) * inPool);
+}
+
+// ===== LOOP =====
+let last = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const raw = (now - last) / 1000 || 0;
+  last = now;
+  stepFps(raw);
+  resize();
+  const dt = Math.min(raw, CONFIG.dtMax);
+  if (!view.paused) { if (parts.mixer) parts.mixer.update(dt); tickEffects(dt); }
+  draw(); drawHud();
+}
+
+// ===== BOOT =====
+const EFFECTS = ['set', 'crowd', 'confetti', 'sparkles', 'bulbs', 'beam', 'shadowFloor', 'blob'];
+function showOnly(names) {
+  const on = new Set(names);
+  parts.body.visible = on.has('body'); parts.face.visible = on.has('face'); parts.hull.visible = on.has('hull') && view.outline;
+  for (const k of EFFECTS) parts[k].visible = on.has(k);
+}
+function testApi() {
+  return {
+    set(o) { Object.assign(view, o); applyWorld(); applyFace(); },
+    pose(clip, t) { playClip(clip); view.paused = true; parts.mixer.setTime(t); parts.root.updateMatrixWorld(true); },
+    show(o) { showOnly(Object.keys(o).filter((k) => o[k])); },
+    only(list) { showOnly(list); },
+    direct(on) { view.direct = on; },
+    isolate(on) { view.iso = on; parts.spot.visible = !on; showOnly(on ? ['body', 'face', 'hull'] : ['body', 'face', 'hull', ...EFFECTS]); fitCamera(); },
+    mode(m) { shared.uMode.value = m; },
+    spec(on) { shared.uSpecOn.value = on ? 1 : 0; },
+    bg(hex) { scene.background = hex ? new THREE.Color(hex) : new THREE.Color(CONFIG.worlds[view.world].bg); },
+    time(t) { view.paused = true; view.time = t - 1e-3; tickEffects(1e-3); },
+    place(x, z) { parts.root.position.set(x, 0, z); parts.root.updateMatrixWorld(true); tickEffects(0); },
+    keyNow() { return shared.uKeyCol.value.r; },
+    bloom(on) { parts.bloom.intensity = on ? CONFIG.post.bloom : 0; },
+    cast(on) { parts.body.castShadow = on; parts.face.castShadow = on; },
+    clipBelowFloor(on) { renderer.localClippingEnabled = on; parts.confetti.material.clippingPlanes = on ? [new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)] : []; parts.confetti.material.needsUpdate = true; },
+    render() {
+      renderer.info.autoReset = false; draw();
+      return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, w: canvas.width, h: canvas.height, textures: renderer.info.memory.textures };
+    },
+    hullBoundToBody() { return parts.hull.isSkinnedMesh === true && parts.hull.skeleton === parts.body.skeleton; },
+  };
+}
+async function boot() {
+  buildBar(); bindInput();
+  addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', () => { view.paused = document.hidden; });
+  let a;
+  try { a = await loadAll(); } catch (e) { hud.textContent = 'Load failed: ' + e.message; throw e; }
+  setupClown(a); setupSet(a); makePost();
+  newRun(); resize(); fitCamera();
+  if (isTest) window.__game = { newRun, state: () => view, api: testApi() };
+  requestAnimationFrame(frame);
+}
+boot();
+</script>
+</body>
+</html>

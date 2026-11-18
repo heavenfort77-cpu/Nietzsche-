@@ -96,6 +96,8 @@ function installHelpers(C) {
 }
 function runGates(C) {
   const api = window.__game.api, K = window.__chk, R = [];
+  // the game page shows the ring too: step 4 gates look at the clown alone, close up, without post
+  if (api.isolate) api.isolate(true);
   const all = { body: true, face: true, hull: true };
   api.show(all); api.set({ world: 'stage', face: 'sad', paint: 1, flake: 0, outline: true, yaw: 0 }); api.pose('idle', 0.5);
   const info = api.render();
