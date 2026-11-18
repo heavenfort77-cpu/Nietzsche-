@@ -1,0 +1,32 @@
+[
+ {
+  "name": "set: one mesh, triangles <= 60k",
+  "ok": true,
+  "info": "11360 triangles from 408 parts"
+ },
+ {
+  "name": "set UVs: no overlaps",
+  "ok": true,
+  "info": "0 faces"
+ },
+ {
+  "name": "bake finite and not black",
+  "ok": true,
+  "info": "mean 0.050, light bake 397s at 1024px x 64 samples"
+ },
+ {
+  "name": "spot pool: ring centre brighter than its edge",
+  "ok": true,
+  "info": "centre 0.556, edge 0.126"
+ },
+ {
+  "name": "crowd cards: 8 figures, each covers 15-60% of its cell",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "layout: seats and bulbs",
+  "ok": true,
+  "info": "411 seats, 264 bulbs"
+ }
+]
