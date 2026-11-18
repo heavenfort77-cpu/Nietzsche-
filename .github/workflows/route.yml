@@ -1,0 +1,22 @@
+# Proves the route for getting files back: a run commits a file to branch ci-out/route-<run>,
+# which the Claude session then fetches with git.
+name: route-test
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/route.yml']
+permissions:
+  contents: write
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write a file and commit it to a results branch
+        run: |
+          mkdir out && cd out
+          echo "run ${GITHUB_RUN_NUMBER} $(date -u +%FT%TZ) $(nproc) cores" > route.txt
+          python3 -c "import os; open('blob.bin','wb').write(os.urandom(2_000_000))"
+          sha256sum blob.bin > blob.sha256
+          git init -q -b results && git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "route test ${GITHUB_RUN_NUMBER}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" results:ci-out/route-${GITHUB_RUN_NUMBER}
