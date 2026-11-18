@@ -149,7 +149,7 @@ jobs:
           node mutate_step4.mjs | tee -a web.txt
           node check_step5.mjs game index.html shot | tee -a web.txt
           node mutate_step5.mjs | tee -a web.txt
-          node check-runtime.cjs game/index.html runtime 6 | tee -a web.txt
+          node check-runtime.cjs game/index.html runtime 6 2>&1 | tee -a web.txt
           node run_page.mjs . check_clown.html PROBE | tee -a web.txt
           cp ../clown_v2/out/probe/anim_test.glb ./probe_anim.glb
           node run_page.mjs . probe.html PROBE | tee -a web.txt

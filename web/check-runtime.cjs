@@ -37,6 +37,8 @@ const KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'Enter
     const fails = [], notes = [];
     const ctx = await browser.newContext(size);
     const page = await ctx.newPage();
+    // software rendering takes seconds per frame: screenshots and waits get a generous cap (skill 4b)
+    page.setDefaultTimeout(300000);
     let loaded = false;
     page.on('pageerror', (e) => fails.push('page error: ' + e.message));
     page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) fails.push('console error: ' + m.text()); });
