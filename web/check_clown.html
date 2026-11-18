@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>clown_v2 check</title>
+<style>body{margin:0;background:#1E1418}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const out = []; const rep = (n, ok, i = '') => out.push({ name: n, ok: !!ok, info: String(i) });
+try {
+  const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(900, 900); document.body.appendChild(r.domElement);
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  const scene = new THREE.Scene(); scene.background = new THREE.Color('#1E1418');
+  scene.add(new THREE.HemisphereLight(0xffe8d0, 0x302020, 1.2));
+  const key = new THREE.DirectionalLight(0xffdba8, 2.2); key.position.set(-1.5, 3, 2.5); scene.add(key);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50); cam.position.set(0, 1.0, 4.6); cam.lookAt(0, 0.9, 0);
+  const g = await new GLTFLoader().loadAsync('./' + (new URLSearchParams(location.search).get('glb') || 'clown_v2.glb'));
+  scene.add(g.scene);
+  let skinned = 0, tris = 0, face = null;
+  g.scene.traverse(o => { if (o.isSkinnedMesh) { skinned++; tris += o.geometry.index.count / 3; if (o.material.name === 'face') face = o.material; } });
+  rep('GLB loads: 2 skinned meshes', skinned === 2, `skinned ${skinned}, triangles ${tris}`);
+  const names = g.animations.map(a => a.name).sort().join(',');
+  rep('clips idle, slap, walk', names === 'idle,slap,walk', g.animations.map(a => `${a.name} ${a.duration.toFixed(3)}s`).join(', '));
+  const mixer = new THREE.AnimationMixer(g.scene);
+  const hand = g.scene.getObjectByName('hand_R');
+  const shots = {};
+  for (const clip of g.animations) {
+    mixer.stopAllAction(); const a = mixer.clipAction(clip); a.reset().play();
+    const pos = [];
+    for (let k = 0; k <= 4; k++) {
+      mixer.setTime(clip.duration * k / 4); g.scene.updateMatrixWorld(true);
+      const p = new THREE.Vector3(); hand.getWorldPosition(p); pos.push(p);
+    }
+    let moved = 0; for (let k = 1; k < pos.length; k++) moved = Math.max(moved, pos[k].distanceTo(pos[0]));
+    const finite = pos.every(p => isFinite(p.x) && isFinite(p.y) && isFinite(p.z));
+    rep(`clip ${clip.name} plays (right hand moves, no NaN)`, finite && moved > 0.01, `hand moved up to ${(moved * 100).toFixed(1)} cm`);
+  }
+  mixer.stopAllAction(); mixer.clipAction(g.animations.find(a => a.name === 'idle')).reset().play(); mixer.setTime(0.5);
+  r.info.autoReset = true; r.render(scene, cam);
+  rep('draw calls <= 3 (body, face; hull not added yet)', r.info.render.calls <= 3, `calls ${r.info.render.calls}, triangles ${r.info.render.triangles}`);
+  // face expression swap: cell offsets in the 2x2 atlas, measure the face pixels change
+  const map = face.map;
+  const px = () => { const gl = r.getContext(); const b = new Uint8Array(4 * 60 * 40); gl.readPixels(420, 640, 60, 40, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+  const cells = { sad: [0, 0], smile: [0.5, 0], startle: [0, -0.5], wince: [0.5, -0.5] };
+  const base = px(); let diffs = [];
+  for (const [n, [u, v]] of Object.entries(cells)) {
+    map.offset.set(u, v); map.needsUpdate = true; r.render(scene, cam);
+    const b = px(); let d = 0; for (let i = 0; i < b.length; i++) d += Math.abs(b[i] - base[i]); diffs.push(`${n} ${(d / b.length).toFixed(1)}`);
+  }
+  map.offset.set(0, 0); r.render(scene, cam);
+  rep('face cell swap changes the face (texture.offset)', diffs.slice(1).every(s => parseFloat(s.split(' ')[1]) > 1), diffs.join(', '));
+} catch (e) { rep('exception', false, e.stack || e); }
+window.PROBE = out;
+</script></body></html>

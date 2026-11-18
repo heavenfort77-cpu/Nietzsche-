@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>r187 probe</title>
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/",
+  "three/examples/jsm/": "./node_modules/three/examples/jsm/",
+  "postprocessing": "./node_modules/postprocessing/build/index.js",
+  "n8ao": "./node_modules/n8ao/dist/N8AO.js",
+  "meshopt": "./node_modules/meshoptimizer/meshopt_decoder.mjs"
+} }
+</script></head><body>
+<script type="module">
+const out = [];
+const rep = (n, ok, i = '') => out.push({ name: n, ok: !!ok, info: String(i) });
+try {
+  const THREE = await import('three');
+  rep('three r187 loads', THREE.REVISION === '187', 'REVISION ' + THREE.REVISION);
+  const pp = await import('postprocessing');
+  rep('postprocessing loads', !!pp.EffectComposer && !!pp.BloomEffect, 'ToneMappingMode.AGX=' + (pp.ToneMappingMode && pp.ToneMappingMode.AGX));
+  const n8 = await import('n8ao');
+  rep('N8AO loads', !!(n8.N8AOPostPass || n8.N8AOPass), Object.keys(n8).join(','));
+  const mo = await import('meshopt');
+  await mo.MeshoptDecoder.ready;
+  rep('meshopt decoder ready', mo.MeshoptDecoder.supported, '');
+  const { KTX2Loader } = await import('three/addons/loaders/KTX2Loader.js');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const { OutlineEffect } = await import('three/addons/effects/OutlineEffect.js');
+  rep('KTX2Loader, GLTFLoader, OutlineEffect import', !!KTX2Loader && !!GLTFLoader && !!OutlineEffect);
+  const r = new THREE.WebGLRenderer({ antialias: false });
+  r.setSize(320, 240); document.body.appendChild(r.domElement);
+  rep('WebGL2 context', r.capabilities.isWebGL2, r.getContext().getParameter(r.getContext().VERSION));
+  const k = new KTX2Loader().setTranscoderPath('./node_modules/three/examples/jsm/libs/basis/').detectSupport(r);
+  rep('KTX2 detectSupport', true, JSON.stringify(k.workerConfig));
+  const gl = new GLTFLoader(); gl.setMeshoptDecoder(mo.MeshoptDecoder); gl.setKTX2Loader(k);
+  const g = await gl.loadAsync('./probe_anim.glb');
+  const mixer = new THREE.AnimationMixer(g.scene);
+  g.animations.forEach(a => mixer.clipAction(a).play()); mixer.update(0.2);
+  let skinned = 0; g.scene.traverse(o => { if (o.isSkinnedMesh) skinned++; });
+  rep('GLB with skin + actions plays in AnimationMixer', g.animations.length === 2 && skinned === 1, g.animations.map(a => a.name).join(',') + ' skinned=' + skinned);
+  const scene = new THREE.Scene(); scene.add(g.scene);
+  const cam = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, 50); cam.position.set(0, 1, 4);
+  const comp = new pp.EffectComposer(r, { frameBufferType: THREE.HalfFloatType });
+  comp.addPass(new pp.RenderPass(scene, cam));
+  comp.addPass(new pp.EffectPass(cam, new pp.BloomEffect({ intensity: 1, luminanceThreshold: 0.9 }), new pp.ToneMappingEffect({ mode: pp.ToneMappingMode.AGX })));
+  comp.render(); r.info.autoReset = true;
+  rep('EffectComposer bloom + AgX tone map renders', true, 'calls=' + r.info.render.calls);
+} catch (e) { rep('exception', false, e.stack || e); }
+window.PROBE = out;
+</script></body></html>

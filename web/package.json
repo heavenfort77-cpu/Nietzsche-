@@ -1,0 +1,15 @@
+{
+  "name": "clown-checks",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "three": "0.187.0",
+    "postprocessing": "6.39.6",
+    "n8ao": "2.1.0",
+    "meshoptimizer": "1.3.0",
+    "puppeteer-core": "*",
+    "playwright-core": "*",
+    "acorn": "*",
+    "acorn-walk": "*"
+  }
+}

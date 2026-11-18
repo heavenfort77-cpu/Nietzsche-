@@ -1,0 +1,7 @@
+node_modules/
+clown_v2/out/
+clown_v2/chk/
+web/viewer/lib/
+web/viewer/assets/
+web/*.glb
+__pycache__/
