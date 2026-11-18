@@ -52,6 +52,14 @@ try {
     await p.screenshot({ path: `${shot}_ring.png` });
   }
 } catch (e) { out.push('FAIL run | ' + String(e).slice(0, 300)); }
+  // every control fully on screen at phone sizes (the page hides overflow, so a scroll check cannot see this);
+  // switching to a mobile viewport reloads the page, so this runs last
+  for (const [w, h] of [[390, 844], [844, 390]]) {
+    await p.setViewport({ width: w, height: h, isMobile: true, hasTouch: true });
+    await p.waitForSelector('.bar button');
+    const off = await p.evaluate(() => [...document.querySelectorAll('.bar button, .bar input, .bar label')].filter((e) => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth + 0.5 || r.top < 0 || r.bottom > innerHeight + 0.5; }).map((e) => e.id || e.textContent).slice(0, 5));
+    out.push(`${off.length ? 'FAIL' : 'PASS'} controls on screen at ${w}x${h}${off.length ? ' | off screen: ' + off.join(', ') : ''}`);
+  }
 out.push(`${errs.length ? 'FAIL' : 'PASS'} no page or console errors${errs.length ? ' | ' + errs.slice(0, 3).join(' / ').slice(0, 300) : ''}`);
 for (const l of out) console.log(l);
 console.log(`RESULT ${out.filter((l) => l.startsWith('PASS')).length} of ${out.length} pass`);

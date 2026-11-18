@@ -15,7 +15,7 @@ body { display: flex; flex-direction: column; }
 .stage { position: relative; flex: 1; min-height: 0; }
 .stage__canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
 .bar { display: flex; flex-wrap: wrap; gap: var(--gap); justify-content: center; padding: var(--gap) var(--gap) calc(env(safe-area-inset-bottom) + var(--gap)); background: var(--panel); }
-.bar__group { display: flex; gap: var(--gap); align-items: center; }
+.bar__group { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap); align-items: center; max-width: 100%; }
 /* ===== CSS: UI ===== */
 .bar__button { min-width: 44px; min-height: 44px; padding: 0 10px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--ink); border-radius: var(--radius); }
 .bar__slider { width: 110px; min-height: 44px; }
@@ -993,6 +993,8 @@ async function boot() {
   let a;
   try { a = await loadAll(); } catch (e) { hud.textContent = 'Load failed: ' + e.message; throw e; }
   setupClown(a); setupSet(a); makePost();
+  // the post chain renders several passes per frame: count them all (draw() resets once per frame)
+  renderer.info.autoReset = false;
   newRun(); resize(); fitCamera();
   if (isTest) window.__game = { newRun, state: () => view, api: testApi() };
   requestAnimationFrame(frame);
