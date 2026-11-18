@@ -386,7 +386,7 @@ void main() {
 // BOOT    boot(); test hook window.__game = { newRun, state, api } when ?test
 // TEST    api.mode(0 lit, 1 texture colour, 2 blouse mask), api.bg(hex), api.isolate(on), api.direct(on: no post),
 //         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on), api.counts(),
-//         api.governor(on), api.aoEnabled(on), api.feedFrames(ms, n), api.resetGovernor(), api.audit() (read-only performance audit)
+//         api.governor(on), api.aoEnabled(on), api.dprLevel(i), api.loseContext(lose), api.lost(), api.feedFrames(ms, n), api.resetGovernor(), api.audit() (read-only performance audit)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -584,14 +584,18 @@ const CONFIG = Object.freeze({
   exposure: 1.15,
   // outline hull bounding sphere scale over the posed mesh (outline width plus limbs swinging out)
   hullBoundsGrow: 1.3,
-  // pixel-ratio steps on desktop and laptop, sharpest first; the frame governor moves between them
-  dprStepsDesktop: Object.freeze([2, 1.75, 1.5, 1.25, 1]),
+  // pixel-ratio steps on desktop and laptop, sharpest first (developer rule: pixel ratio 1.25 at most)
+  dprStepsDesktop: Object.freeze([1.25, 1]),
   // pixel-ratio steps on touch devices, sharpest first
-  dprStepsTouch: Object.freeze([1.5, 1.25, 1]),
-  // starting step on desktop (index into dprStepsDesktop: 1.25, steps up on a fast GPU)
-  dprStartDesktop: 3,
-  // starting step on touch (index into dprStepsTouch: 1.25)
-  dprStartTouch: 1,
+  dprStepsTouch: Object.freeze([1.25, 1]),
+  // starting step on desktop (index into dprStepsDesktop)
+  dprStartDesktop: 0,
+  // starting step on touch (index into dprStepsTouch)
+  dprStartTouch: 0,
+  // most texture anisotropy (developer rule: 4)
+  maxAniso: 4,
+  // extra bounding radius for instanced effects (sway, bob, card height), metres
+  boundsPad: 1.0,
   gov: Object.freeze({
     // frames are averaged over this long before a decision, seconds
     window: 2.0,
@@ -617,7 +621,7 @@ const ASSETS = Object.freeze({
 });
 async function loadTex(url, flipY) {
   const t = await new THREE.TextureLoader().loadAsync(url);
-  t.flipY = flipY; t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true;
+  t.flipY = flipY; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = CONFIG.maxAniso; t.needsUpdate = true;
   return t;
 }
 async function loadAll() {
@@ -630,7 +634,7 @@ async function loadAll() {
 }
 
 // ===== STATE =====
-const view = { world: 'stage', clip: 'idle', face: 'sad', paint: 1, flake: 0, outline: true, yaw: 0, fps: 0, paused: false, excite: CONFIG.ring.excite, confetti: true, time: 0, iso: false, direct: false };
+const view = { lost: false, world: 'stage', clip: 'idle', face: 'sad', paint: 1, flake: 0, outline: true, yaw: 0, fps: 0, paused: false, excite: CONFIG.ring.excite, confetti: true, time: 0, iso: false, direct: false };
 function newRun() {
   Object.assign(view, { world: 'stage', clip: 'idle', face: 'sad', paint: 1, flake: 0, outline: true, yaw: 0, paused: false, excite: CONFIG.ring.excite, confetti: true, time: 0 });
   applyWorld(); applyFace(); setConfetti(true); playClip(view.clip); syncInputs();
@@ -733,7 +737,8 @@ function makeCrowd(seats, cards, cells) {
     vertexShader: shaderText('crowdVert'), fragmentShader: shaderText('crowdFrag'), side: THREE.DoubleSide, fog: true,
   });
   mesh.material.uniforms.uTime = shared.uTime;
-  mesh.frustumCulled = false;
+  // culled by the bounds of every seat, grown for card height and bob
+  mesh.computeBoundingSphere(); mesh.boundingSphere.radius += r.cardH + CONFIG.boundsPad;
   return mesh;
 }
 function scatterLayer(geo, n, ringR, cols, rnd) {
@@ -783,8 +788,9 @@ function makeConfetti(ringR) {
     vertexShader: shaderText('confettiVert'), fragmentShader: shaderText('confettiFrag'), side: THREE.DoubleSide, fog: true, clipping: true,
   });
   mat.uniforms.uTime = shared.uTime;
-  const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false;
-  return mesh;
+  const reach = Math.min(r.spread, ringR) + CONFIG.boundsPad, top = r.spawnY[1] + CONFIG.boundsPad;
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, top / 2, 0), Math.hypot(reach, top / 2));
+  return new THREE.Mesh(geo, mat);
 }
 function makeSparkles(layout) {
   const r = CONFIG.ring, n = r.sparkles;
@@ -808,7 +814,9 @@ function makeSparkles(layout) {
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
   mat.uniforms.uTime = shared.uTime;
-  const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false;
+  geo.boundingSphere = new THREE.Box3().setFromArray(pos).getBoundingSphere(new THREE.Sphere());
+  geo.boundingSphere.radius += CONFIG.boundsPad;
+  const mesh = new THREE.Mesh(geo, mat);
   return mesh;
 }
 function makeBulbs(list, hex) {
@@ -831,7 +839,8 @@ function makeBeam(spot) {
 }
 function makeShadows(layout) {
   const r = CONFIG.ring, s = layout.spot;
-  const spot = new THREE.SpotLight(s.color, 0, 0, THREE.MathUtils.degToRad(s.angle_deg / 2), s.penumbra);
+  // intensity 1: nothing lit uses it (all materials are toon, basic or shadow-only); no zero-intensity lights
+  const spot = new THREE.SpotLight(s.color, 1, 0, THREE.MathUtils.degToRad(s.angle_deg / 2), s.penumbra);
   spot.position.fromArray(s.pos); spot.target.position.set(0, 0, 0);
   spot.castShadow = true; spot.shadow.mapSize.set(r.shadowMap, r.shadowMap);
   spot.shadow.camera.near = r.shadowNear; spot.shadow.camera.far = r.shadowFar; spot.shadow.bias = -0.0005;
@@ -851,7 +860,8 @@ function makePost() {
   composer.addPass(new RenderPass(scene, camera));
   const ao = new N8AOPostPass(scene, camera, 1, 1);
   ao.configuration.aoRadius = p.aoRadius; ao.configuration.intensity = p.aoIntensity; ao.configuration.halfRes = true;
-  ao.setQualityMode('Medium');
+  // Performance mode: 8 AO samples at half resolution (developer rule: 4 to 8)
+  ao.setQualityMode('Performance');
   composer.addPass(ao); parts.ao = ao;
   parts.bloom = new BloomEffect({ mipmapBlur: true, intensity: p.bloom, luminanceThreshold: p.bloomThreshold });
   const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
@@ -1070,6 +1080,7 @@ function frame(now) {
   if (gov.on) govStep(raw);
   const dt = Math.min(raw, CONFIG.dtMax);
   if (!view.paused) { if (parts.mixer) parts.mixer.update(dt); tickEffects(dt); }
+  if (view.lost) return;
   draw();
   if (fpsChanged) drawHud();
 }
@@ -1081,6 +1092,8 @@ function showOnly(names) {
   parts.body.visible = on.has('body'); parts.face.visible = on.has('face'); parts.hull.visible = on.has('hull') && view.outline;
   for (const k of EFFECTS) parts[k].visible = on.has(k);
 }
+// the lose-context extension is unreachable once the context is lost, so the test keeps it
+let loseExt = null;
 function testApi() {
   return {
     set(o) { Object.assign(view, o); applyWorld(); applyFace(); },
@@ -1105,12 +1118,15 @@ function testApi() {
     counts() { return { crowd: parts.crowd.count, scatter: parts.scatter.children.reduce((n, m) => n + m.count, 0), confetti: parts.confetti.geometry.instanceCount, bulbs: parts.bulbs.count, sparkles: parts.sparkles.geometry.instanceCount }; },
     governor(on) { gov.on = on; },
     aoEnabled(on) { parts.ao.enabled = on; },
+    dprLevel(i) { gov.level = i; resize(); return currentDpr(); },
+    loseContext(lose) { if (lose) { loseExt = renderer.getContext().getExtension('WEBGL_lose_context'); loseExt.loseContext(); } else loseExt.restoreContext(); },
+    lost() { return view.lost === true; },
     feedFrames(ms, n) { for (let k = 0; k < n; k++) govStep(ms / 1000); return { dpr: currentDpr(), level: gov.level, cap: gov.cap, ao: parts.ao.enabled }; },
     resetGovernor() { govInit(); parts.ao.enabled = true; resize(); return { dpr: currentDpr(), level: gov.level }; },
     audit() {
-      let lights = 0, casterTris = 0, texBytes = 0; const lit = [], noCull = [], seen = new Set();
+      let lights = 0, zeroLights = 0, casterTris = 0, texBytes = 0, maxAniso = 0; const lit = [], noCull = [], seen = new Set();
       scene.traverse((o) => {
-        if (o.isLight) lights++;
+        if (o.isLight) { lights++; if (o.intensity === 0) zeroLights++; }
         if (!o.isMesh && !o.isPoints) return;
         const g = o.geometry, tris = (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.count || g.instanceCount || 1);
         if (o.castShadow) casterTris += tris;
@@ -1119,11 +1135,11 @@ function testApi() {
           if (/Standard|Physical|Lambert|Phong|MeshToon/.test(m.type)) lit.push(m.type);
           for (const t of texturesOf(m)) {
             if (seen.has(t) || !t.image) continue;
-            seen.add(t); texBytes += (t.image.width || 0) * (t.image.height || 0) * 4 * (t.generateMipmaps ? 4 / 3 : 1);
+            seen.add(t); maxAniso = Math.max(maxAniso, t.anisotropy); texBytes += (t.image.width || 0) * (t.image.height || 0) * 4 * (t.generateMipmaps ? 4 / 3 : 1);
           }
         }
       });
-      return { lights, lit, noCull, casterTris: Math.round(casterTris), texMB: texBytes / 1048576, shadowMap: parts.spot.shadow.mapSize.x,
+      return { lights, zeroLights, maxAniso, aoSamples: parts.ao.configuration.aoSamples, lit, noCull, casterTris: Math.round(casterTris), texMB: texBytes / 1048576, shadowMap: parts.spot.shadow.mapSize.x,
         programs: renderer.info.programs.length, textures: renderer.info.memory.textures, aoHalf: parts.ao.configuration.halfRes, dpr: currentDpr() };
     },
     hullBoundToBody() { return parts.hull.isSkinnedMesh === true && parts.hull.skeleton === parts.body.skeleton; },
@@ -1134,6 +1150,9 @@ async function boot() {
   new ResizeObserver(() => resize()).observe(canvas); watchDpr();
   addEventListener('resize', resize);
   document.addEventListener('visibilitychange', () => { view.paused = document.hidden; });
+  // phones drop the WebGL context when backgrounded: wait for it, then rebuild GPU state and carry on
+  canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); view.lost = true; });
+  canvas.addEventListener('webglcontextrestored', () => { view.lost = false; warmUp(); });
   let a;
   try { a = await loadAll(); } catch (e) { hud.textContent = 'Load failed: ' + e.message; throw e; }
   setupClown(a); setupSet(a); makePost(); warmUp();

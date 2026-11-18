@@ -17,12 +17,15 @@ const CONFIG = {
   aoMaxTriShare: 0.02, aoMaxPasses: 16,
   // 3. draw calls per frame, all passes (Dawnpunk: 1,760)
   maxCalls: 150,
-  // 4. triangles in meshes that skip frustum culling, at most (only always-on-screen things may skip it)
-  noCullTris: 5000,
+  // 4. meshes that skip frustum culling: none (developer rule; enlarge bounds instead)
   // 5. texture memory on the GPU, MB, mipmaps included (Dawnpunk: about 500 MB)
   maxTexMB: 64,
-  // 6. desktop starts at this pixel ratio; the governor may step up only on fast frames
+  // 6. desktop starts at this pixel ratio, and never goes above it (developer rule: 1.25 at most)
   startDpr: 1.25,
+  // 5. texture anisotropy at most (developer rule)
+  maxAniso: 4,
+  // 2. AO samples at most (developer rule: 4 to 8)
+  aoMaxSamples: 8,
   // 7. light objects in the scene, at most (the shadow-only spot); lit materials (Standard, Physical, ...) none
   maxLights: 1,
   // 8. shadow map size at most, and triangles that cast shadows at most
@@ -76,8 +79,8 @@ const down = await api('feedFrames', 33, 130);
 const held = await api('feedFrames', 16.7, 600);
 let slow = await api('feedFrames', 40, 2000);
 const countsSlow = await api('counts');
-gate('6. governor: steps sharper on fast frames, softer on slow, never back to a level that was slow, AO off last',
-  up.dpr > before.dpr && down.dpr < up.dpr && held.dpr <= down.dpr && held.level >= held.cap && slow.dpr === 1 && slow.ao === false,
+gate('6. governor: never above ' + CONFIG.startDpr + ', softer on slow frames, never back to a level that was slow, AO off last',
+  before.dpr === CONFIG.startDpr && up.dpr <= CONFIG.startDpr && down.dpr < up.dpr && held.dpr <= down.dpr && held.level >= held.cap && slow.dpr === 1 && slow.ao === false,
   { start: before.dpr, afterFast: up.dpr, afterSlow: down.dpr, afterFastAgain: held.dpr, floor: slow.dpr, aoAtFloor: slow.ao });
 gate('6. governor never cuts scene density', Object.entries(CONFIG.density).every(([k, v]) => countsSlow[k] >= v), countsSlow);
 await api('resetGovernor');
@@ -98,11 +101,13 @@ const aoOffR = await api('render');
 await p.evaluate(() => window.__game.api.aoEnabled(true));
 a = await api('audit');
 gate('2. ambient occlusion: no second scene render, full-screen passes only, half resolution',
-  aoOn.triangles - aoOffR.triangles <= CONFIG.aoMaxTriShare * aoOffR.triangles && aoOn.calls - aoOffR.calls <= CONFIG.aoMaxPasses && a.aoHalf === true,
-  { extraCalls: aoOn.calls - aoOffR.calls, extraTris: aoOn.triangles - aoOffR.triangles, halfRes: a.aoHalf });
-gate('4. frustum culling: meshes that skip it hold <= ' + CONFIG.noCullTris + ' tris', a.noCull.reduce((n, o) => n + o.tris, 0) <= CONFIG.noCullTris, a.noCull);
-gate('5. texture memory <= ' + CONFIG.maxTexMB + ' MB', a.texMB <= CONFIG.maxTexMB, `${a.texMB.toFixed(1)} MB`);
-gate('7. lights <= ' + CONFIG.maxLights + ', no lit (Standard/Physical/Lambert/Phong) materials', a.lights <= CONFIG.maxLights && a.lit.length === 0, { lights: a.lights, lit: a.lit });
+  aoOn.triangles - aoOffR.triangles <= CONFIG.aoMaxTriShare * aoOffR.triangles && aoOn.calls - aoOffR.calls <= CONFIG.aoMaxPasses && a.aoHalf === true && a.aoSamples <= CONFIG.aoMaxSamples,
+  { extraCalls: aoOn.calls - aoOffR.calls, extraTris: aoOn.triangles - aoOffR.triangles, halfRes: a.aoHalf, samples: a.aoSamples });
+gate('4. frustum culling: no mesh skips it', a.noCull.length === 0, a.noCull);
+gate('5. texture memory <= ' + CONFIG.maxTexMB + ' MB, anisotropy <= ' + CONFIG.maxAniso, a.texMB <= CONFIG.maxTexMB && a.maxAniso <= CONFIG.maxAniso,
+  `${a.texMB.toFixed(1)} MB, anisotropy ${a.maxAniso}`);
+gate('7. lights <= ' + CONFIG.maxLights + ', none at intensity 0, no lit (Standard/Physical/Lambert/Phong) materials',
+  a.lights <= CONFIG.maxLights && a.zeroLights === 0 && a.lit.length === 0, { lights: a.lights, zero: a.zeroLights, lit: a.lit });
 gate('8. shadow map <= ' + CONFIG.maxShadowMap + ', casters <= ' + CONFIG.maxCasterTris + ' tris', a.shadowMap <= CONFIG.maxShadowMap && a.casterTris <= CONFIG.maxCasterTris,
   { map: a.shadowMap, casterTris: a.casterTris });
 // 11. no first-use hitches: cycling every state compiles no new shader and uploads no new texture
@@ -130,6 +135,13 @@ const per = await p.evaluate(() => ({ hud: window.__hudWrites, mm: window.__mm }
 gate('10. per frame: HUD written at most ' + CONFIG.maxHudPerFrame + ' times, no matchMedia calls', per.hud / frames <= CONFIG.maxHudPerFrame && per.mm === 0,
   { frames, hudWrites: per.hud, matchMedia: per.mm });
 gate('9. no requests during play', lateReq.length === 0, lateReq.slice(0, 3));
+// 12. phones drop the WebGL context in the background: the game must wait and come back drawing
+await api('loseContext', true);
+await p.waitForFunction(() => window.__game.api.lost());
+await api('loseContext', false);
+await p.waitForFunction(() => !window.__game.api.lost());
+const back = await api('render');
+gate('12. WebGL context lost and restored: the game draws again', back.calls > 0 && back.triangles > 0, { calls: back.calls, tris: back.triangles });
 gate('no page or console errors', errs.length === 0, errs.slice(0, 3));
 console.log(`RESULT perf ${pass} of ${pass + fail} pass`);
 await b.close(); srv.close();
