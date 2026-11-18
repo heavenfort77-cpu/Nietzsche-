@@ -377,14 +377,16 @@ void main() {
 // ASSETS  ASSETS, loadTex(), loadAll()
 // STATE   view, newRun()
 // RENDER  makeToon(), makeHull(), setupClown(), setupSet(), makeCrowd(), makeScatter(), scatterLayer(), makeConfetti(), makeSparkles(), makeBulbs(),
-//         makeBeam(), makeShadows(), makePost(), applyWorld(), applyFace(), setConfetti(), resize(), fitCamera(), draw()
+//         makeBeam(), makeShadows(), makePost(), applyWorld(), applyFace(), setConfetti(), currentDpr(), watchDpr(), resize(), fitCamera(), draw(),
+//         texturesOf(), warmUp()
 // INPUT   bindInput(), onKey()
 // UI      buildBar(), onPick(), markActive(), syncInputs(), drawHud()
-// SYSTEMS playClip(), stepFps(), tickEffects()
+// SYSTEMS playClip(), stepFps(), govInit(), govStep(), govSlower() (frame governor), tickEffects()
 // LOOP    frame()
 // BOOT    boot(); test hook window.__game = { newRun, state, api } when ?test
 // TEST    api.mode(0 lit, 1 texture colour, 2 blouse mask), api.bg(hex), api.isolate(on), api.direct(on: no post),
-//         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on), api.counts()
+//         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on), api.counts(),
+//         api.governor(on), api.aoEnabled(on), api.feedFrames(ms, n), api.resetGovernor(), api.audit() (read-only performance audit)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -580,10 +582,28 @@ const CONFIG = Object.freeze({
   }),
   // tone mapping exposure
   exposure: 1.15,
-  // pixel-ratio cap on desktop and laptop
-  dprDesktop: 2,
-  // pixel-ratio cap on touch devices
-  dprTouch: 1.5,
+  // outline hull bounding sphere scale over the posed mesh (outline width plus limbs swinging out)
+  hullBoundsGrow: 1.3,
+  // pixel-ratio steps on desktop and laptop, sharpest first; the frame governor moves between them
+  dprStepsDesktop: Object.freeze([2, 1.75, 1.5, 1.25, 1]),
+  // pixel-ratio steps on touch devices, sharpest first
+  dprStepsTouch: Object.freeze([1.5, 1.25, 1]),
+  // starting step on desktop (index into dprStepsDesktop: 1.25, steps up on a fast GPU)
+  dprStartDesktop: 3,
+  // starting step on touch (index into dprStepsTouch: 1.25)
+  dprStartTouch: 1,
+  gov: Object.freeze({
+    // frames are averaged over this long before a decision, seconds
+    window: 2.0,
+    // step down when the average frame is slower than this, ms (under 50 fps)
+    slowMs: 20,
+    // count as keeping up when the average frame is at most this, ms (60 Hz vsync plus slack)
+    fastMs: 17.5,
+    // seconds of keeping up before stepping one level sharper
+    upHold: 4,
+    // frames longer than this are ignored (tab switch, debugger), seconds
+    ignoreOver: 0.25,
+  }),
   // drag sensitivity: radians per pixel
   turnPerPx: 0.01,
   // longest frame step used for animation, seconds
@@ -655,7 +675,8 @@ function makeHull(body, face) {
   });
   const hull = new THREE.SkinnedMesh(hullGeo, hullMat);
   hull.bind(body.skeleton, body.bindMatrix);
-  hull.frustumCulled = false;
+  // culled like the body: bounds from the posed mesh, grown so the outline and swinging limbs stay inside
+  hull.computeBoundingSphere(); hull.boundingSphere.radius *= CONFIG.hullBoundsGrow;
   hull.position.copy(body.position); hull.quaternion.copy(body.quaternion); hull.scale.copy(body.scale);
   return hull;
 }
@@ -831,7 +852,7 @@ function makePost() {
   const ao = new N8AOPostPass(scene, camera, 1, 1);
   ao.configuration.aoRadius = p.aoRadius; ao.configuration.intensity = p.aoIntensity; ao.configuration.halfRes = true;
   ao.setQualityMode('Medium');
-  composer.addPass(ao);
+  composer.addPass(ao); parts.ao = ao;
   parts.bloom = new BloomEffect({ mipmapBlur: true, intensity: p.bloom, luminanceThreshold: p.bloomThreshold });
   const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
   const grain = new NoiseEffect({ blendFunction: BlendFunction.OVERLAY }); grain.blendMode.opacity.value = p.grain;
@@ -869,14 +890,18 @@ function setConfetti(on) {
   parts.confetti.visible = on && !view.iso;
   document.getElementById('confetti').classList.toggle('is-active', on);
 }
+function currentDpr() { return Math.min(devicePixelRatio || 1, gov.steps[gov.level]); }
+// the screen's pixel ratio changed (window moved to another monitor, browser zoom): the canvas CSS size may not
+function watchDpr() {
+  matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener('change', () => { resize(); watchDpr(); }, { once: true });
+}
+// called by the ResizeObserver, the pixel-ratio watcher and the frame governor, never per frame
 function resize() {
-  const touch = matchMedia('(pointer: coarse)').matches;
-  const dpr = Math.min(devicePixelRatio || 1, touch ? CONFIG.dprTouch : CONFIG.dprDesktop);
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (canvas.width === Math.round(w * dpr) && canvas.height === Math.round(h * dpr)) return;
+  const dpr = currentDpr(), w = canvas.clientWidth, h = canvas.clientHeight;
   renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
   if (parts.composer) parts.composer.setSize(w, h);
   fitCamera();
+  gov.acc = 0; gov.n = 0; gov.skip = 1;
 }
 function fitCamera() {
   const w = canvas.clientWidth, h = Math.max(canvas.clientHeight, 1), c = CONFIG.cam;
@@ -953,9 +978,13 @@ function syncInputs() {
   document.getElementById('flake').value = String(view.flake);
   document.getElementById('excite').value = String(view.excite);
 }
+let hudText = '';
+// called twice a second; writes the DOM only when the text changed
 function drawHud() {
   const i = renderer.info.render;
-  hud.textContent = `${view.fps.toFixed(0)} fps · ${i.calls} draws · ${i.triangles} tris · ${view.world} · ${view.clip}`;
+  const t = `${view.fps.toFixed(0)} fps · ${i.calls} draws · ${i.triangles} tris · ${currentDpr()}x · ${view.world} · ${view.clip}`;
+  if (t === hudText) return;
+  hudText = t; hud.textContent = t;
 }
 
 // ===== SYSTEMS =====
@@ -966,10 +995,42 @@ function playClip(name) {
   view.clip = name; markActive('clip', name);
 }
 let fpsAcc = 0, fpsN = 0;
+// returns true when the fps reading changed (twice a second)
 function stepFps(dt) {
   fpsAcc += dt; fpsN++;
-  if (fpsAcc < 0.5) return;
+  if (fpsAcc < 0.5) return false;
   view.fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
+  return true;
+}
+// frame governor: keeps the frame time under CONFIG.gov.slowMs by changing pixel ratio, then AO; never scene density
+const gov = { on: !isTest, steps: CONFIG.dprStepsDesktop, level: 0, cap: 0, acc: 0, n: 0, skip: 0, fastFor: 0 };
+function govInit() {
+  const touch = matchMedia('(pointer: coarse)').matches;
+  gov.steps = touch ? CONFIG.dprStepsTouch : CONFIG.dprStepsDesktop;
+  gov.level = touch ? CONFIG.dprStartTouch : CONFIG.dprStartDesktop; gov.cap = 0;
+}
+function govStep(dt) {
+  const g = CONFIG.gov;
+  if (dt > g.ignoreOver) return;
+  gov.acc += dt; gov.n++;
+  if (gov.acc < g.window) return;
+  const ms = gov.acc / gov.n * 1000;
+  gov.acc = 0; gov.n = 0;
+  if (gov.skip > 0) { gov.skip--; return; }
+  if (ms > g.slowMs) { govSlower(); return; }
+  gov.fastFor = ms <= g.fastMs ? gov.fastFor + g.window : 0;
+  if (gov.fastFor < g.upHold || gov.level <= gov.cap) return;
+  gov.level--; gov.fastFor = 0; resize();
+}
+function govSlower() {
+  gov.fastFor = 0;
+  if (gov.level < gov.steps.length - 1) {
+    gov.level++;
+    // the level that was too slow is never tried again this session
+    gov.cap = gov.level;
+    resize(); return;
+  }
+  parts.ao.enabled = false;
 }
 const tmpV = new THREE.Vector3();
 function tickEffects(dt) {
@@ -983,17 +1044,34 @@ function tickEffects(dt) {
   shared.uKeyCol.value.copy(keyBase).multiplyScalar(r.poolMin + (1 - r.poolMin) * inPool);
 }
 
+function texturesOf(m) {
+  const out = [];
+  for (const v of Object.values(m)) if (v && v.isTexture) out.push(v);
+  for (const u of Object.values(m.uniforms || {})) if (u.value && u.value.isTexture) out.push(u.value);
+  return out;
+}
+// compile every shader and upload every texture while loading, so the first use of an effect never hitches
+function warmUp() {
+  const hidden = [];
+  scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+  renderer.compile(scene, camera);
+  scene.traverse((o) => { for (const m of [].concat(o.material || [])) for (const t of texturesOf(m)) renderer.initTexture(t); });
+  parts.composer.render(0);
+  for (const o of hidden) o.visible = false;
+}
+
 // ===== LOOP =====
 let last = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const raw = (now - last) / 1000 || 0;
   last = now;
-  stepFps(raw);
-  resize();
+  const fpsChanged = stepFps(raw);
+  if (gov.on) govStep(raw);
   const dt = Math.min(raw, CONFIG.dtMax);
   if (!view.paused) { if (parts.mixer) parts.mixer.update(dt); tickEffects(dt); }
-  draw(); drawHud();
+  draw();
+  if (fpsChanged) drawHud();
 }
 
 // ===== BOOT =====
@@ -1025,16 +1103,40 @@ function testApi() {
       return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, w: canvas.width, h: canvas.height, textures: renderer.info.memory.textures };
     },
     counts() { return { crowd: parts.crowd.count, scatter: parts.scatter.children.reduce((n, m) => n + m.count, 0), confetti: parts.confetti.geometry.instanceCount, bulbs: parts.bulbs.count, sparkles: parts.sparkles.geometry.instanceCount }; },
+    governor(on) { gov.on = on; },
+    aoEnabled(on) { parts.ao.enabled = on; },
+    feedFrames(ms, n) { for (let k = 0; k < n; k++) govStep(ms / 1000); return { dpr: currentDpr(), level: gov.level, cap: gov.cap, ao: parts.ao.enabled }; },
+    resetGovernor() { govInit(); parts.ao.enabled = true; resize(); return { dpr: currentDpr(), level: gov.level }; },
+    audit() {
+      let lights = 0, casterTris = 0, texBytes = 0; const lit = [], noCull = [], seen = new Set();
+      scene.traverse((o) => {
+        if (o.isLight) lights++;
+        if (!o.isMesh && !o.isPoints) return;
+        const g = o.geometry, tris = (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.count || g.instanceCount || 1);
+        if (o.castShadow) casterTris += tris;
+        if (!o.frustumCulled) noCull.push({ name: o.name || o.type, tris: Math.round(tris) });
+        for (const m of [].concat(o.material)) {
+          if (/Standard|Physical|Lambert|Phong|MeshToon/.test(m.type)) lit.push(m.type);
+          for (const t of texturesOf(m)) {
+            if (seen.has(t) || !t.image) continue;
+            seen.add(t); texBytes += (t.image.width || 0) * (t.image.height || 0) * 4 * (t.generateMipmaps ? 4 / 3 : 1);
+          }
+        }
+      });
+      return { lights, lit, noCull, casterTris: Math.round(casterTris), texMB: texBytes / 1048576, shadowMap: parts.spot.shadow.mapSize.x,
+        programs: renderer.info.programs.length, textures: renderer.info.memory.textures, aoHalf: parts.ao.configuration.halfRes, dpr: currentDpr() };
+    },
     hullBoundToBody() { return parts.hull.isSkinnedMesh === true && parts.hull.skeleton === parts.body.skeleton; },
   };
 }
 async function boot() {
-  buildBar(); bindInput();
+  buildBar(); bindInput(); govInit();
+  new ResizeObserver(() => resize()).observe(canvas); watchDpr();
   addEventListener('resize', resize);
   document.addEventListener('visibilitychange', () => { view.paused = document.hidden; });
   let a;
   try { a = await loadAll(); } catch (e) { hud.textContent = 'Load failed: ' + e.message; throw e; }
-  setupClown(a); setupSet(a); makePost();
+  setupClown(a); setupSet(a); makePost(); warmUp();
   // the post chain renders several passes per frame: count them all (draw() resets once per frame)
   renderer.info.autoReset = false;
   newRun(); resize(); fitCamera();

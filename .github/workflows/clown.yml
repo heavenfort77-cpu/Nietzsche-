@@ -132,23 +132,15 @@ jobs:
         with: { name: ring, path: ring_out }
       - name: Game page checks (steps 4 and 5)
         run: |
-          cd web && npm install --silent
-          L=game/lib
-          mkdir -p $L/build $L/examples/jsm/loaders $L/examples/jsm/utils $L/examples/jsm/postprocessing $L/postprocessing $L/n8ao game/assets
-          cp node_modules/three/build/three.module.js node_modules/three/build/three.core.js $L/build/
-          cp node_modules/three/examples/jsm/loaders/GLTFLoader.js $L/examples/jsm/loaders/
-          cp node_modules/three/examples/jsm/utils/BufferGeometryUtils.js node_modules/three/examples/jsm/utils/SkeletonUtils.js $L/examples/jsm/utils/
-          cp node_modules/three/examples/jsm/postprocessing/Pass.js $L/examples/jsm/postprocessing/
-          cp node_modules/postprocessing/build/index.js $L/postprocessing/
-          cp node_modules/n8ao/dist/N8AO.js $L/n8ao/
-          cp ../clown_v2/out/clown_v2.glb ../clown_v2/out/face_atlas.png ../clown_v2/out/face_paint.png game/assets/
-          cp ../ring_out/ring_set.glb ../ring_out/ring_layout.json ../ring_out/crowd_cards.png game/assets/
+          bash web/ci_setup.sh
+          cd web
           cp ../clown_v2/out/clown_v2.glb ./clown_v2.glb
           node check-static.cjs game/index.html | tee web.txt
           node check_step4.mjs game index.html shot | tee -a web.txt
           node mutate_step4.mjs | tee -a web.txt
           node check_step5.mjs game index.html shot | tee -a web.txt
           node mutate_step5.mjs | tee -a web.txt
+          node check_perf.mjs game index.html | tee -a web.txt
           node check-runtime.cjs game/index.html runtime 6 2>&1 | tee -a web.txt
           node run_page.mjs . check_clown.html PROBE | tee -a web.txt
           cp ../clown_v2/out/probe/anim_test.glb ./probe_anim.glb
@@ -163,6 +155,40 @@ jobs:
             web/web.txt
             web/shot_*.png
             web/runtime/*.png
+
+  perf:
+    # the Dawnpunk lag-report mistakes put back one at a time; each perf gate must fail on its mistake
+    needs: [build, ring]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - dense,aofullres,nocull,bigtex,maxdpr
+          - govstuck,sixlights,litset,bigshadow,inlined
+          - latefetch,hudevery,mmframe,nowarm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/download-artifact@v4
+        with: { name: out, path: clown_v2/out }
+      - uses: actions/download-artifact@v4
+        with: { name: ring, path: ring_out }
+      - name: Perf mutations
+        run: |
+          bash web/ci_setup.sh
+          cd web
+          node mutate_perf.mjs ${{ matrix.shard }} | tee perf.txt
+          grep -q 'RESULT perf mutations \([0-9]*\) of \1 fired' perf.txt
+          ! grep -q '^FAIL' perf.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf_${{ strategy.job-index }}
+          retention-days: 3
+          path: web/perf.txt
 
   cast:
     # step 6: the other humanoid characters through the same scripts (chars/<name>.py), every gate per character
@@ -206,7 +232,7 @@ jobs:
           retention-days: 3
 
   collect:
-    needs: [build, ring, gates, renders, web, cast]
+    needs: [build, ring, gates, renders, web, cast, perf]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -215,7 +241,7 @@ jobs:
       - name: Commit results to ci-out/run-<n>
         run: |
           cd results
-          echo "run ${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA} build=${{ needs.build.result }} ring=${{ needs.ring.result }} gates=${{ needs.gates.result }} renders=${{ needs.renders.result }} web=${{ needs.web.result }} cast=${{ needs.cast.result }}" > SUMMARY.txt
+          echo "run ${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA} build=${{ needs.build.result }} ring=${{ needs.ring.result }} gates=${{ needs.gates.result }} renders=${{ needs.renders.result }} web=${{ needs.web.result }} cast=${{ needs.cast.result }} perf=${{ needs.perf.result }}" > SUMMARY.txt
           git init -q -b results && git add -A
           git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "results run ${GITHUB_RUN_NUMBER}"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" results:ci-out/run-${GITHUB_RUN_NUMBER}
