@@ -1,0 +1,38 @@
+00:00.232  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out/rigged.blend"
+PASS bone names have no dots
+PASS every mesh visible
+PASS every vertex weighted (sum 1) | 0 vertices off
+PASS <= 4 influences per vertex | 4
+PASS coordinates finite
+PASS height 1.7-1.9 m | 1.791 m
+PASS feet on the floor (z = 0) | min z -0.0060
+PASS no degenerate faces
+PASS head sits on its bone | 0.0 cm from the head bone
+PASS materials <= 2 | 2
+PASS body UVs: no overlaps | 0 faces
+PASS head UV: one island | 1
+PASS head UVs inside cell 0 (u 0..0.5, v 0.5..1) | u 0.000..0.500 v 0.500..1.000
+PASS the 4 face cells all differ | smallest mean difference 8.7
+RESULT 14 of 14 pass
+PASS clips are idle, walk, slap | ['idle', 'slap', 'walk']
+PASS clip lengths match the plates (within 1 frame) | {'idle': 2, 'slap': 1.2, 'walk': 0.967}
+PASS one skin | 1
+PASS two meshes (body, face) | 2
+PASS node names have no dots
+PASS at most 4 joints per vertex (no JOINTS_1)
+PASS no vertex colours (COLOR_0)
+PASS shine mask _SPEC on every mesh | [['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC'], ['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC']]
+PASS file <= 4096 KB before compression | 2260 KB
+PASS animation channels target real nodes
+RESULT 10 of 10 pass
+00:00.215  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out/rigged.blend"
+PASS rest pose = bind mesh | max 0.000 mm
+touching pairs at rest: 313
+part groups at rest: 3
+PASS idle: edge stretch p99.9 <= 1.6 | p99.9 1.51, max 1.70 on part [chest,clavicle_R,upper_arm_R,forearm_R]
+PASS idle: head tipped forward (looks down) on every sample | least forward lean y = -0.20
+PASS idle: nothing floats free (part groups stay 3) | max groups 3; parts with no contact: []
+PASS walk: edge stretch p99.9 <= 1.6 | p99.9 1.54, max 1.76 on part [chest,clavicle_R,upper_arm_R,forearm_R]
+PASS walk: nothing floats free (part groups stay 3) | max groups 3; parts with no contact: []
+PASS slap: edge stretch p99.9 <= 1.6 | p99.9 1.45, max 1.71 on part [chest,clavicle_R,upper_arm_R,forearm_R]
+PASS slap: nothing floats free (part groups stay 3) | max groups 3; parts with no contact: []

@@ -1,0 +1,82 @@
+FILE game/index.html  lines=1048  scripts=1  styles=1
+RESULT PASS  fails=0 warns=0
+PASS draw calls <= 3 with the outline | calls 3, triangles 33780
+PASS outline bound to the body skeleton
+PASS blouse found in albedo render | 6274 pixels
+PASS stage: blouse hue 20-70 | hue 32, sat 0.12, value 0.76
+PASS stage: blouse readable (value >= 0.55) | 0.76
+PASS mirror: blouse hue 170-250 | hue 188, sat 0.06, value 0.69
+PASS mirror: blouse readable (value >= 0.55) | 0.69
+PASS shine shows, never on the blouse | 27 pixels shine, 0 on the blouse
+PASS paint amount changes the face | 190 pixels
+PASS flake 0.5 removes 0.25-0.75 of the paint | 0.66
+PASS outline stays on the body: idle 0.5s | 0 of 23734 outline pixels outside
+PASS outline stays on the body: walk 0.25s | 0 of 25629 outline pixels outside
+PASS outline stays on the body: walk 0.75s | 0 of 25628 outline pixels outside
+PASS outline stays on the body: slap 0.45s | 0 of 22742 outline pixels outside
+PASS restart x2 via newRun
+PASS no page or console errors
+RESULT 16 of 16 pass
+PASS mutation statichull -> "outline stays on the body: walk 0.25s" fires | FAIL outline stays on the body: walk 0.25s | 450 of 26301 outline pixels outside
+PASS mutation unbound -> "outline bound to the body skeleton" fires | FAIL outline bound to the body skeleton
+PASS mutation warmmirror -> "mirror: blouse hue" fires | FAIL mirror: blouse hue 170-250 | hue 161, sat 0.03, value 0.68
+PASS mutation darkmirror -> "mirror: blouse readable" fires | FAIL mirror: blouse readable (value >= 0.55) | 0.40
+PASS mutation speceverywhere -> "shine shows, never on the blouse" fires | FAIL shine shows, never on the blouse | 440 pixels shine, 191 on the blouse
+PASS mutation paintignored -> "paint amount changes the face" fires | FAIL paint amount changes the face | 0 pixels
+PASS mutation noflake -> "flake 0.5 removes" fires | FAIL flake 0.5 removes 0.25-0.75 of the paint | 0.00
+PASS mutation extradraw -> "draw calls <= 3" fires | FAIL draw calls <= 3 with the outline | calls 4, triangles 50670
+PASS real page: RESULT 16 of 16 pass
+RESULT mutations 8 of 8 fired
+PASS draw calls per frame <= 150 (all passes) | 48 calls
+PASS triangles per frame <= 500000 | 136372
+PASS desktop density: crowd, floor scatter, confetti, bulbs at their floors | {"crowd":515,"scatter":2100,"confetti":2500,"bulbs":309,"sparkles":220}
+PASS clown readable in the spot (mean value >= 0.55) | 0.65 over 3122 pixels
+PASS key light dims at the ring edge (<= 0.6 of centre) | 0.35 vs 1.00
+PASS black backdrop for mask passes (nothing drawn) | 0 pixels
+PASS crowd freezes at excitement 0 | 0 pixels moved
+PASS crowd moves at excitement 1 | 15445 pixels moved
+PASS confetti never below the floor | 0 pixels below, 6890 visible
+PASS straw and shells drawn on the ring floor | 8854 pixels
+PASS light beam visible (>= 1000 pixels) | 23134
+PASS clown casts a shadow on the floor (>= 200 pixels) | 232
+PASS bloom glows round the bulbs (x1.5 bright area) | 174 -> 601 pixels
+PASS restart x2 via newRun
+PASS controls on screen at 390x844
+PASS controls on screen at 844x390
+PASS no page or console errors
+RESULT 17 of 17 pass
+PASS mutation crowdnofreeze -> "crowd freezes at excitement 0" fires | FAIL crowd freezes at excitement 0 | 14462 pixels moved
+PASS mutation confettifalls -> "confetti never below the floor" fires | FAIL confetti never below the floor | 1235 pixels below, 7200 visible
+PASS mutation drawblowup -> "draw calls per frame" fires | FAIL draw calls per frame <= 150 (all passes) | 248 calls
+PASS mutation nobloom -> "bloom glows round the bulbs" fires | FAIL bloom glows round the bulbs (x1.5 bright area) | 174 -> 174 pixels
+PASS mutation noshadow -> "clown casts a shadow" fires | FAIL clown casts a shadow on the floor (>= 200 pixels) | 0
+PASS mutation nobeam -> "light beam visible" fires | FAIL light beam visible (>= 1000 pixels) | 0
+PASS mutation keynodim -> "key light dims at the ring edge" fires | FAIL key light dims at the ring edge (<= 0.6 of centre) | 1.00 vs 1.00
+PASS mutation darkclown -> "clown readable in the spot" fires | FAIL clown readable in the spot (mean value >= 0.55) | 0.45 over 3122 pixels
+PASS mutation noscatter -> "desktop density" fires | FAIL desktop density: crowd, floor scatter, confetti, bulbs at their floors | {"crowd":515,"scatter":500,"confetti":2500
+PASS mutation nowrap -> "controls on screen at 390x844" fires | FAIL controls on screen at 390x844 | off screen: Paint, paint, outline, confetti
+PASS real page: RESULT 17 of 17 pass
+RESULT mutations 10 of 10 fired
+[phone-portrait] 390x844  canvases=[{"w":585,"h":957,"cw":390,"ch":638}]  headless-fps=3  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/phone-portrait.png
+[phone-landscape] 844x390  canvases=[{"w":1266,"h":426,"cw":844,"ch":284}]  headless-fps=3  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/phone-landscape.png
+[laptop] 1366x768  canvases=[{"w":1366,"h":712,"cw":1366,"ch":712}]  headless-fps=3  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/laptop.png
+[ultrawide] 2560x1080  canvases=[{"w":2560,"h":1024,"cw":2560,"ch":1024}]  headless-fps=3  restart x2 via __game.newRun()  shot=/home/runner/work/Nietzsche-/Nietzsche-/web/runtime/ultrawide.png
+RESULT PASS  fails=0
+PASS GLB loads: 2 skinned meshes | skinned 2, triangles 16890
+PASS clips idle, slap, walk | idle 2.000s, slap 1.200s, walk 0.967s
+PASS clip idle plays (right hand moves, no NaN) | hand moved up to 1.1 cm
+PASS clip slap plays (right hand moves, no NaN) | hand moved up to 32.4 cm
+PASS clip walk plays (right hand moves, no NaN) | hand moved up to 41.9 cm
+PASS draw calls <= 3 (body, face; hull not added yet) | calls 2, triangles 16890
+PASS face cell swap changes the face (texture.offset) | sad 0.0, smile 9.2, startle 22.9, wince 10.6
+PAGE ERRORS: Failed to load resource: the server responded with a status of 404 (Not Found)
+PASS three r187 loads | REVISION 187
+PASS postprocessing loads | ToneMappingMode.AGX=7
+PASS N8AO loads | DepthType,N8AOPass,N8AOPostPass
+PASS meshopt decoder ready
+PASS KTX2Loader, GLTFLoader, OutlineEffect import
+PASS WebGL2 context | WebGL 2.0 (OpenGL ES 3.0 Chromium)
+PASS KTX2 detectSupport | {"astcSupported":false,"astcHDRSupported":false,"etc1Supported":false,"etc2Supported":false,"dxtSupported":true,"bptcSupported":true,"pvrtcSupported":false}
+PASS GLB with skin + actions plays in AnimationMixer | bend,twist skinned=1
+PASS EffectComposer bloom + AgX tone map renders | calls=1
+PAGE ERRORS: Failed to load resource: the server responded with a status of 404 (Not Found)
