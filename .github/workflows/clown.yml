@@ -277,7 +277,8 @@ jobs:
           $GT dedup $O/clown_v2.glb c1.glb
           $GT prune c1.glb c2.glb
           $GT etc1s c2.glb c3.glb
-          $GT meshopt c3.glb ../cast_out/$CHAR/${CHAR}_desktop.glb
+          # one quantization volume for the whole scene: per-mesh volumes cloned the shared skin for the head (run 12)
+          $GT meshopt c3.glb ../cast_out/$CHAR/${CHAR}_desktop.glb --quantization-volume scene
           $GT inspect ../cast_out/$CHAR/${CHAR}_desktop.glb --format md > ../cast_out/$CHAR/inspect_desktop.md
           python -I check_size.py $O/clown_v2.glb ../cast_out/$CHAR/${CHAR}_desktop.glb 800 | tee size.txt
           cat size.txt >> ../cast_out/$CHAR/log.txt
