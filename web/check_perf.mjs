@@ -32,8 +32,10 @@ const CONFIG = {
   maxShadowMap: 2048, maxCasterTris: 40000,
   // 9. bytes fetched before the first frame, MB, and requests during play: none
   maxLoadMB: 20, maxPageKB: 200,
-  // 10. HUD writes per frame at most (twice a second at 60 fps is 0.033), matchMedia calls during play: none
-  maxHudPerFrame: 0.1,
+  // 10. the HUD is refreshed every this many seconds (the fps meter's window); a write that repeats the text fails.
+  // Writes are counted against elapsed time, not frames: run 12 failed per-frame counting on a slow runner
+  // (headless 3-4 fps, 14 writes in 60 frames) with the same game code that passed run 11 (12-14 fps, 4 writes)
+  hudEverySec: 0.5,
   // frames run to measure per-frame work
   frames: 60,
 };
@@ -124,16 +126,24 @@ gate('11. no shader compiles or texture uploads after loading (warm-up covers ev
   { programs: [progs0, a.programs], textures: [tex0, a.textures] });
 // 10 and 9b: per-frame work during real play
 await p.evaluate(() => {
-  window.__hudWrites = 0;
-  new MutationObserver((l) => { window.__hudWrites += l.length; }).observe(document.getElementById('hud'), { childList: true, characterData: true, subtree: true });
+  const hud = document.getElementById('hud');
+  window.__hudWrites = 0; window.__hudRepeats = 0; window.__hudLast = hud.textContent;
+  new MutationObserver((l) => {
+    window.__hudWrites += l.length;
+    if (hud.textContent === window.__hudLast) window.__hudRepeats += 1;
+    window.__hudLast = hud.textContent;
+  }).observe(hud, { childList: true, characterData: true, subtree: true });
   window.__mm = 0; window.__game.api.set({ paused: false });
+  window.__t0 = performance.now();
 });
 playing = true;
 const frames = await p.evaluate((n) => new Promise((res) => { let k = 0; const f = () => { if (++k >= n) res(k); else requestAnimationFrame(f); }; requestAnimationFrame(f); }), CONFIG.frames);
 playing = false;
-const per = await p.evaluate(() => ({ hud: window.__hudWrites, mm: window.__mm }));
-gate('10. per frame: HUD written at most ' + CONFIG.maxHudPerFrame + ' times, no matchMedia calls', per.hud / frames <= CONFIG.maxHudPerFrame && per.mm === 0,
-  { frames, hudWrites: per.hud, matchMedia: per.mm });
+const per = await p.evaluate(() => ({ hud: window.__hudWrites, repeats: window.__hudRepeats, mm: window.__mm, s: (performance.now() - window.__t0) / 1000 }));
+const hudMax = Math.floor(per.s / CONFIG.hudEverySec) + 1;
+gate('10. per frame: HUD written only when its text changes, at most every ' + CONFIG.hudEverySec + ' s, no matchMedia calls',
+  per.repeats === 0 && per.hud <= hudMax && per.mm === 0,
+  { frames, seconds: +per.s.toFixed(2), hudWrites: per.hud, hudMax, repeats: per.repeats, matchMedia: per.mm });
 gate('9. no requests during play', lateReq.length === 0, lateReq.slice(0, 3));
 // 12. phones drop the WebGL context in the background: the game must wait and come back drawing
 await api('loseContext', true);
