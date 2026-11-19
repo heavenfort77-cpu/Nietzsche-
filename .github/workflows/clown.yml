@@ -165,9 +165,12 @@ jobs:
       fail-fast: false
       matrix:
         shard:
-          - dense,aofullres,nocull,bigtex,maxdpr,aosamples
-          - govstuck,sixlights,litset,bigshadow,inlined,aniso,zerolight
-          - latefetch,hudevery,mmframe,nowarm,crowdnocull,noctx
+          # at most 4 per shard: about 8 min each, so a shard stays well inside the 60 min limit
+          - dense,aofullres,nocull,bigtex
+          - maxdpr,aosamples,govstuck,sixlights
+          - litset,bigshadow,inlined,aniso
+          - zerolight,latefetch,hudevery,mmframe
+          - nowarm,crowdnocull,noctx
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
