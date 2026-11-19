@@ -1,0 +1,32 @@
+[
+ {
+  "name": "set: one mesh, triangles <= 60k",
+  "ok": true,
+  "info": "16615 triangles from 503 parts"
+ },
+ {
+  "name": "set UVs: no overlaps",
+  "ok": true,
+  "info": "0 faces"
+ },
+ {
+  "name": "bake finite and not black",
+  "ok": true,
+  "info": "mean 0.060, light bake 312s at 1024px x 64 samples"
+ },
+ {
+  "name": "spot pool: ring centre brighter than its edge",
+  "ok": true,
+  "info": "centre 0.574, edge 0.159"
+ },
+ {
+  "name": "crowd cards: 12 figures, each covers 15-60% of its cell",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "layout: seats >= 500 and bulbs >= 250 (desktop density)",
+  "ok": true,
+  "info": "515 seats, 309 bulbs"
+ }
+]
