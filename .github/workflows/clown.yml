@@ -222,9 +222,10 @@ jobs:
           path: web/gpu.txt
 
   cast:
-    # step 6: the other humanoid characters through the same scripts (chars/<name>.py), every gate per character
+    # step 6: the other humanoid characters through the same scripts (chars/<name>.py), every gate per character,
+    # a side-by-side with the approved model, and the compressed desktop GLB size
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -255,6 +256,32 @@ jobs:
           mkdir -p ../cast_out/$CHAR
           cp log.txt $O/*.glb $O/*.png $O/*.jpg $O/*.gif $O/gates_*.json ../cast_out/$CHAR/
           ! grep -q '^FAIL' log.txt
+      - name: Side-by-side with the approved model (same camera, lights, scale)
+        run: |
+          python -I art/3_blender_3d/render3d.py $CHAR > /dev/null
+          cd clown_v2 && O=out_${CHAR} && mkdir -p sbs
+          UNIT=0.03 python -I render_check.py $O/low.blend sbs/${CHAR}_v2 1024 48 front,three_quarter,side,back > /dev/null
+          python -I side_by_side.py $CHAR ../art/3_blender_3d/renders3d sbs/${CHAR}_v2 ../cast_out/$CHAR/side_by_side.jpg | tee sbs.txt
+          cp sbs/*.png ../cast_out/$CHAR/
+          cat sbs.txt >> ../cast_out/$CHAR/log.txt
+          ! grep -q '^FAIL' sbs.txt
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Compressed GLB (meshopt geometry, KTX2 ETC1S textures) and size gate
+        run: |
+          curl -sSL -o ktx.deb https://github.com/KhronosGroup/KTX-Software/releases/download/v4.3.2/KTX-Software-4.3.2-Linux-x86_64.deb
+          sudo apt-get install -y -qq ./ktx.deb > /dev/null
+          toktx --version
+          cd clown_v2 && O=out_${CHAR}
+          GT="npx -y @gltf-transform/cli@4.1.1"
+          $GT dedup $O/clown_v2.glb c1.glb
+          $GT prune c1.glb c2.glb
+          $GT etc1s c2.glb c3.glb
+          $GT meshopt c3.glb ../cast_out/$CHAR/${CHAR}_desktop.glb
+          $GT inspect ../cast_out/$CHAR/${CHAR}_desktop.glb --format md > ../cast_out/$CHAR/inspect_desktop.md
+          python -I check_size.py $O/clown_v2.glb ../cast_out/$CHAR/${CHAR}_desktop.glb 800 | tee size.txt
+          cat size.txt >> ../cast_out/$CHAR/log.txt
+          ! grep -q '^FAIL' size.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

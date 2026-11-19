@@ -25,12 +25,14 @@ if not sc.camera:
     cam = bpy.data.cameras.new('cam'); co = bpy.data.objects.new('cam', cam); sc.collection.objects.link(co); sc.camera = co
 scale = float(os.environ.get('UNIT', '1'))          # model units per approved unit (0.03 after conversion)
 piv.scale = (1 / scale,) * 3
-render3d.stage('clown')
+# which approved light set to use: the character's world (stage or Mirror); CHAR is set by the cast job
+WHO = os.environ.get('CHAR', 'clown')
+render3d.stage(WHO)
 sc.cycles.samples = spp; sc.render.resolution_x = sc.render.resolution_y = res
 sc.cycles.device = 'CPU'
 for v in views:
     piv.rotation_euler = (0, 0, math.radians(render3d.CONFIG['views'][v]))
     sc.render.filepath = f'{prefix}_{v}.png'
     bpy.ops.render.render(write_still=True)
-    render3d.backdrop(sc.render.filepath, 'clown')
+    render3d.backdrop(sc.render.filepath, WHO)
     print('WROTE', sc.render.filepath)
