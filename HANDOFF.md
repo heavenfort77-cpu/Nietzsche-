@@ -24,7 +24,7 @@ Step 0: the 2D clown-face cue prototype (flat 2D, drum, one act, phone and deskt
 
 ## Open items (cause known)
 
-- Owner requirement 2 gaps: `web/gpu_measure.mjs` budgetMs 20 -> 16.7 (check-only commit with `[gpu]`); every batch touching web/, ring/ or a character carries `[gpu]`; add a before/after density frame-time gate.
+- Owner requirement 2: methods list added 20 Nov (OWNER-REQUIREMENTS.md); rows marked new are not built yet. Gaps: `web/gpu_measure.mjs` budgetMs 20 -> 16.7 (check-only commit with `[gpu]`); every batch touching web/, ring/ or a character carries `[gpu]`; add a before/after density frame-time gate.
 - Owner requirement 3 gaps: motion gates for foot slide, loop seam, clip blend, joint limits, weight shift, each with a mutation. None exist yet.
 
 - Gate 10 too loose on slow runners: drive it with a fixed 1/60 s frame clock and add a mutation that writes changing text every frame (check-only commit).
