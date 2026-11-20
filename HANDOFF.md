@@ -2,7 +2,7 @@
 
 Session start: 0514e06 (2026-11-20)
 
-Rules, design and history: Project doc `claude/START-HERE.md`. This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
+Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`. This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
 ## Restart rule
 
@@ -23,6 +23,9 @@ Step 0: the 2D clown-face cue prototype (flat 2D, drum, one act, phone and deskt
 - Approve the v2 whiteface and Performer (pose sheets run 11, side-by-side run 12).
 
 ## Open items (cause known)
+
+- Owner requirement 2 gaps: `web/gpu_measure.mjs` budgetMs 20 -> 16.7 (check-only commit with `[gpu]`); every batch touching web/, ring/ or a character carries `[gpu]`; add a before/after density frame-time gate.
+- Owner requirement 3 gaps: motion gates for foot slide, loop seam, clip blend, joint limits, weight shift, each with a mutation. None exist yet.
 
 - Gate 10 too loose on slow runners: drive it with a fixed 1/60 s frame clock and add a mutation that writes changing text every frame (check-only commit).
 - Compressed whiteface and Performer GLBs not loaded or checked in the browser; clown GLB not compressed.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Session handoff. Live state lives in HANDOFF.md and git, never only in chat.
-#   tools/handoff.sh start  : first command of every new session. Records the session's start commit, prints status and HANDOFF.md.
+#   tools/handoff.sh start  : first command of every new session. Records the session's start commit, prints status, OWNER-REQUIREMENTS.md and HANDOFF.md.
 #   tools/handoff.sh        : run after every batch. Counts batch commits this session; prints NEW SESSION NOW at the limit.
 #   tools/handoff.sh close  : before handing over. PASS only if HANDOFF.md is committed, current and pushed.
 # A batch commit is one whose subject starts with "Batch " (CI fails a batch commit that does not touch HANDOFF.md).
@@ -32,6 +32,8 @@ case "${1:-check}" in
     head=$(git rev-parse --short HEAD)
     sed -i "s/^Session start: .*/Session start: $head ($(date -u +%F))/" HANDOFF.md
     bash tools/status.sh
+    echo "== OWNER-REQUIREMENTS.md"
+    cat OWNER-REQUIREMENTS.md
     echo "== HANDOFF.md"
     cat HANDOFF.md
     echo "== session start recorded: $head (commit HANDOFF.md with the first batch)"
