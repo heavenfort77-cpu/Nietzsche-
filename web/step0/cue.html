@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>The Clown and the Mirror: step 0 cue prototype</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1E1418; color: #F2EBDD; font: 16px/1.4 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  .hidden { display: none !important; }
+  #hud { position: fixed; top: 8px; left: 8px; right: 8px; display: flex; gap: 16px; font-weight: 600; pointer-events: none; }
+  .panel { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(17, 12, 14, 0.92); text-align: center; overflow: auto; }
+  .panel h1 { font-size: 22px; margin: 0; }
+  .panel p { max-width: 34em; margin: 0; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .panel button { min-width: 64px; min-height: 48px; padding: 8px 14px; font-size: 16px; border-radius: 10px; border: 2px solid #B68C45; background: #3D332D; color: #F2EBDD; }
+  .panel button.on { background: #B68C45; color: #1E1714; }
+  pre { white-space: pre-wrap; text-align: left; font-size: 15px; margin: 0; }
+  .pad { position: fixed; bottom: 18px; width: 30vw; max-width: 180px; min-width: 96px; height: 96px; border-radius: 48px; border: 3px solid #F2EBDD; background: rgba(61, 51, 45, 0.55); color: #F2EBDD; font-size: 20px; font-weight: 700; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .pad.left { left: 18px; }
+  .pad.right { right: 18px; }
+  .pad.down { background: rgba(251, 209, 144, 0.7); color: #1E1714; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud"><span>Night <span id="hudNight">1</span></span><span>Laughs <span id="hudLaughs">0</span></span><span>Mask <span id="hudMask">0</span></span></div>
+<button id="padTake" class="pad left hidden">TAKE</button>
+<button id="padHit" class="pad right hidden">HIT</button>
+
+<div id="title" class="panel">
+  <h1>The Clown and the Mirror: the mask cue</h1>
+  <p>A painted mask closes in on his face. Press when it fits the thin outline. The drum plays on every fit.</p>
+  <p>Desktop: Space = hit, K or Shift = take. Phone: right button = hit, left button = take.</p>
+  <p>Night 1: hit only. Night 2 and later: the whiteface steps in (his face closes in instead of the mask): press take. On the last beat of each chain, take instead of hit turns the grin upside down.</p>
+  <div class="row" id="nightRow">
+    <button data-night="1" class="on">Night 1</button>
+    <button data-night="2">Night 2</button>
+    <button data-night="3">Night 3</button>
+  </div>
+  <div class="row">
+    <span>Timing windows:</span>
+    <button id="btnDesk">Desktop</button>
+    <button id="btnPhone">Phone</button>
+  </div>
+  <div class="row">
+    <span>Latency</span>
+    <button id="latDown">-</button>
+    <span id="latVal">0 ms</span>
+    <button id="latUp">+</button>
+  </div>
+  <div class="row"><button id="btnStart">Tap to begin</button></div>
+</div>
+
+<div id="results" class="panel hidden">
+  <pre id="resText"></pre>
+  <div class="row">
+    <button id="btnAgain">Again</button>
+    <button id="btnMenu">Change night or settings</button>
+  </div>
+</div>
+
+<div id="errPanel" class="panel hidden"><pre id="errText"></pre></div>
+
+<script>
+'use strict';
+(function () {
+  // ===== MAP =====
+  // CONFIG: tuning values. STATE: one game state object S and the beat pool.
+  // AUDIO: buffers built once, one-shot sources. ACT: schedule, judging, end of act.
+  // INPUT: keys and pads. RENDER: canvas drawing. LOOP: frame loop. BOOT: wiring.
+  // Test hooks (read-mostly): window.__game.useVirtual, start, advance, input, info, beats, config.
+
+  // ===== CONFIG =====
+  const CONFIG = {
+    // Beat gap, measured fit to fit, for nights 1, 2, 3+ (ms)
+    gapMs: [600, 500, 400],
+    // Mask close time for nights 1, 2, 3+ (ms); kept at 1.5 x the gap
+    closeMs: [900, 750, 600],
+    // Beats per chain for nights 1, 2, 3+ (from night 2 the last beat is the topper)
+    beatsPerChain: [3, 4, 5],
+    // Chains in one act
+    chainsPerAct: 3,
+    // Whiteface interrupts per act for nights 1, 2, 3+
+    interruptsPerAct: [0, 1, 2],
+    // Night from which take, topper flip and interrupts open
+    secondButtonFromNight: 2,
+    // Time before the first mask spawns (ms)
+    leadInMs: 1200,
+    // Gag animation between chains (ms)
+    gagPauseMs: 2200,
+    // Perfect window half width: desktop, phone (ms)
+    perfectMs: [60, 80],
+    // Good window half width: desktop, phone (ms)
+    goodMs: [130, 160],
+    // Take window half width for the whiteface slap (ms)
+    takeMs: 150,
+    // Timing misses that end the act
+    missesToEnd: 2,
+    // Laughs for a perfect beat
+    laughsPerfect: 10,
+    // Laughs for a good beat
+    laughsGood: 5,
+    // Laughs for a taken slap (pratfall on cue)
+    laughsTake: 15,
+    // Laughs for the upside-down grin, first time each night
+    laughsFlipFirst: 25,
+    // Laughs for the upside-down grin when repeated the same night (the groan)
+    laughsFlipRepeat: 1,
+    // Guaranteed Laughs floor for the deliberate fall act
+    laughsFloor: 15,
+    // Paint added to the real face per perfect beat (Mask meter)
+    paintPerPerfect: 1,
+    // Latency setting step (ms)
+    latencyStepMs: 10,
+    // Latency setting limits (ms)
+    latencyMaxMs: 300,
+    // Cue size as a fraction of screen height: desktop, phone (diameter)
+    cueFrac: [0.20, 0.30],
+    // Mask start radius as a fraction of the larger screen side
+    maskStartFrac: 0.75,
+    // How long the outline flashes around each fit moment (ms)
+    flashMs: 45,
+    // How long a result word stays on the outline (ms)
+    feedbackMs: 320,
+    // Pause between the act ending and the results panel (ms)
+    resultsDelayMs: 1400,
+    // Largest frame step (s)
+    dtMax: 0.05,
+    // Confetti pool size
+    confettiPool: 240,
+    // Confetti per perfect beat
+    confettiPerPerfect: 26,
+    // Crowd heads drawn (two rows)
+    crowdCount: 26,
+    // Crowd excitement change per perfect, good, miss
+    exciteStep: [0.35, 0.2, -0.3],
+    // Crowd excitement resting value
+    exciteRest: 0.12,
+    // Canvas pixel ratio cap
+    pixelRatioMax: 2,
+    // Master volume (0 to 1)
+    volume: 0.8,
+    // Colours: stage backdrop, spotlight, face paint, red, outline, whiteface crimson, silver, hat, blouse, hair, crowd, crowd rim
+    col: {
+      backdrop: '#1E1418', spot: '#FBD190', paint: '#F4F4F2', red: '#C9604A', outline: '#FBD190',
+      crimson: '#962E3A', silver: '#C3C7CF', hat: '#5A4C43', blouse: '#DCD1BC', hair: '#B5532F',
+      crowd: '#0B0A0D', crowdRim: '#5A4A3A', black: '#24212A', perfect: '#F0D27A', good: '#F2EBDD', miss: '#E88A72'
+    },
+    // Confetti colours
+    confettiCols: ['#F0D27A', '#C24A52', '#9DB5BB', '#F4F4F2', '#D9764A']
+  };
+
+  // ===== STATE =====
+  const PENDING = 0, DONE = 1;
+  const HIT = 0, TAKE = 1;
+  const MAX_BEATS = CONFIG.chainsPerAct * Math.max.apply(null, CONFIG.beatsPerChain);
+  const beats = [];
+  for (let i = 0; i < MAX_BEATS; i++) {
+    beats.push({ fit: 0, spawn: 0, kind: HIT, topper: false, chain: 0, state: PENDING, result: '', judged: 0 });
+  }
+  const S = {
+    scene: 'title', night: 1, phone: false, phoneSetByUser: false, latencyMs: 0,
+    laughs: 0, mask: 0, actCount: 0, flipUsed: [false, false, false, false],
+    beatCount: 0, chainLastFit: [0, 0, 0, 0, 0, 0], lastFit: 0,
+    misses: 0, perfects: 0, goods: 0, takes: 0, takeBeats: 0, flips: 0, actLaughs: 0,
+    offSum: 0, offSq: 0, offN: 0,
+    ended: false, endReason: '', endAt: 0, resultsShown: false,
+    excite: CONFIG.exciteRest, fbWord: '', fbCol: '', fbUntil: -1e9, snapUntil: -1e9, fallAt: -1e9,
+    paused: false, error: false, virtual: false, vclock: 0,
+    actStartAudio: 0, clockOff: 0, now: 0
+  };
+  const view = { w: 1, h: 1, dpr: 1, cx: 0, cy: 0, R: 1, R0: 2, spot: null, font: '' };
+  const crowdX = new Float32Array(CONFIG.crowdCount);
+  const crowdY = new Float32Array(CONFIG.crowdCount);
+  const crowdR = new Float32Array(CONFIG.crowdCount);
+  const crowdPh = new Float32Array(CONFIG.crowdCount);
+  const cf = {
+    x: new Float32Array(CONFIG.confettiPool), y: new Float32Array(CONFIG.confettiPool),
+    vx: new Float32Array(CONFIG.confettiPool), vy: new Float32Array(CONFIG.confettiPool),
+    life: new Float32Array(CONFIG.confettiPool), col: new Uint8Array(CONFIG.confettiPool), next: 0
+  };
+  const hudLast = { laughs: -1, mask: -1, night: -1 };
+  let seed = 1;
+  function rand() {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  }
+  function nightIdx() { return Math.min(S.night, 3) - 1; }
+  function winPerfect() { return CONFIG.perfectMs[S.phone ? 1 : 0]; }
+  function winGood() { return CONFIG.goodMs[S.phone ? 1 : 0]; }
+
+  // ===== AUDIO =====
+  const A = { ctx: null, master: null, buf: {}, scheduled: [], schedN: 0 };
+  function makeBuffer(seconds, fn) {
+    const ctx = A.ctx, n = Math.floor(seconds * ctx.sampleRate);
+    const b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+    const st = { phase: 0, lp: 0, lp2: 0 };
+    for (let i = 0; i < n; i++) d[i] = fn(i / ctx.sampleRate, st, ctx.sampleRate);
+    return b;
+  }
+  function sweep(st, f, sr) { st.phase += 2 * Math.PI * f / sr; return Math.sin(st.phase); }
+  function buildSounds() {
+    const B = A.buf, TAU = 2 * Math.PI, nz = () => Math.random() * 2 - 1;
+    B.drum = makeBuffer(0.2, (t, st, sr) => sweep(st, 50 + 90 * Math.exp(-t * 30), sr) * Math.exp(-t * 18) * 0.8 +
+      nz() * Math.exp(-t * 200) * 0.35 + Math.sin(TAU * 2000 * t) * Math.exp(-t * 120) * 0.3);
+    B.rim = makeBuffer(0.16, (t) => nz() * Math.exp(-t * 60) * 0.45 + Math.sin(TAU * 1700 * t) * Math.exp(-t * 40) * 0.4 +
+      Math.sin(TAU * 900 * t) * Math.exp(-t * 30) * 0.3);
+    B.snap = makeBuffer(0.12, (t) => Math.sin(TAU * 2600 * t) * Math.exp(-t * 50) * 0.4 + Math.sin(TAU * 1300 * t) * Math.exp(-t * 35) * 0.3);
+    B.slip = makeBuffer(0.42, (t, st, sr) => sweep(st, 1000 - 1700 * t, sr) * Math.min(1, t * 40) * Math.exp(-t * 4) * 0.4);
+    B.laughBig = makeBuffer(1.3, (t, st) => laughSample(t, st, 0.55, 1.3));
+    B.laughSmall = makeBuffer(0.55, (t, st) => laughSample(t, st, 0.3, 0.55));
+    B.groan = makeBuffer(0.65, (t, st, sr) => { st.phase = (st.phase + (150 - 60 * t) / sr) % 1; st.lp += (st.phase * 2 - 1 - st.lp) * 0.08; return st.lp * Math.min(1, t * 10) * Math.exp(-t * 2.5) * 0.5; });
+    B.sting = makeBuffer(0.2, (t) => Math.sign(Math.sin(TAU * (t < 0.08 ? 1300 : 1700) * t)) * Math.exp(-t * 12) * 0.18);
+    B.slap = makeBuffer(0.09, (t) => nz() * Math.exp(-t * 80) * 0.7 + Math.sin(TAU * 2200 * t) * Math.exp(-t * 90) * 0.3);
+    B.cough = makeBuffer(0.32, (t, st) => { st.lp += (nz() - st.lp) * 0.25; return st.lp * (t < 0.12 ? Math.exp(-t * 25) : Math.exp(-(t - 0.18) * 25) * (t > 0.18 ? 1 : 0)) * 0.9; });
+  }
+  function laughSample(t, st, amp, len) {
+    const n = Math.random() * 2 - 1;
+    st.lp += (n - st.lp) * 0.12;
+    st.lp2 += (n - st.lp2) * 0.6;
+    const ha = Math.pow(0.5 + 0.5 * Math.sin(2 * Math.PI * 5.5 * t), 2);
+    const env = Math.min(1, t * 12) * Math.min(1, (len - t) * 4);
+    return (st.lp * 1.6 + (st.lp2 - st.lp) * 0.5) * ha * env * amp;
+  }
+  function unlockAudio() {
+    if (A.ctx || S.virtual) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older browsers */ }
+    A.ctx = new AC();
+    A.master = A.ctx.createGain();
+    A.master.gain.value = CONFIG.volume;
+    A.master.connect(A.ctx.destination);
+    buildSounds();
+  }
+  function playSound(name, when) {
+    if (!A.ctx) return null;
+    const src = A.ctx.createBufferSource();
+    src.buffer = A.buf[name];
+    src.connect(A.master);
+    src.start(when > 0 ? when : 0);
+    return src;
+  }
+  function scheduleBeatSounds() {
+    A.schedN = 0;
+    if (!A.ctx) return;
+    for (let i = 0; i < S.beatCount; i++) {
+      const b = beats[i];
+      A.scheduled[A.schedN++] = playSound(b.topper ? 'rim' : 'drum', S.actStartAudio + b.fit / 1000);
+      if (b.kind === TAKE) A.scheduled[A.schedN++] = playSound('sting', S.actStartAudio + b.spawn / 1000);
+    }
+  }
+  function stopScheduled() {
+    for (let i = 0; i < A.schedN; i++) {
+      try { A.scheduled[i].stop(); } catch (e) { /* already ended */ }
+    }
+    A.schedN = 0;
+  }
+
+  // ===== ACT =====
+  function actNow() {
+    if (S.virtual || !A.ctx) return S.vclock;
+    return (A.ctx.currentTime - S.actStartAudio) * 1000;
+  }
+  function syncClock(perfNow) {
+    if (!A.ctx) return;
+    const est = A.ctx.currentTime * 1000 - perfNow;
+    S.clockOff = est > S.clockOff ? est : S.clockOff - 0.05;
+  }
+  function eventActTime(ts) {
+    if (S.virtual || !A.ctx) return S.vclock - S.latencyMs;
+    return ts + S.clockOff - S.actStartAudio * 1000 - S.latencyMs;
+  }
+  function buildSchedule() {
+    const n = nightIdx(), gap = CONFIG.gapMs[n], close = CONFIG.closeMs[n], per = CONFIG.beatsPerChain[n];
+    let spawn0 = CONFIG.leadInMs, k = 0;
+    for (let c = 0; c < CONFIG.chainsPerAct; c++) {
+      const firstFit = spawn0 + close;
+      for (let j = 0; j < per; j++) {
+        const b = beats[k++];
+        b.fit = firstFit + j * gap; b.spawn = b.fit - close; b.kind = HIT; b.chain = c;
+        b.topper = S.night >= CONFIG.secondButtonFromNight && j === per - 1;
+        b.state = PENDING; b.result = ''; b.judged = 0;
+      }
+      S.chainLastFit[c] = firstFit + (per - 1) * gap;
+      spawn0 = S.chainLastFit[c] + CONFIG.gagPauseMs;
+    }
+    S.beatCount = k;
+    S.lastFit = beats[k - 1].fit;
+    placeInterrupts(per);
+  }
+  function placeInterrupts(per) {
+    const count = S.night >= CONFIG.secondButtonFromNight ? CONFIG.interruptsPerAct[nightIdx()] : 0;
+    S.takeBeats = 0;
+    for (let i = 0; i < count; i++) {
+      const chain = i % CONFIG.chainsPerAct;
+      const j = 1 + Math.floor(rand() * (per - 2));
+      const b = beats[chain * per + j];
+      b.kind = TAKE; b.topper = false;
+      S.takeBeats++;
+    }
+  }
+  function resetActCounters() {
+    S.misses = 0; S.perfects = 0; S.goods = 0; S.takes = 0; S.flips = 0; S.actLaughs = 0;
+    S.offSum = 0; S.offSq = 0; S.offN = 0;
+    S.ended = false; S.endReason = ''; S.endAt = 0; S.resultsShown = false;
+    S.fbUntil = -1e9; S.snapUntil = -1e9; S.fallAt = -1e9; S.excite = CONFIG.exciteRest;
+    for (let i = 0; i < cf.life.length; i++) cf.life[i] = 0;
+  }
+  function startAct(night) {
+    S.night = night;
+    S.actCount++;
+    seed = 7919 * night + 104729 * S.actCount;
+    resetActCounters();
+    buildSchedule();
+    S.vclock = 0;
+    if (A.ctx && !S.virtual) {
+      S.actStartAudio = A.ctx.currentTime + 0.05;
+      S.clockOff = A.ctx.currentTime * 1000 - performance.now();
+    }
+    scheduleBeatSounds();
+    S.scene = 'act';
+    showPanels();
+  }
+  function nearestBeat(t) {
+    let best = -1, bestD = 1e9;
+    for (let i = 0; i < S.beatCount; i++) {
+      const b = beats[i];
+      if (b.spawn > t) break;
+      const d = Math.abs(t - b.fit);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+  function pressAt(btn, t) {
+    if (S.scene !== 'act' || S.ended) return;
+    if (btn === TAKE && S.night < CONFIG.secondButtonFromNight) return;
+    const i = nearestBeat(t);
+    if (i < 0) return;
+    const b = beats[i];
+    if (b.state !== PENDING) return;
+    b.state = DONE; b.judged++;
+    if (b.kind === TAKE) judgeTake(b, btn, t - b.fit);
+    else judgeHit(b, btn, t - b.fit);
+  }
+  function judgeTake(b, btn, d) {
+    if (btn === TAKE && Math.abs(d) <= CONFIG.takeMs) {
+      b.result = 'take'; S.takes++;
+      addLaughs(CONFIG.laughsTake);
+      feedback('TAKE!', CONFIG.col.perfect, CONFIG.exciteStep[0]);
+      playSound('slap', 0); playSound('laughBig', 0);
+      return;
+    }
+    b.result = 'slap';
+    playSound('slap', 0);
+    endAct('the slap landed');
+  }
+  function judgeHit(b, btn, d) {
+    const ad = Math.abs(d);
+    if (btn === TAKE && !b.topper) { missBeat(b, 'WRONG'); return; }
+    if (ad > winGood()) { missBeat(b, d < 0 ? 'EARLY' : 'LATE'); return; }
+    S.offSum += d; S.offSq += d * d; S.offN++;
+    if (ad <= winPerfect()) {
+      b.result = 'perfect'; S.perfects++;
+      S.mask += CONFIG.paintPerPerfect;
+      addLaughs(CONFIG.laughsPerfect);
+      feedback('PERFECT', CONFIG.col.perfect, CONFIG.exciteStep[0]);
+      S.snapUntil = S.now + 250;
+      burstConfetti();
+      playSound('snap', 0);
+    } else {
+      b.result = 'good'; S.goods++;
+      addLaughs(CONFIG.laughsGood);
+      feedback('GOOD', CONFIG.col.good, CONFIG.exciteStep[1]);
+    }
+    if (b.topper && btn === TAKE) flipGrin();
+    else if (b.topper) playSound(b.result === 'perfect' ? 'laughBig' : 'laughSmall', 0);
+  }
+  function flipGrin() {
+    S.flips++;
+    if (!S.flipUsed[S.night]) {
+      S.flipUsed[S.night] = true;
+      addLaughs(CONFIG.laughsFlipFirst);
+      feedback('FLIP!', CONFIG.col.perfect, CONFIG.exciteStep[0]);
+      playSound('laughBig', 0);
+    } else {
+      addLaughs(CONFIG.laughsFlipRepeat);
+      feedback('groan', CONFIG.col.miss, CONFIG.exciteStep[2]);
+      playSound('groan', 0);
+    }
+  }
+  function missBeat(b, word) {
+    b.result = 'miss';
+    S.misses++;
+    feedback(word, CONFIG.col.miss, CONFIG.exciteStep[2]);
+    S.fallAt = S.now;
+    playSound('slip', 0); playSound('cough', 0.25 + (A.ctx ? A.ctx.currentTime : 0));
+    if (S.misses >= CONFIG.missesToEnd) endAct('two misses');
+  }
+  function addLaughs(n) { S.laughs += n; S.actLaughs += n; }
+  function feedback(word, col, excite) {
+    S.fbWord = word; S.fbCol = col; S.fbUntil = S.now + CONFIG.feedbackMs;
+    S.excite = Math.max(0, Math.min(1, S.excite + excite));
+  }
+  function endAct(reason) {
+    if (S.ended) return;
+    S.ended = true; S.endReason = reason; S.endAt = S.now;
+    if (reason !== 'complete') S.fallAt = S.now;
+    for (let i = 0; i < S.beatCount; i++) if (beats[i].state === PENDING) { beats[i].state = DONE; beats[i].result = 'cut'; }
+    stopScheduled();
+    if (S.actLaughs < CONFIG.laughsFloor) addLaughs(CONFIG.laughsFloor - S.actLaughs);
+  }
+  function updateAct(dt) {
+    const t = actNow();
+    S.now = t;
+    if (S.ended) {
+      if (!S.resultsShown && t - S.endAt > CONFIG.resultsDelayMs) showResults();
+      return;
+    }
+    expireBeats(t);
+    if (!S.ended && t > S.lastFit + winGood() + 400) endAct('complete');
+    S.excite += (CONFIG.exciteRest - S.excite) * Math.min(1, dt * 0.6);
+    updateConfetti(dt);
+  }
+  function expireBeats(t) {
+    for (let i = 0; i < S.beatCount && !S.ended; i++) {
+      const b = beats[i];
+      if (b.state !== PENDING) continue;
+      const limit = b.kind === TAKE ? CONFIG.takeMs : winGood();
+      if (t <= b.fit + limit) break;
+      b.state = DONE; b.judged++;
+      if (b.kind === TAKE) { b.result = 'slap'; playSound('slap', 0); endAct('the slap landed'); }
+      else missBeat(b, 'LATE');
+    }
+  }
+  function burstConfetti() {
+    for (let k = 0; k < CONFIG.confettiPerPerfect; k++) {
+      const i = cf.next; cf.next = (cf.next + 1) % cf.life.length;
+      const a = rand() * Math.PI * 2, sp = 120 + rand() * 260;
+      cf.x[i] = view.cx; cf.y[i] = view.cy - view.R * 0.4;
+      cf.vx[i] = Math.cos(a) * sp; cf.vy[i] = Math.sin(a) * sp - 220;
+      cf.life[i] = 1.4 + rand() * 0.6; cf.col[i] = k % CONFIG.confettiCols.length;
+    }
+  }
+  function updateConfetti(dt) {
+    for (let i = 0; i < cf.life.length; i++) {
+      if (cf.life[i] <= 0) continue;
+      cf.life[i] -= dt;
+      cf.vy[i] += 520 * dt;
+      cf.vx[i] *= 1 - Math.min(1, dt * 1.5);
+      cf.x[i] += cf.vx[i] * dt; cf.y[i] += cf.vy[i] * dt;
+    }
+  }
+  function resultsText() {
+    const hits = S.perfects + S.goods;
+    const total = S.beatCount;
+    let s = 'Night ' + S.night + ': ' + (S.endReason === 'complete' ? 'act complete' : 'act ended, ' + S.endReason) + '\n\n';
+    s += 'Laughs +' + S.actLaughs + ' (total ' + S.laughs + ')   Mask ' + S.mask + '\n';
+    s += 'Perfect ' + S.perfects + '  Good ' + S.goods + '  Miss ' + S.misses + '  of ' + total + ' beats\n';
+    if (S.takeBeats) s += 'Slaps taken ' + S.takes + ' of ' + S.takeBeats + '\n';
+    if (S.flips) s += 'Upside-down grins ' + S.flips + '\n';
+    if (S.offN) {
+      const mean = S.offSum / S.offN, sd = Math.sqrt(Math.max(0, S.offSq / S.offN - mean * mean));
+      s += '\nTiming over ' + hits + ' hits: ' + Math.abs(Math.round(mean)) + ' ms ' + (mean < 0 ? 'early' : 'late') +
+        ' on average, spread ' + Math.round(sd) + ' ms.\n';
+      s += 'Windows: perfect +/-' + winPerfect() + ' ms, good +/-' + winGood() + ' ms (' + (S.phone ? 'phone' : 'desktop') + ').\n';
+      s += 'Latency setting ' + S.latencyMs + ' ms. If you are late by the same amount every time, raise it by that much.';
+    }
+    return s;
+  }
+  function showResults() {
+    S.resultsShown = true;
+    S.scene = 'results';
+    el.resText.textContent = resultsText();
+    showPanels();
+  }
+
+  // ===== INPUT =====
+  const el = {};
+  function onKeyDown(e) {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.code;
+    let btn = -1;
+    if (k === 'Space') btn = HIT;
+    else if (k === 'KeyK' || k === 'ShiftLeft' || k === 'ShiftRight') btn = TAKE;
+    if (btn < 0) return;
+    e.preventDefault();
+    if (S.scene === 'act') pressAt(btn, eventActTime(e.timeStamp));
+  }
+  function onPadDown(e) {
+    e.preventDefault();
+    const btn = e.currentTarget === el.padHit ? HIT : TAKE;
+    e.currentTarget.classList.add('down');
+    if (S.scene === 'act') pressAt(btn, eventActTime(e.timeStamp));
+  }
+  function onPadUp(e) { e.currentTarget.classList.remove('down'); }
+  function releaseAll() { el.padHit.classList.remove('down'); el.padTake.classList.remove('down'); }
+  function onVisibility() {
+    S.paused = document.hidden;
+    releaseAll();
+    if (!A.ctx) return;
+    if (S.paused) A.ctx.suspend(); else A.ctx.resume();
+  }
+  function setNightButton(n) {
+    S.night = n;
+    const bs = el.nightRow.children;
+    for (let i = 0; i < bs.length; i++) bs[i].classList.toggle('on', Number(bs[i].dataset.night) === n);
+  }
+  function setPhone(p, byUser) {
+    S.phone = p;
+    if (byUser) S.phoneSetByUser = true;
+    el.btnDesk.classList.toggle('on', !p);
+    el.btnPhone.classList.toggle('on', p);
+    layout();
+  }
+  function setLatency(v) {
+    S.latencyMs = Math.max(-CONFIG.latencyMaxMs, Math.min(CONFIG.latencyMaxMs, v));
+    el.latVal.textContent = S.latencyMs + ' ms';
+  }
+  function showPanels() {
+    el.title.classList.toggle('hidden', S.scene !== 'title');
+    el.results.classList.toggle('hidden', S.scene !== 'results');
+    const showPads = S.scene === 'act';
+    el.padHit.classList.toggle('hidden', !showPads);
+    el.padTake.classList.toggle('hidden', !showPads || S.night < CONFIG.secondButtonFromNight);
+  }
+
+  // ===== RENDER =====
+  let g = null;
+  function layout() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const dpr = Math.min(CONFIG.pixelRatioMax, window.devicePixelRatio || 1);
+    view.w = w; view.h = h; view.dpr = dpr;
+    el.cv.width = Math.round(w * dpr); el.cv.height = Math.round(h * dpr);
+    view.cx = w / 2; view.cy = h * 0.4;
+    view.R = Math.min(h * CONFIG.cueFrac[S.phone ? 1 : 0] / 2, w * 0.3);
+    view.R0 = Math.max(w, h) * CONFIG.maskStartFrac;
+    view.font = '700 ' + Math.round(view.R * 0.34) + 'px system-ui, sans-serif';
+    view.spot = g.createRadialGradient(view.cx, view.cy, view.R * 0.5, view.cx, view.cy + view.R, Math.max(w, h) * 0.6);
+    view.spot.addColorStop(0, 'rgba(251,209,144,0.38)');
+    view.spot.addColorStop(1, 'rgba(251,209,144,0)');
+    layoutCrowd(w, h);
+  }
+  function layoutCrowd(w, h) {
+    const n = CONFIG.crowdCount, half = Math.ceil(n / 2);
+    for (let i = 0; i < n; i++) {
+      const back = i < half, k = back ? i : i - half, cnt = back ? half : n - half;
+      crowdX[i] = (k + 0.5 + (back ? 0 : 0.5)) * w / cnt;
+      crowdY[i] = h - (back ? 70 : 22);
+      crowdR[i] = Math.min(w / cnt * 0.42, back ? 26 : 34);
+      crowdPh[i] = i * 1.7;
+    }
+  }
+  function render() {
+    const w = view.w, h = view.h, t = S.now, C = CONFIG.col;
+    g.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+    g.fillStyle = C.backdrop; g.fillRect(0, 0, w, h);
+    g.fillStyle = view.spot; g.fillRect(0, 0, w, h);
+    if (S.scene === 'title') { drawClown(t); drawCrowd(t); return; }
+    drawClown(t);
+    drawCue(t);
+    drawMasks(t);
+    drawConfetti();
+    drawCrowd(t);
+    drawFeedback(t);
+  }
+  function clownTilt(t) {
+    if (S.ended && S.endReason !== 'complete') return Math.min(1.35, (t - S.fallAt) / 300);
+    const sinceMiss = t - S.fallAt;
+    if (sinceMiss >= 0 && sinceMiss < 500) return Math.sin(sinceMiss / 500 * Math.PI) * 0.35;
+    for (let c = 0; c < CONFIG.chainsPerAct - 1; c++) {
+      const k = (t - S.chainLastFit[c]) / CONFIG.gagPauseMs;
+      if (k > 0.05 && k < 0.85) return Math.sin((k - 0.05) / 0.8 * Math.PI) * 1.1;
+    }
+    return 0;
+  }
+  function drawClown(t) {
+    const C = CONFIG.col, R = view.R, x = view.cx, y = view.cy;
+    g.save();
+    g.translate(x, y + R * 3.2);
+    g.rotate(S.scene === 'act' ? clownTilt(t) : 0);
+    g.translate(0, -R * 3.2);
+    g.fillStyle = C.blouse;
+    g.beginPath(); g.moveTo(-R * 0.5, R * 0.9); g.lineTo(R * 0.5, R * 0.9); g.lineTo(R * 1.05, R * 3.2); g.lineTo(-R * 1.05, R * 3.2); g.closePath(); g.fill();
+    g.fillStyle = C.hair;
+    g.beginPath(); g.arc(-R * 0.95, -R * 0.1, R * 0.32, 0, Math.PI * 2); g.arc(R * 0.95, -R * 0.1, R * 0.32, 0, Math.PI * 2); g.fill();
+    g.fillStyle = C.paint; g.globalAlpha = Math.min(0.55, 0.08 + S.mask * 0.03);
+    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 1;
+    g.fillStyle = C.hat;
+    g.fillRect(-R * 0.55, -R * 1.45, R * 1.1, R * 0.5); g.fillRect(-R * 0.85, -R * 1.0, R * 1.7, R * 0.12);
+    g.restore();
+  }
+  function drawCue(t) {
+    const C = CONFIG.col, R = view.R;
+    let col = C.outline, lw = 2, alpha = 0.75;
+    for (let i = 0; i < S.beatCount; i++) {
+      if (Math.abs(t - beats[i].fit) < CONFIG.flashMs) { col = C.paint; lw = 4; alpha = 1; break; }
+    }
+    if (t < S.fbUntil) { col = S.fbCol; lw = 4; alpha = 1; }
+    if (t < S.snapUntil) drawMask(view.cx, view.cy, R, 1, HIT, false);
+    g.save();
+    g.translate(view.cx, view.cy);
+    g.rotate(S.scene === 'act' ? clownTilt(t) * 0.3 : 0);
+    g.strokeStyle = col; g.lineWidth = lw; g.globalAlpha = alpha;
+    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(0, R * 0.05, R * 0.55, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+    g.fillStyle = col; g.beginPath(); g.arc(0, 0, R * 0.08, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+  function drawMasks(t) {
+    let first = true;
+    for (let i = 0; i < S.beatCount; i++) {
+      const b = beats[i];
+      if (b.spawn > t) break;
+      if (b.state !== PENDING) continue;
+      const p = Math.min(1, (t - b.spawn) / (b.fit - b.spawn));
+      const over = Math.max(0, t - b.fit);
+      const r = view.R + (view.R0 - view.R) * (1 - p) - Math.min(view.R * 0.2, over * 0.6);
+      drawMask(view.cx, view.cy + over * 0.25, r, first ? 1 : 0.35, b.kind, false);
+      first = false;
+    }
+  }
+  function drawMask(x, y, r, alpha, kind, flip) {
+    g.save();
+    g.globalAlpha = alpha;
+    g.translate(x, y);
+    if (kind === TAKE) drawWhitefaceShapes(r);
+    else drawMaskShapes(r, flip);
+    g.restore();
+  }
+  function drawMaskShapes(r, flip) {
+    const C = CONFIG.col;
+    g.fillStyle = C.paint; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+    g.fillStyle = C.black;
+    diamond(-r * 0.38, -r * 0.3, r * 0.12); diamond(r * 0.38, -r * 0.3, r * 0.12);
+    g.strokeStyle = C.red; g.lineWidth = Math.max(2, r * 0.12);
+    g.beginPath();
+    if (flip) g.arc(0, r * 0.75, r * 0.5, 1.2 * Math.PI, 1.8 * Math.PI);
+    else g.arc(0, r * 0.05, r * 0.55, 0.15 * Math.PI, 0.85 * Math.PI);
+    g.stroke();
+    g.fillStyle = C.red; g.beginPath(); g.arc(0, 0, r * 0.14, 0, Math.PI * 2); g.fill();
+  }
+  function drawWhitefaceShapes(r) {
+    const C = CONFIG.col;
+    g.fillStyle = C.silver;
+    g.beginPath(); g.moveTo(-r * 0.45, -r * 0.85); g.lineTo(r * 0.45, -r * 0.85); g.lineTo(0, -r * 2.0); g.closePath(); g.fill();
+    g.fillStyle = C.paint; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = C.crimson; g.lineWidth = Math.max(3, r * 0.14);
+    g.beginPath(); g.arc(0, 0, r * 0.97, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = C.black; g.lineWidth = Math.max(1.5, r * 0.04);
+    g.beginPath(); g.arc(-r * 0.36, -r * 0.18, r * 0.2, 1.15 * Math.PI, 1.85 * Math.PI); g.stroke();
+    g.beginPath(); g.arc(r * 0.36, -r * 0.18, r * 0.2, 1.15 * Math.PI, 1.85 * Math.PI); g.stroke();
+    g.fillStyle = C.red; g.beginPath(); g.arc(0, r * 0.45, r * 0.1, 0, Math.PI * 2); g.fill();
+  }
+  function diamond(x, y, s) {
+    g.beginPath(); g.moveTo(x, y - s * 1.5); g.lineTo(x + s, y); g.lineTo(x, y + s * 1.5); g.lineTo(x - s, y); g.closePath(); g.fill();
+  }
+  function drawConfetti() {
+    const cols = CONFIG.confettiCols;
+    for (let i = 0; i < cf.life.length; i++) {
+      if (cf.life[i] <= 0) continue;
+      g.globalAlpha = Math.min(1, cf.life[i]);
+      g.fillStyle = cols[cf.col[i]];
+      g.fillRect(cf.x[i] - 3, cf.y[i] - 2, 6, 4);
+    }
+    g.globalAlpha = 1;
+  }
+  function drawCrowd(t) {
+    const C = CONFIG.col, ex = S.excite;
+    g.fillStyle = C.crowd; g.strokeStyle = C.crowdRim; g.lineWidth = 2;
+    for (let i = 0; i < CONFIG.crowdCount; i++) {
+      const bob = Math.abs(Math.sin(t * 0.012 + crowdPh[i])) * ex * crowdR[i] * 0.5;
+      const y = crowdY[i] - bob;
+      g.beginPath(); g.arc(crowdX[i], y, crowdR[i], 0, Math.PI * 2); g.fill(); g.stroke();
+      g.fillRect(crowdX[i] - crowdR[i] * 1.2, y + crowdR[i] * 0.8, crowdR[i] * 2.4, crowdR[i] * 2);
+    }
+  }
+  function drawFeedback(t) {
+    if (t >= S.fbUntil) return;
+    g.fillStyle = S.fbCol;
+    g.font = view.font;
+    g.textAlign = 'center';
+    g.fillText(S.fbWord, view.cx, view.cy + view.R * 1.45);
+  }
+  function writeHud() {
+    if (hudLast.laughs !== S.laughs) { hudLast.laughs = S.laughs; el.hudLaughs.textContent = S.laughs; }
+    if (hudLast.mask !== S.mask) { hudLast.mask = S.mask; el.hudMask.textContent = S.mask; }
+    if (hudLast.night !== S.night) { hudLast.night = S.night; el.hudNight.textContent = S.night; }
+  }
+
+  // ===== LOOP =====
+  let lastTs = 0;
+  function loop(ts) {
+    requestAnimationFrame(loop);
+    if (S.error) return;
+    try { frame(ts); } catch (e) { showError(e); }
+  }
+  function frame(ts) {
+    const dt = Math.min(CONFIG.dtMax, Math.max(0, (ts - lastTs) / 1000));
+    lastTs = ts;
+    if (S.paused) return;
+    syncClock(performance.now());
+    if (S.scene === 'act') updateAct(dt);
+    else S.now = ts;
+    render();
+    writeHud();
+  }
+  function showError(e) {
+    S.error = true;
+    el.errText.textContent = 'Something broke. Reload the page.\n\n' + (e && e.stack ? e.stack : String(e));
+    el.errPanel.classList.remove('hidden');
+  }
+
+  // ===== BOOT =====
+  function grab() {
+    const ids = ['cv', 'hudNight', 'hudLaughs', 'hudMask', 'padTake', 'padHit', 'title', 'nightRow', 'btnDesk', 'btnPhone',
+      'latDown', 'latVal', 'latUp', 'btnStart', 'results', 'resText', 'btnAgain', 'btnMenu', 'errPanel', 'errText'];
+    for (let i = 0; i < ids.length; i++) el[ids[i]] = document.getElementById(ids[i]);
+    g = el.cv.getContext('2d');
+  }
+  function wire() {
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('blur', releaseAll);
+    document.addEventListener('visibilitychange', onVisibility);
+    el.padHit.addEventListener('pointerdown', onPadDown);
+    el.padTake.addEventListener('pointerdown', onPadDown);
+    el.padHit.addEventListener('pointerup', onPadUp);
+    el.padTake.addEventListener('pointerup', onPadUp);
+    el.nightRow.addEventListener('click', (e) => { const n = Number(e.target.dataset.night); if (n) setNightButton(n); });
+    el.btnDesk.addEventListener('click', () => setPhone(false, true));
+    el.btnPhone.addEventListener('click', () => setPhone(true, true));
+    el.latDown.addEventListener('click', () => setLatency(S.latencyMs - CONFIG.latencyStepMs));
+    el.latUp.addEventListener('click', () => setLatency(S.latencyMs + CONFIG.latencyStepMs));
+    el.btnStart.addEventListener('click', () => { unlockAudio(); startAct(S.night); });
+    el.btnAgain.addEventListener('click', () => startAct(S.night));
+    el.btnMenu.addEventListener('click', () => { S.scene = 'title'; showPanels(); });
+  }
+  function onResize() {
+    if (!S.phoneSetByUser) S.phone = window.matchMedia('(pointer: coarse)').matches;
+    setPhone(S.phone, false);
+  }
+  function boot() {
+    grab();
+    wire();
+    onResize();
+    setLatency(0);
+    showPanels();
+    requestAnimationFrame(loop);
+  }
+  window.__game = {
+    useVirtual(phone) { S.virtual = true; S.phone = !!phone; S.phoneSetByUser = true; layout(); },
+    start(night) { startAct(night); },
+    advance(ms) { S.vclock = ms; updateAct(0.016); render(); },
+    input(btn, ms) { S.vclock = ms; S.now = ms; pressAt(btn, ms - S.latencyMs); },
+    setLatency(v) { setLatency(v); },
+    info() {
+      return { scene: S.scene, ended: S.ended, endReason: S.endReason, misses: S.misses, perfects: S.perfects, goods: S.goods,
+        takes: S.takes, takeBeats: S.takeBeats, flips: S.flips, laughs: S.laughs, actLaughs: S.actLaughs, mask: S.mask,
+        beatCount: S.beatCount, lastFit: S.lastFit, endAt: S.endAt, phone: S.phone };
+    },
+    beats() { return beats.slice(0, S.beatCount).map((b) => Object.assign({}, b)); },
+    config: CONFIG,
+    HIT: HIT, TAKE: TAKE
+  };
+  boot();
+})();
+</script>
+</body>
+</html>
