@@ -44,7 +44,7 @@ Status: **in use** = in the build per START-HERE (20 Nov build status); **planne
 | --- | --- |
 | Characters 20 to 30k triangles desktop with the face as texture, not tube meshes | in use |
 | Detail as texture (baked AO, curvature, painted ramps) instead of geometry | in use (ring bake), planned (characters) |
-| LOD: lighter meshes past a set distance; far props as camera-facing impostor cards | new |
+| LOD: lighter meshes past a set distance; far props as camera-facing impostor cards. Props and set pieces only, never characters (owner decision 4) | new |
 | Painted cards for far layers (back crowd rows, tent depth, Mirror fog reflections) | in use (crowd cards), new (other layers) |
 | Delete faces nobody sees (hidden interiors, culled shells) | in use |
 | Frustum culling on everything, bounds grown for moving and skinned meshes | in use |
@@ -118,7 +118,7 @@ Status: **in use** = in the build per START-HERE (20 Nov build status); **planne
 | --- | --- |
 | Frame governor: pixel ratio first, then AO; never density (gate 6) | in use |
 | Quality tier chosen from frame time measured while loading | planned |
-| Phone gets separate lighter models and textures (step 9), not fewer things on desktop | planned |
+| Phone gets lighter set models and textures (step 9), not fewer things on desktop; character models only if the owner says so (owner decision 4) | planned |
 
 **Proof**
 
@@ -145,3 +145,11 @@ Status: **in use** = in the build per START-HERE (20 Nov build status); **planne
   - clip blend: switching clips in the game page crossfades, no frame-to-frame joint jump above a limit;
   - joint limits: every bone stays inside its angle range for the whole clip;
   - weight shift: hip centre over the standing foot during walk.
+
+## 4. The game uses the current character models (owner, 20 Nov 2026)
+
+- The character models stay as they are: no decimation, LOD swap, remesh or replacement to win frame time or memory. Frame time is won from everything else (methods list in requirement 2).
+- Allowed: lossless compression of the same mesh (meshopt, KTX2), and animating far characters at a lower rate (the model is unchanged).
+- Phone build (step 9): ask the owner before any lighter character model.
+- Not enforced yet: a gate that the game's character triangle counts equal the built models' counts.
+

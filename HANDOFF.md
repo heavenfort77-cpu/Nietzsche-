@@ -19,6 +19,8 @@ Step 0: the 2D clown-face cue prototype (flat 2D, drum, one act, phone and deskt
 
 ## Waiting on the owner
 
+- Decided 20 Nov: the game uses the current character models as they are (OWNER-REQUIREMENTS.md section 4).
+
 - Play step 0 and say whether the loop works.
 - Approve the v2 whiteface and Performer (pose sheets run 11, side-by-side run 12).
 
