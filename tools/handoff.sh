@@ -45,6 +45,9 @@ case "${1:-check}" in
     if [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then
       echo "$out" | grep FAIL; echo "FAIL fix HANDOFF.md before the next batch"; exit 1
     fi
+    if [ -n "$s" ] && ! out=$(bash tools/check_faults.sh "$s" HEAD); then
+      echo "$out" | grep FAIL; echo "FAIL fix FAULTS.md before the next batch (owner requirement 5)"; exit 1
+    fi
     echo "batches this session: $n of $LIMIT (start $(start_commit))"
     if [ "$n" = "?" ]; then banner "session start commit unknown"; exit 1; fi
     if [ "$n" -ge "$LIMIT" ]; then banner "$n batches done"; exit 1; fi
@@ -62,6 +65,7 @@ case "${1:-check}" in
     fi
     s=$(start_commit)
     if [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then echo "$out" | grep FAIL; fail=1; fi
+    if [ -n "$s" ] && ! out=$(bash tools/check_faults.sh "$s" HEAD); then echo "$out" | grep FAIL; fail=1; fi
     grep -q '^## Next step' HANDOFF.md || { echo "FAIL HANDOFF.md has no '## Next step'"; fail=1; }
     if [ "$fail" = 0 ]; then
       echo "PASS handoff ready. Also write START-HERE.md to the Project if its rules changed."

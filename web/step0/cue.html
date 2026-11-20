@@ -117,8 +117,10 @@
     latencyMaxMs: 300,
     // Cue size as a fraction of screen height: desktop, phone (diameter)
     cueFrac: [0.20, 0.30],
-    // Mask start radius as a fraction of the larger screen side
-    maskStartFrac: 0.75,
+    // Mask start radius as a fraction of the distance from the face to the nearest screen edge (1 = touches it)
+    maskStartFrac: 0.96,
+    // Switch to the page clock if the audio clock stands still this long during an act (ms)
+    audioStallMs: 500,
     // How long the outline flashes around each fit moment (ms)
     flashMs: 45,
     // How long a result word stays on the outline (ms)
@@ -168,7 +170,8 @@
     ended: false, endReason: '', endAt: 0, resultsShown: false,
     excite: CONFIG.exciteRest, fbWord: '', fbCol: '', fbUntil: -1e9, snapUntil: -1e9, fallAt: -1e9,
     paused: false, error: false, virtual: false, vclock: 0,
-    actStartAudio: 0, clockOff: 0, now: 0
+    actStartAudio: 0, clockOff: 0, now: 0,
+    clockAudio: false, actStartPerf: 0, hiddenAt: 0, lastAudioT: -1, audioStillSince: 0
   };
   const view = { w: 1, h: 1, dpr: 1, cx: 0, cy: 0, R: 1, R0: 2, spot: null, font: '' };
   const crowdX = new Float32Array(CONFIG.crowdCount);
@@ -232,6 +235,7 @@
     A.master = A.ctx.createGain();
     A.master.gain.value = CONFIG.volume;
     A.master.connect(A.ctx.destination);
+    if (A.ctx.resume) A.ctx.resume();
     buildSounds();
   }
   function playSound(name, when) {
@@ -244,7 +248,7 @@
   }
   function scheduleBeatSounds() {
     A.schedN = 0;
-    if (!A.ctx) return;
+    if (!S.clockAudio) return;
     for (let i = 0; i < S.beatCount; i++) {
       const b = beats[i];
       A.scheduled[A.schedN++] = playSound(b.topper ? 'rim' : 'drum', S.actStartAudio + b.fit / 1000);
@@ -260,17 +264,28 @@
 
   // ===== ACT =====
   function actNow() {
-    if (S.virtual || !A.ctx) return S.vclock;
-    return (A.ctx.currentTime - S.actStartAudio) * 1000;
+    if (S.virtual) return S.vclock;
+    if (S.clockAudio) return (A.ctx.currentTime - S.actStartAudio) * 1000;
+    return performance.now() - S.actStartPerf;
   }
   function syncClock(perfNow) {
-    if (!A.ctx) return;
-    const est = A.ctx.currentTime * 1000 - perfNow;
+    if (!S.clockAudio) return;
+    const at = A.ctx.currentTime;
+    if (at !== S.lastAudioT) { S.lastAudioT = at; S.audioStillSince = perfNow; }
+    else if (S.scene === 'act' && perfNow - S.audioStillSince > CONFIG.audioStallMs) { usePageClock(perfNow); return; }
+    const est = at * 1000 - perfNow;
     S.clockOff = est > S.clockOff ? est : S.clockOff - 0.05;
   }
+  function usePageClock(perfNow) {
+    const t = (A.ctx.currentTime - S.actStartAudio) * 1000;
+    S.clockAudio = false;
+    S.actStartPerf = perfNow - Math.max(0, t);
+    stopScheduled();
+  }
   function eventActTime(ts) {
-    if (S.virtual || !A.ctx) return S.vclock - S.latencyMs;
-    return ts + S.clockOff - S.actStartAudio * 1000 - S.latencyMs;
+    if (S.virtual) return S.vclock - S.latencyMs;
+    if (S.clockAudio) return ts + S.clockOff - S.actStartAudio * 1000 - S.latencyMs;
+    return ts - S.actStartPerf - S.latencyMs;
   }
   function buildSchedule() {
     const n = nightIdx(), gap = CONFIG.gapMs[n], close = CONFIG.closeMs[n], per = CONFIG.beatsPerChain[n];
@@ -315,9 +330,12 @@
     resetActCounters();
     buildSchedule();
     S.vclock = 0;
-    if (A.ctx && !S.virtual) {
+    S.clockAudio = !S.virtual && !!A.ctx && A.ctx.state === 'running';
+    S.actStartPerf = performance.now() + 50;
+    if (S.clockAudio) {
       S.actStartAudio = A.ctx.currentTime + 0.05;
       S.clockOff = A.ctx.currentTime * 1000 - performance.now();
+      S.lastAudioT = A.ctx.currentTime; S.audioStillSince = performance.now();
     }
     scheduleBeatSounds();
     S.scene = 'act';
@@ -497,6 +515,9 @@
   function onPadUp(e) { e.currentTarget.classList.remove('down'); }
   function releaseAll() { el.padHit.classList.remove('down'); el.padTake.classList.remove('down'); }
   function onVisibility() {
+    const now = performance.now();
+    if (document.hidden && !S.paused) S.hiddenAt = now;
+    if (!document.hidden && S.paused) S.actStartPerf += now - S.hiddenAt;
     S.paused = document.hidden;
     releaseAll();
     if (!A.ctx) return;
@@ -535,7 +556,7 @@
     el.cv.width = Math.round(w * dpr); el.cv.height = Math.round(h * dpr);
     view.cx = w / 2; view.cy = h * 0.4;
     view.R = Math.min(h * CONFIG.cueFrac[S.phone ? 1 : 0] / 2, w * 0.3);
-    view.R0 = Math.max(w, h) * CONFIG.maskStartFrac;
+    view.R0 = Math.max(view.R * 1.3, Math.min(view.cx, view.cy, w - view.cx, h - view.cy) * CONFIG.maskStartFrac);
     view.font = '700 ' + Math.round(view.R * 0.34) + 'px system-ui, sans-serif';
     view.spot = g.createRadialGradient(view.cx, view.cy, view.R * 0.5, view.cx, view.cy + view.R, Math.max(w, h) * 0.6);
     view.spot.addColorStop(0, 'rgba(251,209,144,0.38)');
@@ -729,6 +750,10 @@
     el.padTake.addEventListener('pointerdown', onPadDown);
     el.padHit.addEventListener('pointerup', onPadUp);
     el.padTake.addEventListener('pointerup', onPadUp);
+    for (const ev of ['pointercancel', 'pointerleave', 'lostpointercapture']) {
+      el.padHit.addEventListener(ev, onPadUp);
+      el.padTake.addEventListener(ev, onPadUp);
+    }
     el.nightRow.addEventListener('click', (e) => { const n = Number(e.target.dataset.night); if (n) setNightButton(n); });
     el.btnDesk.addEventListener('click', () => setPhone(false, true));
     el.btnPhone.addEventListener('click', () => setPhone(true, true));
@@ -759,7 +784,8 @@
     info() {
       return { scene: S.scene, ended: S.ended, endReason: S.endReason, misses: S.misses, perfects: S.perfects, goods: S.goods,
         takes: S.takes, takeBeats: S.takeBeats, flips: S.flips, laughs: S.laughs, actLaughs: S.actLaughs, mask: S.mask,
-        beatCount: S.beatCount, lastFit: S.lastFit, endAt: S.endAt, phone: S.phone };
+        beatCount: S.beatCount, lastFit: S.lastFit, endAt: S.endAt, phone: S.phone, w: view.w, h: view.h, R: view.R, R0: view.R0, cx: view.cx, cy: view.cy,
+        actCount: S.actCount, confettiAlive: cf.life.reduce((n, l) => n + (l > 0 ? 1 : 0), 0) };
     },
     beats() { return beats.slice(0, S.beatCount).map((b) => Object.assign({}, b)); },
     config: CONFIG,

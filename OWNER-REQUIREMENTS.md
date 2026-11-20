@@ -153,3 +153,20 @@ Status: **in use** = in the build per START-HERE (20 Nov build status); **planne
 - Phone build (step 9): ask the owner before any lighter character model.
 - Not enforced yet: a gate that the game's character triangle counts equal the built models' counts.
 
+
+## 5. Faults: check wide, probe first, one commit (owner, 21 Nov 2026)
+
+Owner's words: "any check of fault is to go wide instead of narrow. If 1 bug is found, check all, no crack should exist, no slip up. If 1 fault is found do probe test and no guess work. Consolidate all fixes and send for 1 commit."
+
+- **Probe first, no guessing.** Before any fix, a test reproduces the fault and prints a FAIL line. The cause is named from that probe, not assumed. A fault that cannot be reproduced is reported as "not proven" and gets a probe, not a fix.
+- **Go wide.** One fault means its whole class is suspect. State the class wide (for example "sizes derived from the screen", not "the mask radius"), then check every place in that class across the whole player journey and every target screen and device, and add a probe for each case. A gate that checks an assumption (half the screen) instead of the real geometry or behaviour is itself a fault.
+- **Fix the class, not the instance.** All faults found in the sweep are fixed together.
+- **One commit.** All fixes from one sweep go in one commit, together with their probes and gates. No fix is pushed before the sweep is finished.
+- **Prove it.** The same probe passes after the fix, and a mutation that puts the fault back makes the suite fail.
+- **Log it.** Each fault gets an entry in `FAULTS.md` (Found, Probe with its FAIL line, Cause, Class, Sweep, Fix, Proof with its PASS line), in the same commit as the fix. Places checked with no fault are listed in the Sweep, so they are not re-checked.
+- Enforced by: `tools/check_faults.sh` in CI job `handoff` and in `tools/handoff.sh check` and `close`:
+  - fails a new entry missing a field, a Probe with no FAIL line, or a Proof with no PASS line;
+  - fails a commit whose subject says fix, bug or fault, and that changes code, when it adds no entry;
+  - fails when new entries are spread over more than one commit in one push (CI) or in one session (`handoff.sh`).
+  - Tested 21 Nov in a scratch repo: 10 of 10 cases behaved as intended.
+- Not enforced (cannot be checked by a script): whether the Class and Sweep are really wide enough. The entry has to say what was checked, so the owner and the next session can judge it.

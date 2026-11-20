@@ -24,7 +24,8 @@ const scriptOf = (html) => html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const HOT = ['loop', 'frame', 'syncClock', 'updateAct', 'expireBeats', 'updateConfetti', 'render', 'drawClown', 'clownTilt',
   'drawCue', 'drawMasks', 'drawMask', 'drawMaskShapes', 'drawWhitefaceShapes', 'diamond', 'drawConfetti', 'drawCrowd',
   'drawFeedback', 'writeHud', 'actNow', 'onKeyDown', 'onPadDown', 'onPadUp', 'eventActTime', 'pressAt', 'nearestBeat',
-  'judgeTake', 'judgeHit', 'flipGrin', 'missBeat', 'addLaughs', 'feedback', 'burstConfetti', 'endAct', 'stopScheduled'];
+  'judgeTake', 'judgeHit', 'flipGrin', 'missBeat', 'addLaughs', 'feedback', 'burstConfetti', 'endAct', 'stopScheduled',
+  'winGood', 'winPerfect', 'rand', 'usePageClock'];
 function hotGate(code) {
   const fails = [];
   const ast = acorn.parse(code, { ecmaVersion: 'latest', locations: true });
@@ -76,18 +77,19 @@ function stubEl(id) {
     }
   };
 }
-function makeGame(code) {
-  const els = {};
-  const document = { hidden: false, getElementById: (id) => (els[id] = els[id] || stubEl(id)), addEventListener() {} };
+function makeGame(code, size) {
+  const els = {}, handlers = {}, clock = { now: 0, raf: null };
+  const on = (k, f) => { handlers[k] = f; };
+  const document = { hidden: false, activeElement: null, getElementById: (id) => (els[id] = els[id] || stubEl(id)), addEventListener: on };
   const window = {
-    innerWidth: 1280, innerHeight: 800, devicePixelRatio: 1, addEventListener() {},
+    innerWidth: size ? size[0] : 1280, innerHeight: size ? size[1] : 800, devicePixelRatio: 1, addEventListener: on,
     matchMedia: () => ({ matches: false })
   };
-  const ctx = { window, document, navigator: {}, performance: { now: () => 0 }, requestAnimationFrame: () => 0, Math, Number, String, Object, Float32Array, Uint8Array, console };
+  const ctx = { window, document, navigator: {}, performance: { now: () => clock.now }, requestAnimationFrame: (f) => { clock.raf = f; return 1; }, Math, Number, String, Object, Float32Array, Uint8Array, console };
   window.window = window;
   vm.createContext(ctx);
   vm.runInContext(code, ctx, { filename: 'cue.js' });
-  return { G: window.__game, els };
+  return { G: window.__game, els, handlers, clock, document };
 }
 
 // ---------- 2. bots ----------
@@ -173,11 +175,107 @@ function expect(name, r, night, phone, bot) {
   if (night >= C.secondButtonFromNight) ok(i.takeBeats === C.interruptsPerAct[Math.min(night, 3) - 1], `interrupts ${i.takeBeats}`);
   return r.inv.concat(fails).map((f) => `${name}: ${f}`);
 }
+// ---------- wide probes (owner requirement 5) ----------
+// Layout at every target screen: mask start inside the screen, cue clear of HUD and pads, whiteface hat on screen.
+const SIZES = [[1280, 800, false], [1920, 1080, false], [2560, 1080, false], [390, 844, true], [844, 390, true], [360, 640, true], [768, 1024, true]];
+function layoutGate(code) {
+  const fails = [];
+  for (const [w, h, phone] of SIZES) {
+    const { G } = makeGame(code, [w, h]);
+    G.useVirtual(phone);
+    const i = G.info(), tag = `layout ${w}x${h}`;
+    const padW = Math.min(180, Math.max(96, 0.3 * w)), padTop = h - 18 - 96;
+    const pads = [[18, 18 + padW], [w - 18 - padW, w - 18]];
+    const hitsPad = (x0, x1, y0, y1) => pads.some(([a, b]) => x0 < b && x1 > a && y1 > padTop && y0 < h - 18);
+    if (i.cx - i.R0 < -1 || i.cy - i.R0 < -1 || i.cx + i.R0 > w + 1 || i.cy + i.R0 > h + 1) fails.push(`${tag}: mask start r ${i.R0.toFixed(0)} at (${i.cx.toFixed(0)},${i.cy.toFixed(0)}) leaves the screen`);
+    if (i.R0 < i.R * 1.3) fails.push(`${tag}: mask start r ${i.R0.toFixed(0)} < 1.3 x cue ${i.R.toFixed(0)}`);
+    if (i.cy - i.R < 40) fails.push(`${tag}: cue top ${(i.cy - i.R).toFixed(0)} under the HUD (40)`);
+    if (i.cy - 2 * i.R < 0) fails.push(`${tag}: whiteface hat top ${(i.cy - 2 * i.R).toFixed(0)} off screen at fit`);
+    if (hitsPad(i.cx - i.R, i.cx + i.R, i.cy - i.R, i.cy + i.R)) fails.push(`${tag}: cue overlaps a pad`);
+    if (hitsPad(i.cx - 0.9 * i.R, i.cx + 0.9 * i.R, i.cy + 1.15 * i.R, i.cy + 1.5 * i.R)) fails.push(`${tag}: result word overlaps a pad`);
+  }
+  return fails;
+}
+// Every function a hot function calls is hot-checked too, or listed cold with a reason.
+const COLD_OK = { playSound: 'one-shot source, allowed', showResults: 'once per act', resultsText: 'once per act', showError: 'error path', stopScheduled: 'hot-checked' };
+function callGraphGate(code) {
+  const fails = [];
+  const ast = acorn.parse(code, { ecmaVersion: 'latest', locations: true });
+  const declared = new Set();
+  walk.simple(ast, { FunctionDeclaration(f) { declared.add(f.id.name); } });
+  walk.simple(ast, {
+    FunctionDeclaration(fn) {
+      if (!HOT.includes(fn.id.name)) return;
+      walk.simple(fn.body, { CallExpression(c) {
+        const nm = c.callee.type === 'Identifier' && c.callee.name;
+        if (nm && declared.has(nm) && !HOT.includes(nm) && !(nm in COLD_OK)) fails.push(`hot ${fn.id.name} calls ${nm}, which is not hot-checked`);
+      } });
+    }
+  });
+  return fails;
+}
+// A second act in the same page plays exactly like a fresh page; nothing moves after an act ends.
+function sameRunProbe(code) {
+  const fails = [];
+  for (const night of [1, 2, 3]) {
+    const fresh = runBot(code, night, false, 'perfect').info;
+    const { G } = makeGame(code);
+    G.useVirtual(false);
+    G.start(night);
+    let t = 0;
+    for (; t < 20000 && !G.info().ended; t += STEP) { if (t === 2400) burstThenFail(G, t); G.advance(t); }
+    const frozen = JSON.stringify([G.info().laughs, G.info().misses, G.beats().map((b) => b.state + b.result)]);
+    for (let k = 0; k < 40; k++) { G.input(k % 2, t + k * 37); G.advance(t + k * 37); }
+    const after = JSON.stringify([G.info().laughs, G.info().misses, G.beats().map((b) => b.state + b.result)]);
+    if (frozen !== after) fails.push(`night ${night}: state changed after the act ended`);
+    while (G.info().scene !== 'results' && t < 40000) { t += STEP; G.advance(t); }
+    const laughs0 = G.info().laughs, mask0 = G.info().mask;
+    G.start(night);
+    G.advance(0);
+    if (G.info().confettiAlive) fails.push(`night ${night}: ${G.info().confettiAlive} confetti still alive at the start of the next act`);
+    const plan = pressPlan(G.beats(), 'perfect', G, false);
+    let pi = 0;
+    for (t = 0; t <= G.info().lastFit + 4000; t += STEP) {
+      while (pi < plan.length && plan[pi][0] <= t) { G.input(plan[pi][1], plan[pi][0]); pi++; }
+      G.advance(t);
+    }
+    const i = G.info();
+    const same = i.endReason === fresh.endReason && i.perfects === fresh.perfects && i.actLaughs === fresh.actLaughs &&
+      i.laughs - laughs0 === fresh.laughs && i.mask - mask0 === fresh.mask && i.takes === fresh.takes;
+    if (!same) fails.push(`night ${night}: second act differs from a fresh page (${i.endReason} ${i.perfects}p ${i.actLaughs}L vs ${fresh.endReason} ${fresh.perfects}p ${fresh.actLaughs}L)`);
+  }
+  return fails;
+}
+function burstThenFail(G, t) { G.input(G.HIT, G.beats()[0].fit); }
+// Without an audio clock (no Web Audio, or a context that never runs) the act still runs, and pauses while hidden.
+function noAudioClockProbe(code) {
+  const fails = [];
+  const { G, handlers, clock, document } = makeGame(code);
+  const frameAt = (ms) => { clock.now = ms; clock.raf(ms); };
+  handlers.resize && handlers.resize();
+  G.start(1);
+  frameAt(16);
+  const firstFit = G.beats()[0].fit;
+  frameAt(firstFit - 300);
+  document.hidden = true; handlers.visibilitychange();
+  for (let k = 1; k <= 30; k++) frameAt(firstFit - 300 + k * 2000);
+  document.hidden = false; handlers.visibilitychange();
+  const back = clock.now;
+  frameAt(back + 16);
+  if (G.info().misses !== 0) fails.push(`no audio: ${G.info().misses} misses counted while the tab was hidden 60 s`);
+  for (let ms = back + 32; ms < back + 40000 && G.info().scene !== 'results'; ms += 16) frameAt(ms);
+  if (G.info().scene !== 'results') fails.push(`no audio: act never reached results (act clock frozen at ${G.info().misses} misses)`);
+  return fails;
+}
 function suite(html) {
   const code = scriptOf(html);
   const out = { checks: 0, fails: [] };
   const add = (list) => { out.checks++; out.fails.push(...list); };
   add(hotGate(code));
+  add(layoutGate(code));
+  add(callGraphGate(code));
+  add(sameRunProbe(code));
+  add(noAudioClockProbe(code));
   for (const night of [1, 2, 3]) {
     for (const phone of [false, true]) {
       const bots = ['perfect', 'good', 'late', 'idle', 'masher', 'latency'];
@@ -202,6 +300,10 @@ const MUTATIONS = [
   ['flip groan removed', 'if (!S.flipUsed[S.night]) {', 'if (true) {'],
   ['laughs floor removed', 'if (S.actLaughs < CONFIG.laughsFloor)', 'if (false)'],
   ['night 1 take not ignored', 'if (btn === TAKE && S.night < CONFIG.secondButtonFromNight) return;', ''],
+  ['mask start sized from the screen, not the face position (batch 2 fault)', 'Math.min(view.cx, view.cy, w - view.cx, h - view.cy) * CONFIG.maskStartFrac', 'Math.min(w, h) * 0.48'],
+  ['no page clock without audio', 'return performance.now() - S.actStartPerf;', 'return S.vclock;'],
+  ['hidden time counted', 'if (!document.hidden && S.paused) S.actStartPerf += now - S.hiddenAt;', ''],
+  ['new helper called per frame but not hot-checked', '  function drawCrowd(t) {\n', '  function crowdHelper() { return { a: 1 }; }\n  function drawCrowd(t) {\n    crowdHelper();\n'],
   ['allocation in draw', '  function drawCrowd(t) {\n', '  function drawCrowd(t) {\n    const tmp = { t: t };\n'],
   ['DOM lookup per frame', '  function writeHud() {\n', '  function writeHud() {\n    document.getElementById(\'hudMask\');\n'],
   ['unguarded HUD write', '  function writeHud() {\n', '  function writeHud() {\n    el.hudMask.textContent = S.mask;\n']
