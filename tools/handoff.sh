@@ -39,6 +39,7 @@ case "${1:-check}" in
     echo "== session start recorded: $head (commit HANDOFF.md with the first batch)"
     ;;
   check)
+    git fetch -q --depth=50 origin main 2>/dev/null
     n=$(batches)
     s=$(start_commit)
     if [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then
@@ -51,7 +52,7 @@ case "${1:-check}" in
     ;;
   close)
     fail=0
-    git fetch -q origin main 2>/dev/null
+    git fetch -q --depth=50 origin main 2>/dev/null
     if [ -n "$(git status --porcelain)" ]; then echo "FAIL uncommitted changes:"; git status --short | head -10; fail=1; fi
     if [ -n "$(git log --oneline FETCH_HEAD..HEAD 2>/dev/null)" ]; then echo "FAIL commits not pushed"; fail=1; fi
     last_batch=$(git log --format=%H --grep='^Batch ' -1)
