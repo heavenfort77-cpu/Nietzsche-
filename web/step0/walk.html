@@ -19,6 +19,9 @@
   #panel { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #0c0809cc; text-align: center; padding: 20px; }
   #panel button { font: inherit; font-weight: 600; padding: 10px 22px; border-radius: 6px; border: 0; background: #cfaa4e; color: #1e1714; }
   #state { font-size: 12px; opacity: .8; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity var(--fade, 300ms) linear; }
+  #roomBar { position: fixed; left: 0; right: 0; bottom: 34px; display: flex; justify-content: center; gap: 10px; }
+  #roomBar button { font: inherit; font-weight: 600; min-width: 48px; min-height: 44px; padding: 0 16px; border-radius: 6px; border: 0; background: #2a2f38; color: #d6dbe4; }
 </style>
 </head>
 <body>
@@ -30,11 +33,13 @@
 </div></div>
 <div id="stick" class="hidden"><div id="knob"></div></div>
 <div id="hint">Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.</div>
+<div id="roomBar" class="hidden"><button id="roomL" aria-label="Turn left">&#9664;</button><button id="again">Walk back again</button><button id="roomR" aria-label="Turn right">&#9654;</button></div>
 <div id="panel">
-  <div id="panelText">Leaving the cube room by the tent exit: corridor, wings, ring entrance.</div>
-  <div id="state">Loading the clown, two performers and three shots...</div>
-  <button id="go" class="hidden">Walk</button>
+  <div id="panelText">Walk out: cube room to the ring (corridor, wings, ring entrance). Walk back: after the act, ring to the cube room.</div>
+  <div id="state">Loading the clown, two performers, three shots and the cube room...</div>
+  <div><button id="go" class="hidden">Walk out</button> <button id="back" class="hidden">Walk back</button></div>
 </div>
+<div id="fade"></div>
 
 <!-- plate: Blender colour plus per-pixel depth (planar view depth packed in R and G), written into the depth buffer -->
 <script type="x-shader/x-vertex" id="plateVert">
@@ -50,13 +55,81 @@ uniform sampler2D uDepth;
 uniform float uNear;
 uniform float uFar;
 uniform float uDepthFar;
+uniform float uGloomAmt;
+uniform vec3 uGloomTint;
 varying vec2 vUv;
 void main() {
   vec4 d = texture2D(uDepth, vUv);
   float z = (d.r * 65280.0 + d.g * 255.0) / 65535.0 * uDepthFar;
   float ndc = z >= uDepthFar * 0.999 ? 1.0 : ((uFar + uNear) * z - 2.0 * uFar * uNear) / ((uFar - uNear) * max(z, uNear));
   gl_FragDepth = clamp(ndc * 0.5 + 0.5, 0.0, 1.0);
-  gl_FragColor = vec4(texture2D(uColor, vUv).rgb, 1.0);
+  vec3 c = texture2D(uColor, vUv).rgb;
+  c = mix(c, dot(c, vec3(0.299, 0.587, 0.114)) * uGloomTint, uGloomAmt);
+  gl_FragColor = vec4(c, 1.0);
+}
+</script>
+<!-- cube room layer plate (cube25d/*.webp): same gloom grade as the walk plates -->
+<script type="x-shader/x-vertex" id="roomVert">
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="roomFrag">
+uniform sampler2D uMap;
+uniform float uGloomAmt;
+uniform vec3 uGloomTint;
+varying vec2 vUv;
+void main() {
+  vec4 t = texture2D(uMap, vUv);
+  vec3 c = mix(t.rgb, dot(t.rgb, vec3(0.299, 0.587, 0.114)) * uGloomTint, uGloomAmt);
+  gl_FragColor = vec4(c, t.a);
+}
+</script>
+<!-- falling flakes in the cube room: one draw; each flake's fall and sway come from its seed and the time (no per-frame CPU work) -->
+<script type="x-shader/x-vertex" id="flakeVert">
+uniform float uTime;
+uniform float uScale;
+uniform float uSize;
+uniform float uFall;
+uniform float uSway;
+uniform vec3 uBoxMin;
+uniform vec3 uBoxSize;
+attribute vec4 seed;
+varying float vShade;
+void main() {
+  vec3 p = uBoxMin + seed.xyz * uBoxSize;
+  float h = uBoxSize.y;
+  p.y = uBoxMin.y + h - mod(seed.y * h + uTime * uFall * (0.6 + 0.8 * seed.w), h);
+  p.x += sin(uTime * (0.7 + seed.w) + seed.x * 30.0) * uSway;
+  p.z += cos(uTime * (0.5 + seed.z) + seed.w * 20.0) * uSway * 0.6;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mv;
+  gl_PointSize = uSize * (0.6 + 0.8 * seed.z) * uScale / max(-mv.z, 0.1);
+  vShade = seed.w;
+}
+</script>
+<script type="x-shader/x-fragment" id="flakeFrag">
+uniform vec3 uColor;
+varying float vShade;
+void main() {
+  vec2 q = gl_PointCoord - 0.5;
+  if (length(q * vec2(1.0, 1.8)) > 0.5) discard;
+  gl_FragColor = vec4(uColor * (0.75 + 0.5 * vShade), 1.0);
+}
+</script>
+<!-- gloom vignette and darkening: one full-screen quad multiplied onto the frame (no extra render target) -->
+<script type="x-shader/x-fragment" id="vigFrag">
+uniform float uGloomAmt;
+uniform float uVig;
+uniform float uDark;
+uniform float uAspect;
+varying vec2 vUv;
+void main() {
+  float r = length((vUv - 0.5) * vec2(uAspect, 1.0));
+  float v = (1.0 - uGloomAmt * uVig * smoothstep(0.25, 0.95, r)) * (1.0 - uGloomAmt * uDark);
+  gl_FragColor = vec4(vec3(v), 1.0);
 }
 </script>
 <!-- toon and outline shaders: copied from web/game/index.html (same look) -->
@@ -254,6 +327,47 @@ const CONFIG = Object.freeze({
   band1: 0.42, band2: 0.68, soft: 0.04, rimPow: 2.0, specPow: 60.0, specCut: 0.5, flakeScale: 90.0,
   // face cells in the 2x2 atlas, uv offset from the sad cell (atlas rows run down)
   faces: { sad: [0, 0], smile: [0.5, 0], startle: [0, 0.5], wince: [0.5, 0.5] },
+  // ----- walk back after the act (HANDOFF next step 1) -----
+  // walk back starts here, Blender floor (x, y), metres: the ring edge end of the entrance passage
+  backStart: [-1.25, 18.0],
+  // walk back ends when he gets this close to the cube room's exit flap (Blender y), metres
+  backEndY: 2.5,
+  // his face on the way out and on the way back
+  faceOut: 'smile', faceBack: 'sad',
+  // cube room plates (box-and-shape, from cube25d/build_cube.py) and the view he comes in by
+  room: './cube25d/views.json', roomPlates: './cube25d/', roomStart: 'exit',
+  // room views in turning order (yaw grows to the left)
+  roomOrder: ['ring', 'exit', 'mirror', 'dressing'],
+  // room camera vertical field of view, degrees (plates are rendered at 46, the margin is for parallax later)
+  roomFov: 42,
+  // where he stands in the room: this far in front of the camera, metres
+  roomClownDist: 3.0,
+  // fade to black at the flap and between room views, ms
+  fadeMs: 300, turnFadeMs: 140,
+  // ----- gloom (colour grade, vignette, darkening) -----
+  // gloom amount when he reaches the flap (rises from 0 at the ring); the room itself is 1
+  gloomWalk: 0.35,
+  // cool tint the colours are pulled toward (multiplied by brightness)
+  gloomTint: [0.62, 0.7, 0.86],
+  // how far colours move to the tint at full gloom (0 none, 1 all)
+  gloomDesat: 0.7,
+  // vignette strength at full gloom
+  gloomVig: 0.6,
+  // overall darkening at full gloom
+  gloomDark: 0.3,
+  // ----- falling flakes in the room (one GPU draw, fixed count) -----
+  // number of flakes
+  flakeCount: 700,
+  // flake colour (already gloomy, then darkened with the frame)
+  flakeColor: [0.6, 0.62, 0.66],
+  // flake size, metres
+  flakeSize: 0.035,
+  // fall speed, metres per second (each flake 0.6x to 1.4x)
+  flakeFall: 0.35,
+  // sideways sway, metres
+  flakeSway: 0.12,
+  // fall volume in front of the camera (view space before yaw), metres: min x, y, z and size x, y, z
+  flakeBoxMin: [-3.5, 0, -5.0], flakeBoxSize: [7, 4.5, 3.3],
 });
 
 // ===== STATE =====
@@ -262,6 +376,7 @@ const S = {
   shot: '', x: 0, y: 0, yaw: 0, speed: CONFIG.speedFallback, moving: false, still: 0, lastMag: 1, dirX: 0, dirZ: -1,
   hold: false, holdAng: 0, basisX: 0, basisZ: -1,
   dprI: 0, slowT: 0, lastT: 0, raf: 0, w: 0, h: 0, cuts: 0, walkStarts: 0,
+  back: false, room: false, roomView: '', roomT: 0, turning: false, gloom: -1,
 };
 // test hook: read by the headless checks
 window.__walk = S;
@@ -270,6 +385,9 @@ const el = {
   panel: document.getElementById('panel'), panelText: document.getElementById('panelText'), state: document.getElementById('state'),
   go: document.getElementById('go'), stick: document.getElementById('stick'), knob: document.getElementById('knob'),
   labels: [document.getElementById('label0'), document.getElementById('label1')],
+  back: document.getElementById('back'), fade: document.getElementById('fade'), roomBar: document.getElementById('roomBar'),
+  roomL: document.getElementById('roomL'), roomR: document.getElementById('roomR'), again: document.getElementById('again'),
+  hint: document.getElementById('hint'),
 };
 const renderer = new THREE.WebGLRenderer({ canvas: el.canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
 renderer.autoClear = false;
@@ -284,6 +402,13 @@ const shared = {
   uShadow: { value: new THREE.Color().fromArray(CONFIG.shadow) }, uRimDir: { value: new THREE.Vector3() },
   uGradeTint: { value: new THREE.Color(1, 1, 1) }, uGradeAmt: { value: 0 }, uSpecOn: { value: 1 }, uMode: { value: 0 }, uTime: { value: 0 },
 };
+// gloom uniforms, shared by the plates, the room layers and the vignette quad
+const gloomU = { uGloomAmt: { value: 0 }, uGloomTint: { value: new THREE.Color().fromArray(CONFIG.gloomTint) } };
+const roomScene = new THREE.Scene();
+const roomCam = new THREE.PerspectiveCamera(CONFIG.roomFov, CONFIG.aspect, CONFIG.near, CONFIG.far);
+const room = { rigs: {}, data: null, textures: [], flakes: null, flakeMat: null };
+const vigScene = new THREE.Scene();
+let vigMat = null;
 const chars = { clown: null, whiteface: null, performer: null };
 const performers = [];
 const plates = {};
@@ -391,7 +516,7 @@ function loadPlates(tl, data) {
 }
 function makePlate(data) {
   plateMat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: null }, uDepth: { value: null }, uNear: { value: CONFIG.near }, uFar: { value: CONFIG.far }, uDepthFar: { value: data.depthFar } },
+    uniforms: { uColor: { value: null }, uDepth: { value: null }, uNear: { value: CONFIG.near }, uFar: { value: CONFIG.far }, uDepthFar: { value: data.depthFar }, ...gloomU },
     vertexShader: shaderText('plateVert'), fragmentShader: shaderText('plateFrag'), depthTest: true, depthFunc: THREE.AlwaysDepth, depthWrite: true,
   });
   plateScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), plateMat));
@@ -415,8 +540,150 @@ function cutTo(name) {
   el.shotName.textContent = s.title;
 }
 
+// ===== cube room (after the walk back) and gloom =====
+function loadRoom(tl) {
+  return fetch(CONFIG.room).then((r) => r.json()).then((data) => {
+    room.data = data;
+    const cfg = data.config;
+    const jobs = [];
+    for (const n of CONFIG.roomOrder) for (const l of ['back', 'mid', 'front']) {
+      jobs.push(tl.loadAsync(CONFIG.roomPlates + data.views[n].files[l].replace('.png', '.webp')).then((t) => {
+        t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; room.textures.push(t); return t;
+      }));
+    }
+    return Promise.all(jobs).then((tex) => {
+      CONFIG.roomOrder.forEach((n, i) => { room.rigs[n] = makeRoomRig(data.views[n], tex.slice(i * 3, i * 3 + 3), cfg); });
+      makeFlakes();
+    });
+  });
+}
+// one wall view: back, mid and front layers on planes that exactly cover the render frustum at their depths
+function makeRoomRig(v, tex, cfg) {
+  const rig = new THREE.Group();
+  rig.position.set(0, cfg.camZ, 0);
+  rig.rotation.order = 'YXZ';
+  rig.rotation.set(THREE.MathUtils.degToRad(cfg.pitch), THREE.MathUtils.degToRad(v.yaw), 0);
+  const aspect = cfg.res[0] / cfg.res[1], t = Math.tan(THREE.MathUtils.degToRad(cfg.renderFov) / 2);
+  ['back', 'mid', 'front'].forEach((layer, i) => {
+    const d = cfg.planeDepth[layer], h = 2 * d * t;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(h * aspect, h), new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: tex[i] }, ...gloomU }, vertexShader: shaderText('roomVert'), fragmentShader: shaderText('roomFrag'),
+      transparent: layer !== 'back', depthWrite: layer === 'back',
+    }));
+    m.position.z = -d;
+    rig.add(m);
+  });
+  rig.visible = false;
+  rig.updateMatrixWorld(true);
+  rig.matrixAutoUpdate = false;
+  roomScene.add(rig);
+  return rig;
+}
+function makeFlakes() {
+  const n = CONFIG.flakeCount, seed = new Float32Array(n * 4);
+  // fixed seed: the same flakes every run
+  let r = 12345;
+  for (let i = 0; i < seed.length; i++) { r = (r * 16807) % 2147483647; seed[i] = r / 2147483647; }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  g.setAttribute('seed', new THREE.BufferAttribute(seed, 4));
+  const bmin = new THREE.Vector3().fromArray(CONFIG.flakeBoxMin), bsize = new THREE.Vector3().fromArray(CONFIG.flakeBoxSize);
+  // bounds cover the whole fall volume plus sway (positions are made in the shader)
+  g.boundingSphere = new THREE.Sphere(bmin.clone().addScaledVector(bsize, 0.5), bsize.length() * 0.5 + CONFIG.flakeSway);
+  room.flakeMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 }, uScale: { value: 1 }, uSize: { value: CONFIG.flakeSize }, uFall: { value: CONFIG.flakeFall }, uSway: { value: CONFIG.flakeSway },
+      uBoxMin: { value: bmin }, uBoxSize: { value: bsize }, uColor: { value: new THREE.Color().fromArray(CONFIG.flakeColor) },
+    },
+    vertexShader: shaderText('flakeVert'), fragmentShader: shaderText('flakeFrag'),
+  });
+  room.flakes = new THREE.Points(g, room.flakeMat);
+  roomScene.add(room.flakes);
+}
+function makeVignette() {
+  vigMat = new THREE.ShaderMaterial({
+    uniforms: { ...gloomU, uVig: { value: CONFIG.gloomVig }, uDark: { value: CONFIG.gloomDark }, uAspect: { value: CONFIG.aspect } },
+    vertexShader: shaderText('plateVert'), fragmentShader: shaderText('vigFrag'), depthTest: false, depthWrite: false,
+    blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.DstColorFactor, blendDst: THREE.ZeroFactor,
+  });
+  vigScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), vigMat));
+}
+// gloom 0..1: plates, room layers and characters lose colour toward the cool tint; the vignette quad darkens the frame
+function setGloom(g) {
+  if (Math.abs(g - S.gloom) < 0.002) return;
+  S.gloom = g;
+  gloomU.uGloomAmt.value = g;
+  shared.uGradeAmt.value = g * CONFIG.gloomDesat;
+}
+function setRoomView(name) {
+  const cfg = room.data.config, yaw = THREE.MathUtils.degToRad(room.data.views[name].yaw);
+  S.roomView = name;
+  for (const n of CONFIG.roomOrder) room.rigs[n].visible = n === name;
+  roomCam.position.set(0, cfg.camZ, 0);
+  roomCam.rotation.order = 'YXZ';
+  roomCam.rotation.set(THREE.MathUtils.degToRad(cfg.pitch), yaw, 0);
+  roomCam.updateMatrixWorld(true);
+  room.flakes.rotation.y = yaw;
+  room.flakes.updateMatrixWorld(true);
+  // he stands in front of the wall being looked at, facing the camera
+  const c = chars.clown, d = CONFIG.roomClownDist;
+  c.root.position.set(-Math.sin(yaw) * d, 0, -Math.cos(yaw) * d);
+  c.root.rotation.y = yaw;
+  c.blob.position.set(c.root.position.x, 0.02, c.root.position.z);
+  shared.uKeyDir.value.fromArray(CONFIG.keyDir).normalize().transformDirection(roomCam.matrixWorldInverse);
+  shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(roomCam.matrixWorldInverse);
+  shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(roomCam.matrixWorldInverse);
+  el.shotName.textContent = 'Cube room: ' + room.data.views[name].title;
+}
+function fadeThen(ms, fn) {
+  el.fade.style.setProperty('--fade', ms + 'ms');
+  el.fade.style.opacity = 1;
+  setTimeout(() => { fn(); el.fade.style.opacity = 0; }, ms);
+}
+function turnRoom(step) {
+  if (!S.room || S.turning) return;
+  S.turning = true;
+  fadeThen(CONFIG.turnFadeMs, () => {
+    const o = CONFIG.roomOrder, i = (o.indexOf(S.roomView) + step + o.length) % o.length;
+    setRoomView(o[i]);
+    if (!S.raf) renderFrame();
+    setTimeout(() => { S.turning = false; }, CONFIG.turnFadeMs);
+  });
+}
+// the clown moves between the walk scene and the room scene; walk state he carried is reset here
+function enterRoom() {
+  const c = chars.clown;
+  S.room = true; S.moving = false; S.hold = false; S.roomT = 0;
+  c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
+  roomScene.add(c.root, c.blob);
+  setFace(c, CONFIG.faceBack);
+  setGloom(1);
+  setRoomView(CONFIG.roomStart);
+  for (const l of el.labels) l.classList.add('hidden');
+  for (const p of performers) p.shown = false;
+  el.roomBar.classList.remove('hidden');
+  el.hint.textContent = 'Look around: A / D or arrow keys, or the buttons.';
+}
+function leaveRoom() {
+  const c = chars.clown;
+  S.room = false;
+  scene.add(c.root, c.blob);
+  el.roomBar.classList.add('hidden');
+  el.hint.textContent = 'Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.';
+}
+
 // ===== INPUT =====
-window.addEventListener('keydown', (e) => { keys.add(e.code); if (e.code.startsWith('Arrow')) e.preventDefault(); readKeys(); });
+window.addEventListener('keydown', (e) => {
+  if (e.code.startsWith('Arrow')) e.preventDefault();
+  // in the room the side keys turn between walls (key repeat and modifiers ignored)
+  if (S.room) {
+    if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') turnRoom(1);
+    else if (e.code === 'KeyD' || e.code === 'ArrowRight') turnRoom(-1);
+    return;
+  }
+  keys.add(e.code); readKeys();
+});
 window.addEventListener('keyup', (e) => { keys.delete(e.code); readKeys(); });
 window.addEventListener('blur', () => { keys.clear(); readKeys(); });
 function readKeys() {
@@ -516,7 +783,19 @@ function updateClown(dt) {
   c.blob.position.set(S.x, 0.02, -S.y);
   c.mixer.update(dt);
   pickShot();
-  if (S.y >= S.data.endY && !S.ended) endWalk();
+  if (S.ended) return;
+  if (!S.back && S.y >= S.data.endY) endWalk();
+  else if (S.back) {
+    // gloom rises from the ring edge to the flap
+    const g = (CONFIG.backStart[1] - S.y) / (CONFIG.backStart[1] - CONFIG.backEndY);
+    setGloom(CONFIG.gloomWalk * THREE.MathUtils.clamp(g, 0, 1));
+    if (S.y <= CONFIG.backEndY) { S.ended = true; fadeThen(CONFIG.fadeMs, enterRoom); }
+  }
+}
+function updateRoom(dt) {
+  S.roomT += dt;
+  room.flakeMat.uniforms.uTime.value = S.roomT;
+  chars.clown.mixer.update(dt);
 }
 function updatePerformers(dt) {
   for (let i = 0; i < performers.length; i++) {
@@ -552,11 +831,14 @@ function fit() {
   el.canvas.style.height = h + 'px';
   renderer.setPixelRatio(Math.min(CONFIG.dprSteps[S.dprI], window.devicePixelRatio || 1));
   renderer.setSize(w, h, false);
+  // flake size in pixels per metre at 1 m
+  if (room.flakeMat) room.flakeMat.uniforms.uScale.value = renderer.getPixelRatio() * h / (2 * Math.tan(THREE.MathUtils.degToRad(CONFIG.roomFov) / 2));
 }
 function renderFrame() {
   renderer.clear();
-  renderer.render(plateScene, plateCam);
-  renderer.render(scene, camera);
+  if (S.room) renderer.render(roomScene, roomCam);
+  else { renderer.render(plateScene, plateCam); renderer.render(scene, camera); }
+  if (S.gloom > 0) renderer.render(vigScene, plateCam);
 }
 // step the pixel ratio down once if frames stay slow (rule 31); never back up during a run
 function tierWatch(ms, dt) {
@@ -572,8 +854,8 @@ function frame(t) {
   const ms = S.lastT ? t - S.lastT : 16;
   const dt = Math.min(0.05, ms / 1000);
   S.lastT = t;
-  updateClown(dt);
-  updatePerformers(dt);
+  if (S.room) updateRoom(dt);
+  else { updateClown(dt); updatePerformers(dt); }
   renderFrame();
   tierWatch(ms, dt);
   S.raf = requestAnimationFrame(frame);
@@ -589,31 +871,47 @@ el.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); S.lo
 el.canvas.addEventListener('webglcontextrestored', () => { S.lost = false; startLoop(); });
 
 // ===== BOOT =====
-function placeStart() {
+// back = the walk back after the act (ring entrance to the cube room); otherwise the walk out
+function placeStart(back) {
   const d = S.data;
-  S.x = d.start.at[0]; S.y = d.start.at[1]; S.yaw = THREE.MathUtils.degToRad(d.start.yaw) + Math.PI;
-  S.ended = false; S.hold = false; S.shot = '';
-  cutTo('corridor');
+  if (S.room) leaveRoom();
+  S.back = back;
+  if (back) { S.x = CONFIG.backStart[0]; S.y = CONFIG.backStart[1]; S.yaw = 0; }
+  else { S.x = d.start.at[0]; S.y = d.start.at[1]; S.yaw = THREE.MathUtils.degToRad(d.start.yaw) + Math.PI; }
+  S.ended = false; S.hold = false; S.shot = ''; S.moving = false;
+  const c = chars.clown;
+  c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
+  c.root.position.set(S.x, 0, -S.y); c.root.rotation.y = S.yaw; c.blob.position.set(S.x, 0.02, -S.y);
+  setFace(c, back ? CONFIG.faceBack : CONFIG.faceOut);
+  setGloom(0);
+  const first = S.shotList.find((v) => inRect(v.zone, S.x, S.y, 0));
+  cutTo(first ? first.name : 'corridor');
 }
 function endWalk() {
   S.ended = true;
   el.panelText.textContent = 'Ring edge: the act starts here (zoom in, the cue).';
   el.state.textContent = `Shots seen with ${S.cuts} camera cuts.`;
-  el.go.textContent = 'Walk again';
+  el.go.textContent = 'Walk out again';
   el.panel.classList.remove('hidden');
 }
-el.go.addEventListener('click', () => {
-  if (S.ended) placeStart();
+function begin(back) {
+  placeStart(back);
   el.panel.classList.add('hidden');
   S.running = true;
   startLoop();
-});
+}
+el.go.addEventListener('click', () => begin(false));
+el.back.addEventListener('click', () => begin(true));
+el.again.addEventListener('click', () => { if (!S.turning) begin(true); });
+el.roomL.addEventListener('click', () => turnRoom(1));
+el.roomR.addEventListener('click', () => turnRoom(-1));
 async function boot() {
   const tl = new THREE.TextureLoader();
   S.data = await (await fetch(CONFIG.shots)).json();
   S.shotList = Object.keys(S.data.shots).map((name) => ({ name, zone: S.data.shots[name].zone }));
   makePlate(S.data);
-  await loadPlates(tl, S.data);
+  makeVignette();
+  await Promise.all([loadPlates(tl, S.data), loadRoom(tl)]);
   const [clown, whiteface, performer] = await Promise.all(['clown', 'whiteface', 'performer'].map((n) => loadChar(n, tl)));
   Object.assign(chars, { clown, whiteface, performer });
   S.walkMeasure = measureSpeed(clown);
@@ -625,19 +923,28 @@ async function boot() {
     el.labels[performers.length].textContent = pd.title;
     performers.push(p);
   }
-  placeStart();
+  placeStart(false);
   fit();
+  // warm-up: every shader and texture once under the loading panel (walk, room with the clown and flakes, vignette)
   renderer.compile(scene, camera);
   renderer.compile(plateScene, plateCam);
+  renderer.compile(vigScene, plateCam);
+  roomScene.add(chars.clown.root);
+  for (const n of CONFIG.roomOrder) room.rigs[n].visible = true;
+  renderer.compile(roomScene, roomCam);
+  for (const n of CONFIG.roomOrder) room.rigs[n].visible = false;
+  scene.add(chars.clown.root);
   for (const c of Object.values(chars)) for (const t of c.textures) renderer.initTexture(t);
   for (const p of Object.values(plates)) { renderer.initTexture(p.color); renderer.initTexture(p.depth); }
+  for (const t of room.textures) renderer.initTexture(t);
   renderFrame();
   S.ready = true;
   el.state.textContent = 'Ready.';
   el.go.classList.remove('hidden');
+  el.back.classList.remove('hidden');
 }
 // test hook for smoke_walk.cjs (read-only use outside the checks)
-window.__walkTest = { renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, get plateMat() { return plateMat; } };
+window.__walkTest = { renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; console.error(e); });
 </script>
 </body>
