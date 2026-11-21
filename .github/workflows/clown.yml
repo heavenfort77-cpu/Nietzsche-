@@ -1,5 +1,5 @@
 # Clown v2 build and every check, on GitHub's 4-core runners.
-# Owner requirement 6: runs only for commits carrying [checks] (gpu job: [gpu]) or a manual run.
+# Owner requirement 6: runs only when the commit subject starts with [checks] (gpu job: [gpu]) or on a manual run; a tag elsewhere in the message does not count.
 # build: Blender pipeline (steps 1-3). Then in parallel: model/GLB/deformation gates, mutation run,
 # high-quality renders, browser checks for step 4. collect: commits reports, renders and the GLB to ci-out/run-<n>.
 name: clown
@@ -20,7 +20,7 @@ env:
 jobs:
   # Rule 2 gate: every "Batch " commit in this push updates HANDOFF.md. A few seconds; blocks nothing else.
   handoff:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[checks]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -30,7 +30,7 @@ jobs:
       - run: bash tools/check_handoff.sh "${{ github.event.before || 'HEAD~1' }}" "${{ github.sha }}"
       - run: bash tools/check_faults.sh "${{ github.event.before || 'HEAD~1' }}" "${{ github.sha }}"
   step0:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[checks]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -48,7 +48,7 @@ jobs:
           node check_input_loop.cjs game/index.html | tee -a step0.txt
           ! grep -q '^FAIL\|RESULT FAIL' step0.txt
   build:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[checks]') || contains(github.event.head_commit.message, '[gpu]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]') || startsWith(github.event.head_commit.message, '[gpu]')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -75,7 +75,7 @@ jobs:
         with: { name: out, path: clown_v2/out, retention-days: 3 }
 
   ring:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[checks]') || contains(github.event.head_commit.message, '[gpu]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]') || startsWith(github.event.head_commit.message, '[gpu]')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -229,7 +229,7 @@ jobs:
     # real-GPU frame times on GitHub's Apple-silicon Mac runner. Mac minutes cost about 10x Linux on a private repo,
     # so this runs only when asked: manual run, or "[gpu]" in the commit message
     needs: [build, ring]
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[gpu]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[gpu]')
     runs-on: macos-15
     timeout-minutes: 15
     steps:
@@ -259,7 +259,7 @@ jobs:
           path: web/gpu.txt
 
   cast:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[checks]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]')
     # step 6: the other humanoid characters through the same scripts (chars/<name>.py), every gate per character,
     # a side-by-side with the approved model, and the compressed desktop GLB size
     runs-on: ubuntu-latest
@@ -331,7 +331,7 @@ jobs:
   collect:
     needs: [build, ring, gates, renders, web, cast, perf, gpu]
     # results only when something ran (owner requirement 6)
-    if: always() && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[checks]') || contains(github.event.head_commit.message, '[gpu]'))
+    if: always() && (github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]') || startsWith(github.event.head_commit.message, '[gpu]'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

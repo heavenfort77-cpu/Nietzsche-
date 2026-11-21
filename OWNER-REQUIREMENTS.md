@@ -186,6 +186,6 @@ Owner: "don't any check until every 5th session unless requested. add to repo."
 - Sessions are numbered in HANDOFF.md (`Session: <n>`); `tools/handoff.sh start` adds 1.
 - Checks run only in sessions 5, 10, 15, ... or when the owner asks for them in the current chat. Checks means every gate, bot sweep, mutation run, perf or GPU measurement and the handoff/fault gates, local or CI.
 - Other sessions build and render only. Before handing the owner a build, the session still loads it once and confirms it opens with no page error (requirement: never hand over a half-finished build); that load is not a check run.
-- CI: the `clown` workflow runs only for commits whose message carries `[checks]` (or `[gpu]` for the GPU job), or a manual run. Commits in a checks session, or when the owner asked, carry `[checks]`.
+- CI: the `clown` workflow runs only when the commit subject starts with `[checks]` (or `[gpu]` for the GPU job), or on a manual run. A tag anywhere else in the message does not count (session 9's first push quoted the tags in its body and started a full run; cancelled). Commits in a checks session, or when the owner asked, start with `[checks]`.
 - `tools/handoff.sh check` and `close` skip `check_handoff.sh` and `check_faults.sh` outside a checks session; `CHECKS=1 tools/handoff.sh check` forces them.
 - This overrides the per-batch gate rules in requirement 2 and the Settings preferences (perf gate every batch) until the owner says otherwise.
