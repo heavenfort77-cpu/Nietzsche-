@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Puts three.js and the clown assets where web/step0/cue_model.html and walk.html load them (lib/ and assets/ are not committed).
 # The room plates (cube25d/*.webp, views.json) are committed; rebuild them with build_cube.py then plates.py.
-# Usage: bash web/step0/cube25d/setup.sh [ci-out branch with the clown GLB, default ci-out/run-18]
+# Usage: bash web/step0/cube25d/setup.sh [ci-out branch with the clown GLB, default ci-out/run-32 (F17 clips)]
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
-BR=${1:-ci-out/run-18}
+BR=${1:-ci-out/run-32}
 S=web/step0
 T=$(mktemp -d)
 npm install --silent --prefix "$T" three@0.187.0
