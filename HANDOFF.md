@@ -11,6 +11,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Now
 
+- Owner verdict 21 Nov on the 2.5D cue artifact: "cue is ok" (step 0 loop accepted on the 3D clown). Framing decision recorded as OWNER-REQUIREMENTS.md section 7: this close framing is the zoom in (nightly act, before going out, before the Mirror World); zoom out for showing the performance and other events (64x64 characters there).
 - Session 9 (21 Nov), batch 1, no checks (owner requirement 6, new: checks only in sessions 5, 10, 15 ... or when asked; CI `clown` runs only when the commit subject starts with `[checks]` or `[gpu]` (first push quoted the tags in its body and started run 44918259504; cancelled, gate tightened to the subject start); `handoff.sh` counts sessions and skips its gates outside checks sessions). RESTART.md and START-HERE.md were not readable (chat outside the Project); worked from this file.
 - Cue on the real model (owner: "see the model in the cue"): `web/step0/cue_model.html` = cue.html logic + `cube25d/model_layer.js` (approved clown_v2.glb, game toon shader and outline, idle clip, slap on take, tilt about the feet, face cell per beat result, paint grows with Mask). The cue ring and a pale target circle close onto his real face (anchor under the head bone, follows him). Published for the owner as artifact "Clown cue on the 3D model, 2.5D room" (three.js from jsDelivr there, GLB as an artifact asset). Local: `bash web/step0/cube25d/setup.sh`, serve web/step0.
 - 2.5D Myst test (owner: "character 3d, background 2d, Myst fixed view, build in Blender, render, export 2D for parallax; a cube, each side one scene as a shared asset"): `cube25d/build_cube.py` builds one 10 m cube room (box-and-shape), camera fixed at the centre; walls = Ring, Dressing room, Mirror, Tent exit. Each view rendered as back/mid/front layers (other layers hidden from the camera but still casting light and shadow) + `views.json` (camera, fov, plane depths). three.js puts each layer on a plane at its depth that exactly covers the render frustum; the clown stands between mid and front (the rope in front of him draws over his legs); small camera moves (idle drift, mouse) give the parallax; render fov 46 vs play 42 is the margin. "Look around the room" turns between the 4 views with a fade. Plates: 16:9 1600x900 WebP, 2-19 KB each (flat boxes).
@@ -31,17 +32,16 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
-1. Owner plays the artifact "Clown cue on the 3D model, 2.5D room" (phone and desktop) and says: is the cue workable on the real model, and is the 2.5D room look the way to go. Also the old ask: whether the cue loop works, with the results-panel timing line.
-2. Session 10 is a checks session (requirement 6): fix the game page face cells (Open items), name the 1440p GPU miss (ladder of controls, below), add `test_cue.cjs`/`smoke_cue.cjs` to CI, run every gate with `[checks]`.
-3. If the owner takes 2.5D: real room art per view in Blender (the cube stays the shared asset), plates per tier (1024 for low/phone, KTX2), depth for the floor plane (now one plane per layer, small slide at the wall line under parallax), the 64x64 play framing in a fixed camera (needs a farther or narrower camera than the cue's).
-Then: tune windows and tempos in CONFIG from the owner's numbers; continue step 6 only after the owner says the loop works.
+1. Zoom-out sample (requirement 7): one fixed performance view, Blender plates of the ring tent from far back (back/mid/front layers, same pipeline as `cube25d/build_cube.py`), clown at 64 px tall, cue framing switching to zoom in for the act. One play-size sample for owner approval before anything else.
+2. Session 10 is a checks session (requirement 6): fix the game page face cells (Open items), name the 1440p GPU miss, add `test_cue.cjs`/`smoke_cue.cjs` to CI, run every gate with a `[checks]` subject.
+3. Then step 6 of the GDD build plan (the loop is accepted), tuning windows and tempos from the owner's results-panel timing line when sent.
 
 ## Waiting on the owner
 
-- Play the 2.5D cue artifact (session 9) and say whether the cue on the 3D clown is workable and whether to keep 2.5D (Myst fixed views, Blender plates, 3D characters).
+- Approve the zoom-out sample when it is ready (requirement 7).
 - Decided 20 Nov: the game uses the current character models as they are (OWNER-REQUIREMENTS.md section 4).
 
-- Play step 0 (`web/step0/cue.html`) and say whether the loop works; send the results-panel timing line. File sent to the owner 21 Nov (session 7).
+- Optional: the results-panel timing line from a cue run, to tune windows and tempos.
 - Decided 21 Nov (owner): "i want it as it look but to fill a 64 by 64 space". Characters keep the approved models and look (no pixel art, no new mesh; requirement 4 holds); in play each character fits a 64x64 box on screen (read as CSS px, tallest side 64, proportions kept). Not built yet; waits for the step 0 verdict (rule 1). Plan: CONFIG value for on-screen size with camera fitted to it; outline width in screen px (min 1); gate that the projected box is 60-64 px tall in the ring framing, with mutation; one play-size sample (64 px in the ring, phone and desktop) for owner approval before anything else. Close-up scenes (changing room, mirror) keep full-size framing so faces read. Step 0 needs no change (cue is a screen overlay).
 - Start each session with the paste line in the Project's RESTART.md (it includes the push authorisation).
 - Gamepad support: the controls chart sets keyboard, mouse and gamepad as the PC standard; the GDD has keyboard and touch only. Add gamepad or not?

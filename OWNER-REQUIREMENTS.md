@@ -189,3 +189,10 @@ Owner: "don't any check until every 5th session unless requested. add to repo."
 - CI: the `clown` workflow runs only when the commit subject starts with `[checks]` (or `[gpu]` for the GPU job), or on a manual run. A tag anywhere else in the message does not count (session 9's first push quoted the tags in its body and started a full run; cancelled). Commits in a checks session, or when the owner asked, start with `[checks]`.
 - `tools/handoff.sh check` and `close` skip `check_handoff.sh` and `check_faults.sh` outside a checks session; `CHECKS=1 tools/handoff.sh check` forces them.
 - This overrides the per-batch gate rules in requirement 2 and the Settings preferences (perf gate every batch) until the owner says otherwise.
+
+## 7. Two camera framings: zoom in and zoom out (owner, 21 Nov 2026)
+
+Owner, after playing the cue on the 3D clown in the 2.5D room: "cue is ok. this can be use for the act but it is large. this should be consider the zoom in for the nightly act, before going out for act and before going into mirror world. zoom out for showing of performance and other events."
+- **Zoom in** (the session 9 cue framing: clown about 3 m from the camera, face at cue size, full body in frame): the nightly act (the cue), the moment before going out to the act (backstage), the moment before going into the Mirror World.
+- **Zoom out**: showing the performance and other events. This is where the 64x64 on-screen character size (requirement 4 decision, 21 Nov) applies.
+- Both are fixed Myst-style viewpoints (2.5D: Blender-rendered plates, 3D characters). A zoom out with a 64 px clown sees about 20 m of set at his distance, more than the 10 m cube room, so the performance view needs its own wider set and plates (the ring tent), not a wall of the cube.
