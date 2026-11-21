@@ -1,9 +1,9 @@
 # Handoff (live state)
 
-Session start: 17a7850 (2026-11-21)
-Session: 9
+Session start: 11a4a4d (2026-11-21)
+Session: 10
 
-Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`. This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
+Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`; where they differ, `OWNER-REQUIREMENTS.md` section 6 (checks only every 5th session) and section 7 (zoom in / zoom out framings and the 2.5D methods: cube room, fixed-camera rooms, Mirror World turning camera) win (owner, 22 Nov: START-HERE.md cannot be edited from his side). This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
 ## Restart rule
 
@@ -11,6 +11,8 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Now
 
+- Session 10 (22 Nov, checks session), batch 1: fixed-camera walk sample built (requirement 7). `web/step0/walk/build_walk.py` (Blender, box-and-shape) renders 3 shots, each a colour plate (1024x576 WebP, 13 KB) plus a per-pixel depth plate (planar view depth, 16 bit packed in R and G of a PNG, 22-131 KB) and `plates/shots.json` (cameras in three.js axes, zones, walk areas, prop footprints, performers). Shots: corridor (from the cube room's exit flap, camera behind him), wings (diagonal from the corner: Whiteface and Performer v2 GLBs from run 18 as stand-ins, costume rack in front of the path, curtain gap to the ring), ring entrance (camera behind him down the passage, ring and 4 audience tiers as boxes through the arch). Each shot's field of view is fitted so his feet and head stay in frame over the whole walk area of its zone (100% for all 3; corridor 58, wings 58, entrance 57.7 deg). `web/step0/walk.html`: plate shader writes the Blender depth into the depth buffer, then the 3D characters are depth-tested against it; camera cuts at zones (0.25 m hysteresis); stick/keys are camera-relative and the old camera's directions are held across a cut until the input is let go or turns past 50 deg; walk speed measured from the walk clip's planted foot (0.764 m/s, no slide at that speed); performers turn to him, smile and show a name tag within 2.3 m; ring edge ends the walk (zoom in, the cue). Keys WASD/arrows; phone: drag anywhere for a floating stick. Assets: `bash web/step0/cube25d/setup.sh` now also fetches the two cast GLBs.
+- Checks (session 10): `node web/step0/smoke_walk.cjs` 22 of 22 (desktop 1280x720, phone portrait 390x844, phone landscape 844x390: loads with no error, speed from planted feet, a bot walks the route through 3 shots and 3 cuts holding the stick across cuts, meets 2 of 2 performers, feet and head in frame every tick; depth probe: clown behind the rack 57.5% hidden, in the open 0%).
 - Handover 22 Nov (owner asked): session 9 ends after 2 batches; the walk sample is session 10's first build. Published artifact "Clown cue on the 3D model, 2.5D room" loads the GLB from an artifact asset (`/_blob/ad88eb...`), so its `model_layer.js` differs from the repo by that one line.
 - Owner 21 Nov: Mirror World = 2.5D turning camera (360 colour+depth render per arena, fixed spot, turn/tilt/zoom to keep him in full view; clown and enemies 3D). No first- or third-person camera (requirement 7).
 - Owner 21 Nov: cube room = backstage only; 3 walls for before the performance and before the Mirror World, 1 wall for the nightly act (requirement 7). Other events: owner picked fixed-camera rooms (walk from the cube to the performance, meet performers); Mirror World action default = fixed-camera arena shots, no cuts mid-fight (requirement 7).
@@ -35,12 +37,13 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
-1. Fixed-camera walk sample (requirement 7; owner 22 Nov: meet more than one performer, maybe the audience): the clown leaves the cube by its exit wall and walks through 3 Blender shots (corridor, wings with 2+ performers: the v2 whiteface and Performer GLBs from run 18, waiting on approval, used as stand-ins; ring entrance with audience: crowd cards or boxes) with camera cuts at zones and controls held across a cut. Needs per-pixel depth from Blender (depth pass written into the depth buffer by the plate shader), because a walking character crosses layer depths; the cue's one-plane-per-layer method only works where he stands still. Box-and-shape art; then a Mirror World arena sample (360 colour and depth cube map from Blender, depth-tested 3D clown and one 3D enemy, camera turns to follow), then the zoom-out performance view: one fixed performance view, Blender plates of the ring tent from far back (back/mid/front layers, same pipeline as `cube25d/build_cube.py`), clown at 64 px tall, cue framing switching to zoom in for the act. One play-size sample for owner approval before anything else.
+1. Owner verdict on the walk sample (artifact "Walk sample: fixed-camera shots (2.5D)"). If ok: Mirror World arena sample (360 colour and depth cube map from Blender, same depth-in-shader method as `walk.html`, depth-tested 3D clown and one 3D enemy, camera turns to follow), then the zoom-out performance view: one fixed performance view of the ring tent from far back (per-pixel depth like the walk shots), clown at 64 px tall, cue framing switching to zoom in for the act. One play-size sample for owner approval before anything else.
 2. Session 10 is a checks session (requirement 6): fix the game page face cells (Open items), GPU miss fixes 1-5 from Open items in one `[gpu]` run (pinned Chrome first, then pixel cap and AO-off measured against the control), add `test_cue.cjs`/`smoke_cue.cjs` to CI, run every gate with a `[checks]` subject.
 3. Then step 6 of the GDD build plan (the loop is accepted), tuning windows and tempos from the owner's results-panel timing line when sent.
 
 ## Waiting on the owner
 
+- Approve the walk sample (shots, framing, the held controls across cuts, walk speed 0.76 m/s from the clip).
 - Approve the zoom-out sample when it is ready (requirement 7).
 - Decided 20 Nov: the game uses the current character models as they are (OWNER-REQUIREMENTS.md section 4).
 

@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Walk sample: fixed-camera shots (2.5D)</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0c0809; color: #eadfcf; font: 14px/1.35 system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #frame { position: relative; }
+  #gl { display: block; }
+  .hud { position: absolute; left: 10px; top: 8px; font-weight: 600; letter-spacing: .04em; text-shadow: 0 1px 2px #000; pointer-events: none; }
+  #hint { position: fixed; left: 0; right: 0; bottom: 10px; text-align: center; opacity: .75; font-size: 12px; pointer-events: none; }
+  .label { position: absolute; left: 0; top: 0; transform: translate(calc(var(--x, 0) * 1px - 50%), calc(var(--y, 0) * 1px - 100%)); background: #1e1714cc; padding: 2px 8px; border-radius: 4px; font-size: 13px; white-space: nowrap; pointer-events: none; }
+  .hidden { display: none !important; }
+  #stick { position: fixed; left: 0; top: 0; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; border: 2px solid #eadfcf55; transform: translate(calc(var(--sx, 0) * 1px), calc(var(--sy, 0) * 1px)); pointer-events: none; }
+  #knob { position: absolute; left: 36px; top: 36px; width: 40px; height: 40px; border-radius: 50%; background: #eadfcf66; transform: translate(calc(var(--kx, 0) * 1px), calc(var(--ky, 0) * 1px)); }
+  #panel { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #0c0809cc; text-align: center; padding: 20px; }
+  #panel button { font: inherit; font-weight: 600; padding: 10px 22px; border-radius: 6px; border: 0; background: #cfaa4e; color: #1e1714; }
+  #state { font-size: 12px; opacity: .8; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame">
+  <canvas id="gl"></canvas>
+  <div class="hud" id="shotName">Loading</div>
+  <div class="label hidden" id="label0"></div>
+  <div class="label hidden" id="label1"></div>
+</div></div>
+<div id="stick" class="hidden"><div id="knob"></div></div>
+<div id="hint">Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.</div>
+<div id="panel">
+  <div id="panelText">Leaving the cube room by the tent exit: corridor, wings, ring entrance.</div>
+  <div id="state">Loading the clown, two performers and three shots...</div>
+  <button id="go" class="hidden">Walk</button>
+</div>
+
+<!-- plate: Blender colour plus per-pixel depth (planar view depth packed in R and G), written into the depth buffer -->
+<script type="x-shader/x-vertex" id="plateVert">
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="plateFrag">
+uniform sampler2D uColor;
+uniform sampler2D uDepth;
+uniform float uNear;
+uniform float uFar;
+uniform float uDepthFar;
+varying vec2 vUv;
+void main() {
+  vec4 d = texture2D(uDepth, vUv);
+  float z = (d.r * 65280.0 + d.g * 255.0) / 65535.0 * uDepthFar;
+  float ndc = z >= uDepthFar * 0.999 ? 1.0 : ((uFar + uNear) * z - 2.0 * uFar * uNear) / ((uFar - uNear) * max(z, uNear));
+  gl_FragDepth = clamp(ndc * 0.5 + 0.5, 0.0, 1.0);
+  gl_FragColor = vec4(texture2D(uColor, vUv).rgb, 1.0);
+}
+</script>
+<!-- toon and outline shaders: copied from web/game/index.html (same look) -->
+<script type="x-shader/x-vertex" id="toonVert">
+#include <common>
+#include <skinning_pars_vertex>
+#include <fog_pars_vertex>
+attribute float _spec;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vView;
+varying float vSpec;
+void main() {
+  vUv = uv;
+  vSpec = _spec;
+  #include <beginnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <defaultnormal_vertex>
+  #include <begin_vertex>
+  #include <skinning_vertex>
+  #include <project_vertex>
+  #include <fog_vertex>
+  vNormal = normalize(transformedNormal);
+  vView = normalize(-mvPosition.xyz);
+}
+</script>
+<script type="x-shader/x-fragment" id="toonFrag">
+#include <common>
+#include <fog_pars_fragment>
+uniform sampler2D uMap;
+uniform sampler2D uPaint;
+uniform float uHasPaint;
+uniform vec2 uCell;
+uniform float uPaintAmt;
+uniform float uFlake;
+uniform float uFlakeScale;
+uniform vec3 uKeyDir;
+uniform vec3 uKeyCol;
+uniform vec3 uFillDir;
+uniform vec3 uFillCol;
+uniform vec3 uRimCol;
+uniform vec3 uRimDir;
+uniform vec3 uGradeTint;
+uniform float uGradeAmt;
+uniform vec3 uShadow;
+uniform float uBand1;
+uniform float uBand2;
+uniform float uSoft;
+uniform float uRimPow;
+uniform float uSpecPow;
+uniform float uSpecCut;
+uniform float uSpecOn;
+uniform float uMode;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vView;
+varying float vSpec;
+float hash12(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x), mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+void main() {
+  vec2 uv = vUv + uCell;
+  vec3 albedo = texture2D(uMap, uv).rgb;
+  if (uHasPaint > 0.5) {
+    vec4 p = texture2D(uPaint, uv);
+    float keep = step(uFlake, vnoise(vUv * uFlakeScale));
+    albedo = mix(albedo, p.rgb, p.a * uPaintAmt * keep);
+  }
+  vec3 n = normalize(vNormal);
+  vec3 v = normalize(vView);
+  float h = dot(n, uKeyDir) * 0.5 + 0.5;
+  float ramp = 0.5 * smoothstep(uBand1 - uSoft, uBand1 + uSoft, h) + 0.5 * smoothstep(uBand2 - uSoft, uBand2 + uSoft, h);
+  vec3 col = albedo * mix(uShadow, uKeyCol, ramp);
+  col += albedo * uFillCol * max(dot(n, uFillDir), 0.0);
+  float rim = pow(1.0 - max(dot(n, v), 0.0), uRimPow) * smoothstep(0.0, 0.4, dot(n, uRimDir));
+  col += albedo * uRimCol * rim;
+  float glint = step(uSpecCut, pow(max(dot(n, normalize(uKeyDir + v)), 0.0), uSpecPow));
+  col += uKeyCol * glint * vSpec * uSpecOn;
+  float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  col = mix(col, luma * uGradeTint, uGradeAmt);
+  col = mix(col, albedo, step(0.5, uMode) * step(uMode, 1.5));
+  vec3 wl = vec3(0.888, 0.831, 0.723);
+  vec3 ws = vec3(0.451, 0.381, 0.262);
+  float t = clamp(dot(albedo - ws, wl - ws) / dot(wl - ws, wl - ws), 0.0, 1.0);
+  float isBlouse = step(length(albedo - mix(ws, wl, t)), 0.035);
+  col = mix(col, vec3(0.0, isBlouse, 0.0), step(1.5, uMode));
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="hullVert">
+#include <common>
+#include <skinning_pars_vertex>
+#include <fog_pars_vertex>
+uniform float uThick;
+void main() {
+  #include <beginnormal_vertex>
+  #include <skinbase_vertex>
+  #include <skinnormal_vertex>
+  #include <begin_vertex>
+  #include <skinning_vertex>
+  transformed += normalize(objectNormal) * uThick;
+  #include <project_vertex>
+  #include <fog_vertex>
+}
+</script>
+<script type="x-shader/x-fragment" id="hullFrag">
+#include <common>
+#include <fog_pars_fragment>
+uniform vec3 uColor;
+void main() {
+  gl_FragColor = vec4(uColor, 1.0);
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+</script>
+<script type="importmap">
+{ "imports": {
+  "three": "./lib/build/three.module.js",
+  "three/addons/": "./lib/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ===== MAP =====
+// Fixed-camera walk sample (owner requirement 7). Blender shots: web/step0/walk/build_walk.py writes plates/ and shots.json.
+// MAP: CONFIG, STATE, characters (load, toon look), plates, INPUT (keys, touch stick), movement and zones, RENDER, LOOP, BOOT.
+
+// ===== CONFIG =====
+const CONFIG = Object.freeze({
+  // shot data and plates
+  shots: './walk/plates/shots.json',
+  plates: './walk/plates/',
+  // the clown and the two performers waiting in the wings (approved v2 GLBs as stand-ins; setup.sh fetches them)
+  chars: {
+    clown: { glb: './assets/clown_v2.glb', face: './assets/face_atlas.png', paint: './assets/face_paint.png' },
+    whiteface: { glb: './assets/whiteface/clown_v2.glb', face: './assets/whiteface/face_atlas.png', paint: './assets/whiteface/face_paint.png' },
+    performer: { glb: './assets/performer/clown_v2.glb', face: './assets/performer/face_atlas.png', paint: './assets/performer/face_paint.png' },
+  },
+  // plate aspect (Blender render is 16:9; the picture is letterboxed to it)
+  aspect: 16 / 9,
+  // pixel ratio steps, highest first (performance rule: 1.25 max); step down when frames stay slow
+  dprSteps: [1.25, 1],
+  // frame time that counts as slow, ms, and how long it must stay slow before stepping down, s
+  slowMs: 20, slowFor: 2,
+  // render camera near and far, metres (plate depth is converted to this range)
+  near: 0.1, far: 60,
+  // clown collision radius, metres (walk areas in shots.json are already inset by it from the walls)
+  clownR: 0.3,
+  // performer collision radius, metres
+  performerR: 0.35,
+  // how fast characters turn to face their way, radians per second
+  turnRate: 10,
+  // walk speed used if the walk clip cannot be measured, metres per second
+  speedFallback: 1.3,
+  // limits for the measured walk speed, metres per second
+  speedMin: 0.6, speedMax: 2.2,
+  // a foot counts as planted when it is this close to its lowest point in the clip, metres
+  plantTol: 0.02,
+  // stick or key input below this length is no input
+  deadzone: 0.2,
+  // input held across a camera cut keeps the old camera's directions until it turns more than this, degrees
+  holdAngle: 50,
+  // the clown must be this far inside a new zone before the camera cuts to it, metres
+  zoneHyst: 0.25,
+  // touch stick radius, CSS px
+  stickR: 48,
+  // idle and walk blend time, s
+  blend: 0.2,
+  // a performer turns to the clown and shows a name tag within this distance, metres
+  meetDist: 2.3,
+  // performer turn speed, radians per second
+  performerTurn: 3,
+  // name tag height above the floor, metres
+  labelH: 2.05,
+  // blob shadow radius, metres, and darkness
+  blobR: 0.42, blobA: 0.45,
+  // face paint amount
+  paint: 0.4,
+  // toon light values: the game page's stage world (look unchanged)
+  keyDir: [-0.55, 0.75, 0.6], key: [1.0, 0.86, 0.66], fillDir: [0.8, 0.2, 0.5], fill: [0.55 * 0.22, 0.45 * 0.22, 0.45 * 0.22],
+  rim: [0.69, 0.552, 0.414], rimDir: [0.2, 0.5, -0.9], shadow: [0.46, 0.36, 0.42], outline: '#1E1714', outlineThick: 0.006,
+  band1: 0.42, band2: 0.68, soft: 0.04, rimPow: 2.0, specPow: 60.0, specCut: 0.5, flakeScale: 90.0,
+  // face cells in the 2x2 atlas, uv offset from the sad cell (atlas rows run down)
+  faces: { sad: [0, 0], smile: [0.5, 0], startle: [0, 0.5], wince: [0.5, 0.5] },
+});
+
+// ===== STATE =====
+const S = {
+  data: null, ready: false, running: false, ended: false, lost: false,
+  shot: '', x: 0, y: 0, yaw: 0, speed: CONFIG.speedFallback, moving: false,
+  hold: false, holdAng: 0, basisX: 0, basisZ: -1,
+  dprI: 0, slowT: 0, lastT: 0, raf: 0, w: 0, h: 0, cuts: 0,
+};
+// test hook: read by the headless checks
+window.__walk = S;
+const el = {
+  canvas: document.getElementById('gl'), frame: document.getElementById('frame'), shotName: document.getElementById('shotName'),
+  panel: document.getElementById('panel'), panelText: document.getElementById('panelText'), state: document.getElementById('state'),
+  go: document.getElementById('go'), stick: document.getElementById('stick'), knob: document.getElementById('knob'),
+  labels: [document.getElementById('label0'), document.getElementById('label1')],
+};
+const renderer = new THREE.WebGLRenderer({ canvas: el.canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
+renderer.autoClear = false;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, CONFIG.aspect, CONFIG.near, CONFIG.far);
+const plateScene = new THREE.Scene();
+const plateCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 2);
+plateCam.position.z = 1;
+const shared = {
+  uKeyDir: { value: new THREE.Vector3() }, uKeyCol: { value: new THREE.Color().fromArray(CONFIG.key) }, uFillDir: { value: new THREE.Vector3() },
+  uFillCol: { value: new THREE.Color().fromArray(CONFIG.fill) }, uRimCol: { value: new THREE.Color().fromArray(CONFIG.rim) },
+  uShadow: { value: new THREE.Color().fromArray(CONFIG.shadow) }, uRimDir: { value: new THREE.Vector3() },
+  uGradeTint: { value: new THREE.Color(1, 1, 1) }, uGradeAmt: { value: 0 }, uSpecOn: { value: 1 }, uMode: { value: 0 }, uTime: { value: 0 },
+};
+const chars = { clown: null, whiteface: null, performer: null };
+const performers = [];
+const plates = {};
+let plateMat = null;
+// reused every frame (no per-frame allocation)
+const tmp = new THREE.Vector3();
+const input = { kx: 0, ky: 0, tx: 0, ty: 0, touchId: -1, ox: 0, oy: 0 };
+const keys = new Set();
+
+// ===== characters =====
+function shaderText(id) { return document.getElementById(id).textContent; }
+function makeToon(map, paint) {
+  const uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+    uMap: { value: map }, uPaint: { value: paint || map }, uHasPaint: { value: paint ? 1 : 0 }, uCell: { value: new THREE.Vector2() },
+    uPaintAmt: { value: CONFIG.paint }, uFlake: { value: 0 }, uFlakeScale: { value: CONFIG.flakeScale }, uBand1: { value: CONFIG.band1 },
+    uBand2: { value: CONFIG.band2 }, uSoft: { value: CONFIG.soft }, uRimPow: { value: CONFIG.rimPow }, uSpecPow: { value: CONFIG.specPow },
+    uSpecCut: { value: CONFIG.specCut },
+  }]);
+  Object.assign(uniforms, shared);
+  return new THREE.ShaderMaterial({ uniforms, vertexShader: shaderText('toonVert'), fragmentShader: shaderText('toonFrag'), fog: true });
+}
+function makeHull(body, face) {
+  const strip = (g) => { const c = g.clone(); for (const k of Object.keys(c.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k)) c.deleteAttribute(k); return c; };
+  const geo = mergeGeometries([strip(body.geometry), strip(face.geometry)], false);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uThick: { value: CONFIG.outlineThick }, uColor: { value: new THREE.Color(CONFIG.outline) } }]),
+    vertexShader: shaderText('hullVert'), fragmentShader: shaderText('hullFrag'), side: THREE.BackSide, fog: true,
+  });
+  const hull = new THREE.SkinnedMesh(geo, mat);
+  hull.bind(body.skeleton, body.bindMatrix);
+  hull.position.copy(body.position); hull.quaternion.copy(body.quaternion); hull.scale.copy(body.scale);
+  return hull;
+}
+function loadTex(loader, url) {
+  return loader.loadAsync(url).then((t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; });
+}
+// skinned meshes keep culling on; their bounding spheres are enlarged so a walking pose never culls early (rule 35)
+function growBounds(m) { m.computeBoundingSphere(); m.boundingSphere.radius *= 1.6; }
+function setFace(c, name) {
+  if (c.faceNow === name) return;
+  c.faceNow = name;
+  c.face.material.uniforms.uCell.value.fromArray(CONFIG.faces[name]);
+}
+async function loadChar(name, tl) {
+  const src = CONFIG.chars[name];
+  const [gltf, face, paint] = await Promise.all([new GLTFLoader().loadAsync(src.glb), loadTex(tl, src.face), loadTex(tl, src.paint)]);
+  const c = { name, root: gltf.scene, body: null, face: null, mixer: null, idle: null, walk: null, blob: null, faceNow: '', textures: [face, paint] };
+  c.root.traverse((o) => { if (o.isSkinnedMesh) { if (o.material.name === 'face') c.face = o; else c.body = o; } });
+  c.textures.push(c.body.material.map);
+  c.body.material = makeToon(c.body.material.map, null);
+  c.face.material = makeToon(face, paint);
+  const hull = makeHull(c.body, c.face);
+  c.body.parent.add(hull);
+  [c.body, c.face, hull].forEach(growBounds);
+  c.mixer = new THREE.AnimationMixer(c.root);
+  const clip = (n) => gltf.animations.find((a) => a.name === n);
+  c.idle = c.mixer.clipAction(clip('idle')).play();
+  c.walk = c.mixer.clipAction(clip('walk'));
+  c.walkClip = clip('walk');
+  c.blob = new THREE.Mesh(new THREE.CircleGeometry(CONFIG.blobR, 24), new THREE.MeshBasicMaterial({
+    color: 0x000000, transparent: true, opacity: CONFIG.blobA, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  }));
+  c.blob.rotation.x = -Math.PI / 2;
+  scene.add(c.root, c.blob);
+  setFace(c, name === 'clown' ? 'smile' : 'sad');
+  return c;
+}
+
+// walk speed from the clip itself: how fast a planted foot slides back under the body (no foot slide at that speed).
+// Only steps where the low foot moves back count (the clip's heel settles forward for a few frames after contact).
+function measureSpeed(c) {
+  const mixer = new THREE.AnimationMixer(c.root.clone());
+  const probe = mixer.getRoot();
+  const act = mixer.clipAction(c.walkClip).play();
+  const feet = ['foot_L', 'foot_R'].map((n) => probe.getObjectByName(n));
+  const N = 120, dur = c.walkClip.duration, samples = feet.map(() => []);
+  for (let i = 0; i <= N; i++) {
+    act.time = dur * i / N;
+    mixer.update(0);
+    probe.updateMatrixWorld(true);
+    feet.forEach((f, k) => { f.getWorldPosition(tmp); samples[k].push([tmp.y, tmp.z]); });
+  }
+  let sum = 0, n = 0;
+  for (const s of samples) {
+    const low = Math.min(...s.map((p) => p[0]));
+    for (let i = 1; i < s.length; i++) {
+      const back = s[i - 1][1] - s[i][1];
+      if (back > 0 && s[i][0] - low < CONFIG.plantTol && s[i - 1][0] - low < CONFIG.plantTol) { sum += back * N / dur; n++; }
+    }
+  }
+  const v = n ? sum / n : 0;
+  return { speed: v > 0 ? THREE.MathUtils.clamp(v, CONFIG.speedMin, CONFIG.speedMax) : CONFIG.speedFallback, measured: v, planted: n };
+}
+
+// ===== plates =====
+function loadPlates(tl, data) {
+  const jobs = [];
+  for (const [name, s] of Object.entries(data.shots)) {
+    jobs.push(tl.loadAsync(CONFIG.plates + s.color).then((t) => { t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; plates[name] = { color: t }; }));
+  }
+  return Promise.all(jobs).then(() => Promise.all(Object.entries(data.shots).map(([name, s]) => tl.loadAsync(CONFIG.plates + s.depth).then((t) => {
+    t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter;
+    plates[name].depth = t;
+  }))));
+}
+function makePlate(data) {
+  plateMat = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: null }, uDepth: { value: null }, uNear: { value: CONFIG.near }, uFar: { value: CONFIG.far }, uDepthFar: { value: data.depthFar } },
+    vertexShader: shaderText('plateVert'), fragmentShader: shaderText('plateFrag'), depthTest: true, depthFunc: THREE.AlwaysDepth, depthWrite: true,
+  });
+  plateScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), plateMat));
+}
+// three.js axes from Blender floor (x, y): (x, 0, -y)
+function cutTo(name) {
+  if (S.shot === name) return;
+  const s = S.data.shots[name];
+  S.shot = name;
+  S.cuts++;
+  camera.position.fromArray(s.pos);
+  camera.fov = s.fov;
+  camera.updateProjectionMatrix();
+  camera.lookAt(tmp.fromArray(s.look));
+  camera.updateMatrixWorld();
+  plateMat.uniforms.uColor.value = plates[name].color;
+  plateMat.uniforms.uDepth.value = plates[name].depth;
+  shared.uKeyDir.value.fromArray(CONFIG.keyDir).normalize().transformDirection(camera.matrixWorldInverse);
+  shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(camera.matrixWorldInverse);
+  shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(camera.matrixWorldInverse);
+  el.shotName.textContent = s.title;
+}
+
+// ===== INPUT =====
+window.addEventListener('keydown', (e) => { keys.add(e.code); if (e.code.startsWith('Arrow')) e.preventDefault(); readKeys(); });
+window.addEventListener('keyup', (e) => { keys.delete(e.code); readKeys(); });
+window.addEventListener('blur', () => { keys.clear(); readKeys(); });
+function readKeys() {
+  const k = (a, b) => (keys.has(a) || keys.has(b) ? 1 : 0);
+  input.kx = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
+  input.ky = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
+}
+// touch stick: appears where the finger lands; one pointer owns it
+window.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' || input.touchId !== -1 || !S.running) return;
+  input.touchId = e.pointerId; input.ox = e.clientX; input.oy = e.clientY; input.tx = 0; input.ty = 0;
+  el.stick.style.setProperty('--sx', e.clientX); el.stick.style.setProperty('--sy', e.clientY);
+  el.knob.style.setProperty('--kx', 0); el.knob.style.setProperty('--ky', 0);
+  el.stick.classList.remove('hidden');
+});
+window.addEventListener('pointermove', (e) => {
+  if (e.pointerId !== input.touchId) return;
+  let dx = e.clientX - input.ox, dy = e.clientY - input.oy;
+  const len = Math.hypot(dx, dy), r = CONFIG.stickR;
+  if (len > r) { dx *= r / len; dy *= r / len; }
+  input.tx = dx / r; input.ty = -dy / r;
+  el.knob.style.setProperty('--kx', Math.round(dx)); el.knob.style.setProperty('--ky', Math.round(dy));
+});
+function endTouch(e) {
+  if (e.pointerId !== input.touchId) return;
+  input.touchId = -1; input.tx = 0; input.ty = 0;
+  el.stick.classList.add('hidden');
+}
+window.addEventListener('pointerup', endTouch);
+window.addEventListener('pointercancel', endTouch);
+
+// ===== movement and zones =====
+function inRect(r, x, y, m) { return x >= r[0] + m && x <= r[2] - m && y >= r[1] + m && y <= r[3] - m; }
+function free(x, y) {
+  const walk = S.data.walk, obs = S.data.obstacles;
+  let ok = false;
+  for (let i = 0; i < walk.length && !ok; i++) ok = inRect(walk[i], x, y, 0);
+  if (!ok) return false;
+  for (let i = 0; i < obs.length; i++) if (inRect(obs[i], x, y, -CONFIG.clownR)) return false;
+  for (let i = 0; i < performers.length; i++) if (Math.hypot(x - performers[i].x, y - performers[i].y) < CONFIG.clownR + CONFIG.performerR) return false;
+  return true;
+}
+// camera-relative input; the basis stays with the old camera across a cut until the input is let go or turns past holdAngle
+function moveInput(dt) {
+  const ix = input.tx || input.kx, iy = input.ty || input.ky;
+  const mag = Math.min(1, Math.hypot(ix, iy));
+  if (mag < CONFIG.deadzone || S.ended) { S.hold = false; return 0; }
+  const ang = Math.atan2(iy, ix);
+  const turned = Math.abs(Math.atan2(Math.sin(ang - S.holdAng), Math.cos(ang - S.holdAng))) > THREE.MathUtils.degToRad(CONFIG.holdAngle);
+  if (!S.hold || turned) {
+    camera.getWorldDirection(tmp);
+    const l = Math.hypot(tmp.x, tmp.z) || 1;
+    S.basisX = tmp.x / l; S.basisZ = tmp.z / l; S.hold = true; S.holdAng = ang;
+  }
+  const n = Math.hypot(ix, iy) || 1;
+  // three.js floor direction: forward times up-input plus right times right-input (right = (-fz, fx))
+  const dx = (-S.basisZ * ix + S.basisX * iy) / n, dz = (S.basisX * ix + S.basisZ * iy) / n;
+  S.wantYaw = Math.atan2(dx, dz);
+  const step = S.speed * mag * dt;
+  const nx = S.x + dx * step, ny = S.y - dz * step;
+  if (free(nx, ny)) { S.x = nx; S.y = ny; } else if (free(nx, S.y)) S.x = nx; else if (free(S.x, ny)) S.y = ny;
+  return mag;
+}
+function turnToward(cur, want, rate, dt) {
+  const d = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
+  return cur + Math.sign(d) * Math.min(Math.abs(d), rate * dt);
+}
+function pickShot() {
+  if (inRect(S.data.shots[S.shot].zone, S.x, S.y, 0)) return;
+  const list = S.shotList;
+  for (let i = 0; i < list.length; i++) if (inRect(list[i].zone, S.x, S.y, CONFIG.zoneHyst)) { cutTo(list[i].name); return; }
+}
+function updateClown(dt) {
+  const c = chars.clown;
+  const mag = moveInput(dt);
+  const moving = mag > 0;
+  if (moving) S.yaw = turnToward(S.yaw, S.wantYaw, CONFIG.turnRate, dt);
+  if (moving !== S.moving) {
+    S.moving = moving;
+    if (moving) { c.walk.reset().play(); c.idle.crossFadeTo(c.walk, CONFIG.blend, false); } else { c.idle.reset().play(); c.walk.crossFadeTo(c.idle, CONFIG.blend, false); }
+  }
+  c.walk.timeScale = Math.max(mag, 0.3);
+  c.root.position.set(S.x, 0, -S.y);
+  c.root.rotation.y = S.yaw;
+  c.blob.position.set(S.x, 0.02, -S.y);
+  c.mixer.update(dt);
+  pickShot();
+  if (S.y >= S.data.endY && !S.ended) endWalk();
+}
+function updatePerformers(dt) {
+  for (let i = 0; i < performers.length; i++) {
+    const p = performers[i], c = p.c;
+    const d = Math.hypot(S.x - p.x, S.y - p.y);
+    const near = d < CONFIG.meetDist;
+    const want = near ? Math.atan2(S.x - p.x, -(S.y - p.y)) : p.restYaw;
+    c.root.rotation.y = turnToward(c.root.rotation.y, want, CONFIG.performerTurn, dt);
+    setFace(c, near ? 'smile' : 'sad');
+    c.mixer.update(dt);
+    placeLabel(i, p, near);
+  }
+}
+// name tag over a performer: DOM written only when it changes (shown, hidden or moved a whole pixel)
+function placeLabel(i, p, near) {
+  const lab = el.labels[i];
+  if (near) {
+    tmp.set(p.x, CONFIG.labelH, -p.y).project(camera);
+    near = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+    const x = Math.round((tmp.x + 1) / 2 * S.w), y = Math.round((1 - tmp.y) / 2 * S.h);
+    if (near && (x !== p.lx || y !== p.ly)) { p.lx = x; p.ly = y; lab.style.setProperty('--x', x); lab.style.setProperty('--y', y); }
+  }
+  if (near !== p.shown) { p.shown = near; lab.classList.toggle('hidden', !near); }
+}
+
+// ===== RENDER =====
+function fit() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const w = Math.floor(Math.min(vw, vh * CONFIG.aspect)), h = Math.floor(w / CONFIG.aspect);
+  if (w === S.w && h === S.h) return;
+  S.w = w; S.h = h;
+  el.canvas.style.width = w + 'px';
+  el.canvas.style.height = h + 'px';
+  renderer.setPixelRatio(Math.min(CONFIG.dprSteps[S.dprI], window.devicePixelRatio || 1));
+  renderer.setSize(w, h, false);
+}
+function renderFrame() {
+  renderer.clear();
+  renderer.render(plateScene, plateCam);
+  renderer.render(scene, camera);
+}
+// step the pixel ratio down once if frames stay slow (rule 31); never back up during a run
+function tierWatch(ms, dt) {
+  if (S.dprI >= CONFIG.dprSteps.length - 1) return;
+  S.slowT = ms > CONFIG.slowMs ? S.slowT + dt : 0;
+  if (S.slowT > CONFIG.slowFor) { S.dprI++; S.slowT = 0; S.w = 0; fit(); }
+}
+
+// ===== LOOP =====
+function frame(t) {
+  S.raf = 0;
+  if (!S.running || S.lost || document.hidden) return;
+  const ms = S.lastT ? t - S.lastT : 16;
+  const dt = Math.min(0.05, ms / 1000);
+  S.lastT = t;
+  updateClown(dt);
+  updatePerformers(dt);
+  renderFrame();
+  tierWatch(ms, dt);
+  S.raf = requestAnimationFrame(frame);
+}
+function startLoop() {
+  if (S.raf || !S.running || S.lost || document.hidden) return;
+  S.lastT = 0;
+  S.raf = requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) keys.clear(); else startLoop(); });
+window.addEventListener('resize', () => { fit(); if (S.running && !S.raf) renderFrame(); });
+el.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); S.lost = true; el.state.textContent = 'Graphics paused (context lost).'; });
+el.canvas.addEventListener('webglcontextrestored', () => { S.lost = false; startLoop(); });
+
+// ===== BOOT =====
+function placeStart() {
+  const d = S.data;
+  S.x = d.start.at[0]; S.y = d.start.at[1]; S.yaw = THREE.MathUtils.degToRad(d.start.yaw) + Math.PI;
+  S.ended = false; S.hold = false; S.shot = '';
+  cutTo('corridor');
+}
+function endWalk() {
+  S.ended = true;
+  el.panelText.textContent = 'Ring edge: the act starts here (zoom in, the cue).';
+  el.state.textContent = `Shots seen with ${S.cuts} camera cuts.`;
+  el.go.textContent = 'Walk again';
+  el.panel.classList.remove('hidden');
+}
+el.go.addEventListener('click', () => {
+  if (S.ended) placeStart();
+  el.panel.classList.add('hidden');
+  S.running = true;
+  startLoop();
+});
+async function boot() {
+  const tl = new THREE.TextureLoader();
+  S.data = await (await fetch(CONFIG.shots)).json();
+  S.shotList = Object.keys(S.data.shots).map((name) => ({ name, zone: S.data.shots[name].zone }));
+  makePlate(S.data);
+  await loadPlates(tl, S.data);
+  const [clown, whiteface, performer] = await Promise.all(['clown', 'whiteface', 'performer'].map((n) => loadChar(n, tl)));
+  Object.assign(chars, { clown, whiteface, performer });
+  S.walkMeasure = measureSpeed(clown);
+  S.speed = S.walkMeasure.speed;
+  for (const pd of S.data.performers) {
+    const c = chars[pd.name];
+    const p = { c, x: pd.at[0], y: pd.at[1], restYaw: THREE.MathUtils.degToRad(pd.yaw), lx: -1, ly: -1, shown: false };
+    c.root.position.set(p.x, 0, -p.y); c.root.rotation.y = p.restYaw; c.blob.position.set(p.x, 0.02, -p.y);
+    el.labels[performers.length].textContent = pd.title;
+    performers.push(p);
+  }
+  placeStart();
+  fit();
+  renderer.compile(scene, camera);
+  renderer.compile(plateScene, plateCam);
+  for (const c of Object.values(chars)) for (const t of c.textures) renderer.initTexture(t);
+  for (const p of Object.values(plates)) { renderer.initTexture(p.color); renderer.initTexture(p.depth); }
+  renderFrame();
+  S.ready = true;
+  el.state.textContent = 'Ready.';
+  el.go.classList.remove('hidden');
+}
+// test hook for smoke_walk.cjs (read-only use outside the checks)
+window.__walkTest = { renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, get plateMat() { return plateMat; } };
+boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; console.error(e); });
+</script>
+</body>
+</html>
