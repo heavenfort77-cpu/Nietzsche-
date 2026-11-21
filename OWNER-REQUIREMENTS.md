@@ -170,3 +170,12 @@ Owner's words: "any check of fault is to go wide instead of narrow. If 1 bug is 
   - fails when new entries are spread over more than one commit in one push (CI) or in one session (`handoff.sh`).
   - Tested 21 Nov in a scratch repo: 10 of 10 cases behaved as intended.
 - Not enforced (cannot be checked by a script): whether the Class and Sweep are really wide enough. The entry has to say what was checked, so the owner and the next session can judge it.
+
+### Scope: lasting code and prototype code (owner, 21 Nov 2026)
+
+Owner decision after asking whether probing an incomplete build is worth it: the full rule applies to code that lasts; prototype code gets only what the playtest needs.
+- **Lasting code** (everything not listed in `tools/prototype_paths.txt`): the game page `web/game/`, the pipeline scripts, every check, gate and tool, and any game logic that carries into the real game. Full rule: probe, wide sweep, one commit, log.
+- **Prototype code** (paths listed in `tools/prototype_paths.txt`, now only `web/step0/`): code whose job is to answer one design question and that may be thrown away. Probe and fix only faults that stop the owner's playtest or would give a wrong answer to the question (a frozen act, wrong timing, a missing button). Any other fault found there is logged in `FAULTS.md` as deferred (fields Found, Probe with its FAIL line, Cause, Class, Where with the file path, Deferred with the reason) and not fixed or swept yet. Prototype code gets no polish sweeps (extra screens, rare devices, edge cases) before the owner says the loop works.
+- **When prototype code is kept** (its path is taken out of `tools/prototype_paths.txt`, or its logic is copied into lasting code), every deferred fault for it is swept and fixed in that same commit, and its lasting-code checks are added then.
+- Enforced by `tools/check_faults.sh`: a deferred entry is allowed only if its Where path is under a prototype path; once a path leaves the list, any deferred entry still pointing into it fails CI. Not enforced: logic copied out of a prototype into lasting code by hand (the copying commit has to name it).
+- Areas to sweep for each fault class: `CHECK-AREAS.md`.

@@ -1,0 +1,2 @@
+# Prototype code (owner requirement 5, scope). One path prefix per line. Deferred faults are allowed only under these paths.
+web/step0/

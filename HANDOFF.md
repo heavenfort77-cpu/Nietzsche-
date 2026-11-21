@@ -15,6 +15,8 @@ New session after 3 batch commits, after any context summary, or when the owner 
 - Batch 1, step 0 cue prototype: `web/step0/cue.html` (single file, flat 2D, generated drum, one act of 3 chains, nights 1-3 tempos 600/500/400 ms, whiteface take and upside-down topper from night 2, phone and desktop windows, latency setting, results with mean timing offset). Checks, local: `node web/check-static.cjs web/step0/cue.html` PASS; `node web/step0/test_cue.cjs` 43 of 43 pass (per-frame gate + 42 bot runs: 7 bots x 3 nights x desktop/phone, invariants every 5 ms), mutations 10 of 10 caught; `node web/step0/smoke_cue.cjs` (headless Chrome, 1280x800 and 390x844 touch) PASS. Not yet in CI (no push).
 - Batch 2, folded into batch 3 (owner, 20 Nov: "start too large", read as the mask's start size): the mask now starts at 0.48 of the smaller screen side (was 0.75 of the larger, mostly off-screen on phones), never under 1.3x the cue. New gate: mask start inside the nearest edge at 5 screen sizes, plus its mutation. Local: `test_cue.cjs` 44 of 44, mutations 11 of 11; smoke PASS. Patch file now holds both batches.
 - Batch 3 (owner requirement 5, 21 Nov): rule written in OWNER-REQUIREMENTS.md section 5, fault log `FAULTS.md` (F1-F7), gate `tools/check_faults.sh` (CI job `handoff`, `handoff.sh check` and `close`; scratch-repo test 10 of 10). New CI job `step0` runs the step 0 checks. Wide sweep of step 0 found and fixed 4 more faults in one commit: F4 the batch 2 mask fix still left the screen top (face sits at 40% height), F5 helpers outside the per-frame gate, F6 act froze without a running audio clock (3 cases), F7 touch pad stuck after a cancelled touch. Local: `test_cue.cjs` 47 of 47, mutations 14 of 14; `smoke_cue.cjs` PASS (5 scenarios + 2 play-throughs). The batch 2 `maskStartGate` was replaced by `layoutGate` (7 screens, every edge from the real face centre).
+- Pushed 21 Nov: bd140a2 (run 14: `handoff` and `step0` success; rest of run 14 checked by a scheduled follow-up).
+- Batch 3 of session 5 (21 Nov): requirement 5 now has a scope rule (owner decision): full sweep for lasting code; prototype code (`tools/prototype_paths.txt`, now `web/step0/`) gets only playtest-blocking fixes, other faults logged as deferred. `tools/check_faults.sh` enforces it (scratch test 15 of 15). `CHECK-AREAS.md`: 13 areas to sweep with the gate each has now. `references/controls-reference.jpg`: owner's controls chart (third-party, never ships).
 - Not in step 0, on purpose: encore dial, whiteface's late spoken call (nights 3+), soldier-drill calls, Mirror World, shop. Step 0 is the cue alone (GDD build plan).
 
 ## Next step
@@ -26,7 +28,8 @@ Owner plays `cue.html` on the phone and desktop and says whether the cue is fun 
 - Decided 20 Nov: the game uses the current character models as they are (OWNER-REQUIREMENTS.md section 4).
 
 - Play step 0 (`web/step0/cue.html`) and say whether the loop works; send the results-panel timing line.
-- Allow push access to the repo in the next session.
+- Start each session with the paste line in the Project's RESTART.md (it includes the push authorisation).
+- Gamepad support: the controls chart sets keyboard, mouse and gamepad as the PC standard; the GDD has keyboard and touch only. Add gamepad or not?
 - Approve the v2 whiteface and Performer (pose sheets run 11, side-by-side run 12).
 
 ## Open items (cause known)
