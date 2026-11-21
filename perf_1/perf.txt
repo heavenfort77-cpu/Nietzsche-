@@ -1,0 +1,2 @@
+PASS mutation maxdpr -> "6. desktop starts" fires | FAIL 6. desktop starts at a medium pixel ratio, not the maximum | start 2 on a 2x screen
+PASS mutation aosamples -> "2. ambient occlusion" fires | FAIL 2. ambient occlusion: no second scene render, full-screen passes only, half resolution | {"extraCalls":13,"extraTris":563,"halfRes":tru

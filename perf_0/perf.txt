@@ -1,0 +1,1 @@
+PASS mutation dense -> "1. 1920x1080: density held and triangles" fires | FAIL 1. 1920x1080: density held and triangles <= 500000 (all passes) | {"tris":734720,"crowd":515,"scatter":2100,"confetti":300000,"bulbs":3

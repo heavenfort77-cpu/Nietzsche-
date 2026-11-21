@@ -1,0 +1,1 @@
+PASS mutation nowarm -> "11. no shader compiles" fires | FAIL 11. no shader compiles or texture uploads after loading (warm-up covers every state) | {"programs":[25,26],"textures":[44,44]}
