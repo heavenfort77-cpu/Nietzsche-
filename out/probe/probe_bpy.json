@@ -1,0 +1,57 @@
+[
+ {
+  "name": "bpy version",
+  "ok": true,
+  "info": "5.3.0"
+ },
+ {
+  "name": "glTF exporter params",
+  "ok": true,
+  "info": "9 present"
+ },
+ {
+  "name": "export_animation_mode has ACTIONS",
+  "ok": true,
+  "info": "['ACTIONS', 'ACTIVE_ACTIONS', 'BROADCAST', 'NLA_TRACKS', 'SCENE']"
+ },
+ {
+  "name": "Cycles GPU devices",
+  "ok": true,
+  "info": "none (CPU only)"
+ },
+ {
+  "name": "Cycles DIFFUSE colour bake 512 CPU",
+  "ok": true,
+  "info": "0.2s red_px=155359 white_px=7010"
+ },
+ {
+  "name": "Cycles AO bake 512 CPU 64spp",
+  "ok": true,
+  "info": "3.6s"
+ },
+ {
+  "name": "ARMATURE_AUTO weights in background",
+  "ok": true,
+  "info": "2912/2912 weighted"
+ },
+ {
+  "name": "Scripted keyframes on 5.x actions (NLA stash)",
+  "ok": true,
+  "info": "slots_api=False"
+ },
+ {
+  "name": "GLB export ACTIONS mode: one animation per action",
+  "ok": true,
+  "info": "['bend', 'twist']"
+ },
+ {
+  "name": "GLB has skin",
+  "ok": true,
+  "info": "1"
+ },
+ {
+  "name": "Voxel remesh + decimate modifiers",
+  "ok": true,
+  "info": "23154 faces -> 4630 tris in 0.4s"
+ }
+]
