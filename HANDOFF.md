@@ -1,6 +1,6 @@
 # Handoff (live state)
 
-Session start: 87976a0 (2026-11-20)
+Session start: 4e3e27d (2026-11-21)
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`. This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
@@ -27,7 +27,8 @@ Owner plays `cue.html` on the phone and desktop and says whether the cue is fun 
 
 - Decided 20 Nov: the game uses the current character models as they are (OWNER-REQUIREMENTS.md section 4).
 
-- Play step 0 (`web/step0/cue.html`) and say whether the loop works; send the results-panel timing line.
+- Play step 0 (`web/step0/cue.html`) and say whether the loop works; send the results-panel timing line. File sent to the owner 21 Nov (session 7).
+- Owner, 21 Nov: "I will be using a 64x64 3D model as character". Conflicts with requirement 4 (current models stay) and the approved v2 cast; nothing changed yet. Read as: 3D model rendered to a 64x64 pixel sprite (HD-2D). Owner to confirm the reading and choose: pixel characters in the dense 3D ring, or the whole scene pixelated; keep the approved meshes rendered low-res, or new low-poly models. Step 0 needs no change (its cue is a screen overlay, not on the model).
 - Start each session with the paste line in the Project's RESTART.md (it includes the push authorisation).
 - Gamepad support: the controls chart sets keyboard, mouse and gamepad as the PC standard; the GDD has keyboard and touch only. Add gamepad or not?
 - Approve the v2 whiteface and Performer (pose sheets run 11, side-by-side run 12).
