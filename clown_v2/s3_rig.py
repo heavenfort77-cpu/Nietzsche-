@@ -21,8 +21,9 @@ CONFIG = dict(
     radial=8.0,
     # frames per second the clips are sampled at
     fps=30,
-    # Muybridge series 1 (walking, ordinary speed): seconds between photographs
-    walk_dt=0.083,
+    # Muybridge series 1 (walking, ordinary speed): seconds between photographs (0.083 on the plate; exactly 1/12 so a
+    # cycle is 30 whole frames and its last frame is its first: the export samples whole frames)
+    walk_dt=1 / 12,
     # walk intervals per full two-step cycle (the plate shows one step in 7 photographs)
     walk_n=12,
     # Muybridge series 32 (striking a blow): seconds between photographs
@@ -76,10 +77,27 @@ def key_all(frame):
         pb.keyframe_insert('location', frame=frame)
 
 def make_action(name, times, poser):
+    # every pose is built with no action and the NLA off: the strips of the clips made earlier (idle, then walk) are
+    # evaluated on view-layer updates inside the posers and leaked into these keys (F17: walk arms 59-89 deg off at
+    # the loop seam, the same walk time posed twice came out 23-27 deg apart)
+    ARM.animation_data.action = None
+    ARM.animation_data.use_nla = False
+    poses = []
+    for i, t in enumerate(times):
+        K.rest(); poser(i, t); K.upd()
+        poses.append([(pb.rotation_quaternion.copy(), pb.location.copy()) for pb in ARM.pose.bones])
     act = bpy.data.actions.new(name); act.use_fake_user = True
     ARM.animation_data.action = act
-    for i, t in enumerate(times):
-        K.rest(); poser(i, t); key_all(1 + t * CONFIG['fps'])
+    prev = None
+    for t, pose in zip(times, poses):
+        for k, (pb, (q, loc)) in enumerate(zip(ARM.pose.bones, pose)):
+            # one quaternion sign from key to key, so the curves between keys take the short way round
+            if prev is not None and prev[k].dot(q) < 0:
+                q.negate()
+            pb.rotation_quaternion = q; pb.location = loc
+        prev = [q for q, _ in pose]
+        key_all(1 + t * CONFIG['fps'])
+    ARM.animation_data.use_nla = True
     tr = ARM.animation_data.nla_tracks.new(); tr.name = name
     tr.strips.new(name, 1, act)
     ARM.animation_data.action = None

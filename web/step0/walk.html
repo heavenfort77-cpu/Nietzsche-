@@ -228,6 +228,8 @@ const CONFIG = Object.freeze({
   plantTol: 0.02,
   // stick or key input below this length is no input
   deadzone: 0.2,
+  // input must stay under the dead zone this long before he stops (a wobbling thumb does not restart the walk), s
+  stopDelay: 0.12,
   // input held across a camera cut keeps the old camera's directions until it turns more than this, degrees
   holdAngle: 50,
   // the clown must be this far inside a new zone before the camera cuts to it, metres
@@ -257,9 +259,9 @@ const CONFIG = Object.freeze({
 // ===== STATE =====
 const S = {
   data: null, ready: false, running: false, ended: false, lost: false,
-  shot: '', x: 0, y: 0, yaw: 0, speed: CONFIG.speedFallback, moving: false,
+  shot: '', x: 0, y: 0, yaw: 0, speed: CONFIG.speedFallback, moving: false, still: 0, lastMag: 1, dirX: 0, dirZ: -1,
   hold: false, holdAng: 0, basisX: 0, basisZ: -1,
-  dprI: 0, slowT: 0, lastT: 0, raf: 0, w: 0, h: 0, cuts: 0,
+  dprI: 0, slowT: 0, lastT: 0, raf: 0, w: 0, h: 0, cuts: 0, walkStarts: 0,
 };
 // test hook: read by the headless checks
 window.__walk = S;
@@ -471,12 +473,15 @@ function moveInput(dt) {
   }
   const n = Math.hypot(ix, iy) || 1;
   // three.js floor direction: forward times up-input plus right times right-input (right = (-fz, fx))
-  const dx = (-S.basisZ * ix + S.basisX * iy) / n, dz = (S.basisX * ix + S.basisZ * iy) / n;
-  S.wantYaw = Math.atan2(dx, dz);
-  const step = S.speed * mag * dt;
-  const nx = S.x + dx * step, ny = S.y - dz * step;
-  if (free(nx, ny)) { S.x = nx; S.y = ny; } else if (free(nx, S.y)) S.x = nx; else if (free(S.x, ny)) S.y = ny;
+  S.dirX = (-S.basisZ * ix + S.basisX * iy) / n; S.dirZ = (S.basisX * ix + S.basisZ * iy) / n;
+  S.wantYaw = Math.atan2(S.dirX, S.dirZ);
   return mag;
+}
+// one step along the last input direction at stick strength m; slides along walls
+function stepMove(m, dt) {
+  const step = S.speed * m * dt;
+  const nx = S.x + S.dirX * step, ny = S.y - S.dirZ * step;
+  if (free(nx, ny)) { S.x = nx; S.y = ny; } else if (free(nx, S.y)) S.x = nx; else if (free(S.x, ny)) S.y = ny;
 }
 function turnToward(cur, want, rate, dt) {
   const d = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
@@ -490,13 +495,22 @@ function pickShot() {
 function updateClown(dt) {
   const c = chars.clown;
   const mag = moveInput(dt);
-  const moving = mag > 0;
-  if (moving) S.yaw = turnToward(S.yaw, S.wantYaw, CONFIG.turnRate, dt);
+  if (mag > 0) { S.still = 0; S.lastMag = mag; } else S.still += dt;
+  // he keeps walking (on the last direction) until the input has been gone for stopDelay
+  const moving = !S.ended && (mag > 0 || (S.moving && S.still < CONFIG.stopDelay));
+  const m = mag || S.lastMag;
+  if (moving) { stepMove(m, dt); S.yaw = turnToward(S.yaw, S.wantYaw, CONFIG.turnRate, dt); }
   if (moving !== S.moving) {
     S.moving = moving;
-    if (moving) { c.walk.reset().play(); c.idle.crossFadeTo(c.walk, CONFIG.blend, false); } else { c.idle.reset().play(); c.walk.crossFadeTo(c.idle, CONFIG.blend, false); }
+    if (moving) {
+      S.walkStarts++;
+      // a walk still fading out carries on from where it is; only a walk fully faded out starts from its first frame
+      if (c.walk.getEffectiveWeight() === 0) c.walk.reset();
+      c.walk.play(); c.idle.crossFadeTo(c.walk, CONFIG.blend, false);
+    } else { c.idle.reset().play(); c.walk.crossFadeTo(c.idle, CONFIG.blend, false); }
   }
-  c.walk.timeScale = Math.max(mag, 0.3);
+  // clip speed follows the stick exactly, so the feet match the ground speed at any tilt
+  c.walk.timeScale = m;
   c.root.position.set(S.x, 0, -S.y);
   c.root.rotation.y = S.yaw;
   c.blob.position.set(S.x, 0.02, -S.y);

@@ -156,3 +156,21 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Sweep: `web/step0/walk.html`, `web/step0/cue_model.html`, `web/step0/cue.html`, `web/game/index.html`: all had no icon link (fault, fixed). The game page checks (`check_step4.mjs`, `check_step5.mjs`, `check_perf.mjs`, `check-runtime.cjs`) skip favicon 404s; left as they are (not loosened; the pages no longer ask).
 - Fix: `<link rel="icon" href="data:,">` after the title in all four pages.
 - Proof: `node web/step0/smoke_walk.cjs`: `RESULT walk smoke 22 of 22 pass`; one-off load of the other three pages in Chrome: `PASS step0/cue_model.html HTTP errors: 0`, same for `cue.html` and `game/index.html`.
+
+## F17: walk jerks once a cycle (arms snap at the loop seam; slap legs in a walking stride)
+- Found: session 10, owner on the walk sample: "the walking movement were jerky".
+- Probe: new gate `clown_v2/probe_clip_loop.py` on the run 18/28 GLBs: `FAIL  clip walk: frame furthest from its neighbours' midpoint 39.7 deg, forearm_L at seam (max 4)` (clown), `60.1 deg, forearm_L at seam` (Whiteface), `57.4 deg, upper_arm_L at seam` (Performer). Exported tracks: upper arm 16 and 26 deg steps in the first two frames, 44 deg at the seam, every other step under 4 deg. In Blender, the same walk time posed twice came out 23-27 deg apart (arms).
+- Cause: `s3_rig.make_action` builds the clips in turn (idle, walk, slap) and each one leaves an NLA strip on the rig. While the next clip was posed, view-layer updates evaluated those strips and leaked their pose into the posers, so every key depended on the one before it. The walk's first key inherited the idle pose (arms), so the cycle did not close; the slap was posed over the walk strip (legs mid-stride). Second, smaller part: `walk_dt` 0.083 made a 30.88-frame cycle while the export samples whole frames, so the last 0.88 frame was cut.
+- Class: build-time state leaking between generated animation keys (any generator that poses a rig with earlier actions or NLA live), and loops whose length is not a whole number of sampled frames.
+- Sweep: walk (fault, all 3 characters), slap (fault: up to 46 deg change on shin_L once fixed; it is not a loop, so the probe does not test it; before/after pose sheets show the stride gone), idle (built first, no leak: 0.0 deg change). Other generators: `s2_*` build no actions; `check_model.py`/`s3_check.py` only read. Page side: see F18.
+- Fix: `make_action` poses every key with no action and the NLA off, keys after, turns the NLA back on, and keeps quaternion signs continuous key to key; `walk_dt` = 1/12 (30 whole frames, last frame = first). The clip probe runs in CI after every rig build (build job and both cast jobs), with a mutation (a 20 deg pop on one frame must FAIL).
+- Proof: local full rebuilds: `PASS  clip walk: ... 2.3 deg, shin_L at frame 7 (max 4)` (clown), `1.7 deg` (Whiteface), `2.7 deg` (Performer); mutation `FAIL  clip walk: ... 20.0 deg, upper_arm_L at frame 15`; step 3 gates PASS (walk edge stretch p99.9 1.54 -> 1.39).
+
+## F18: a wobbling stick restarts the walk from its first frame
+- Found: F17 sweep of `web/step0/walk.html`: stopping reset the walk, and any input dip under the dead zone stopped him.
+- Probe: `node web/step0/smoke_walk.cjs` (new case, stick alternating 0.21 / 0.19 each frame): `FAIL stick wobbling at the dead zone for 60 frames: walk restarts 30 (max 1)`.
+- Cause: stop and start followed the raw input every frame, and every start called `walk.reset()`. Also the clip speed had a 0.3 floor while the ground speed followed the stick, so the feet slid at small tilts.
+- Class: animation state driven straight from noisy input with no hysteresis.
+- Sweep: `walk.html` (fault, fixed). `cue_model.html` and the game page have no stick-driven walk.
+- Fix: he stops only after the input has stayed under the dead zone for `stopDelay` 0.12 s (coasting on the last direction meanwhile); a walk still fading out carries on instead of restarting; clip speed = stick strength exactly.
+- Proof: `node web/step0/smoke_walk.cjs`: `PASS stick wobbling at the dead zone for 60 frames: walk restarts 1 (max 1)`, `RESULT walk smoke 23 of 23 pass` (with the rebuilt GLBs: speed 0.748 m/s from planted feet).

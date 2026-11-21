@@ -66,6 +66,24 @@ function botWalk(route) {
   });
 }
 
+// stick held near the dead zone (a thumb wobbling on a phone): the walk must not restart again and again (F18)
+function stickDip() {
+  const T = window.__walkTest, S = window.__walk;
+  return new Promise((done) => {
+    const start = S.walkStarts;
+    let n = 0;
+    T.input.tx = 0; T.input.ty = 0.6;
+    function tick() {
+      n++;
+      T.input.ty = n % 2 ? 0.21 : 0.19;
+      if (n < 60) { requestAnimationFrame(tick); return; }
+      T.input.ty = 0;
+      done({ restarts: S.walkStarts - start, frames: n });
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
 // share of clown pixels left after the plate depth test, at a Blender floor spot in a shot
 function occlusion(spot) {
   const T = window.__walkTest, S = window.__walk;
@@ -127,6 +145,10 @@ async function run() {
     report(!errs.length, `${vp.name}: no page error after the walk ${errs.join('; ')}`);
     if (vp === SCREENS[0]) {
       await page.screenshot({ path: '/tmp/walk_end.png' });
+      await page.evaluate(() => { const S = window.__walk; S.x = 0; S.y = 4; S.ended = false; S.running = true; window.__walkTest.cutTo('corridor'); });
+      await page.click('#go');
+      const dip = await page.evaluate(stickDip);
+      report(dip.restarts <= 1, `stick wobbling at the dead zone for ${dip.frames} frames: walk restarts ${dip.restarts} (max 1)`);
       const behind = await page.evaluate(occlusion, { shot: 'wings', x: 2.6, y: 10.2 });
       const open = await page.evaluate(occlusion, { shot: 'wings', x: -0.5, y: 11.6 });
       report(behind.hidden > 0.2 && open.hidden < 0.05 && open.all > 500,

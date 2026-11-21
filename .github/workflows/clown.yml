@@ -76,6 +76,8 @@ jobs:
           python -I s2_build.py out | tee -a out_log.txt
           python -I s2_shell.py out | tee -a out_log.txt
           python -I s3_rig.py out | tee -a out_log.txt
+          python -I probe_clip_loop.py out/clown_v2.glb | tee -a out_log.txt
+          if MUTATE=1 python -I probe_clip_loop.py out/clown_v2.glb | grep -q '^FAIL  clip walk'; then echo 'PASS clip loop mutation: a 20 deg pop is caught' | tee -a out_log.txt; else echo 'FAIL clip loop mutation: a 20 deg pop is not caught' | tee -a out_log.txt; fi
           mv out_log.txt out/build_log.txt
           ! grep -q '^FAIL' out/build_log.txt
       - uses: actions/upload-artifact@v4
@@ -294,6 +296,7 @@ jobs:
           python -I s2_build.py $O | tee log.txt
           python -I s2_shell.py $O | tee -a log.txt
           python -I s3_rig.py $O | tee -a log.txt
+          python -I probe_clip_loop.py $O/clown_v2.glb | tee -a log.txt
           python -I check_model.py $O/rigged.blend $O/face_atlas.png | tee -a log.txt
           python -I check_glb.py $O/clown_v2.glb | tee -a log.txt
           python -I s3_check.py $O --sheet | tee -a log.txt
