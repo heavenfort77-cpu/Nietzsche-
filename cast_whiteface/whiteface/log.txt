@@ -1,0 +1,132 @@
+Info: Saved as "high.blend"
+PASS chars.whiteface: 48 parts tagged; untagged meshes: []
+00:00.272  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_whiteface/high.blend"
+PASS body: parts joined, hidden faces removed | 47 parts, 12100 tris before, 1271 hidden faces removed, 9766 tris, 0.2s
+PASS body UVs: no overlaps | 0 overlapping faces, 69 islands
+PASS head UV: one island | 1 islands
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS body bakes (colour, AO, edge/top/noise) | 0.6s / 29.3s / 0.4s
+PASS body regions: every part ramp present in the atlas | {'BLACK': 123852, 'CRIMSON': 483821, 'GOLD': 82703, 'PAINT': 231081, 'SILVER': 127119}
+PASS body regions: faces of each ramp read back as that ramp (>= 95%) | {'BLACK': 1.0, 'PAINT': 1.0, 'CRIMSON': 1.0, 'GOLD': 1.0, 'SILVER': 1.0}
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake neutral | 0.3s, feature texels 16772
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer neutral: paint present, eyes cut it | 2.4% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake stern | 0.3s, feature texels 16443
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer stern: paint present, eyes cut it | 1.6% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake call | 0.3s, feature texels 22397
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer call: paint present, eyes cut it | 2.6% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake sigh | 0.3s, feature texels 13214
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer sigh: paint present, eyes cut it | 2.2% of the cell painted
+PASS spec mask: some body vertices shine, most do not | 726 of 5430 vertices
+Info: Deleted 238 data-block(s)
+PASS triangles <= 30k (body + head) | 9766 + 2208 = 11974
+PASS materials (= draw calls before hull) <= 2 | ['body', 'face']
+Info: Saved as "low.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+17:43:55 | INFO: Starting glTF 2.0 export
+17:43:55 | INFO: Extracting primitive: Sphere.061
+17:43:55 | INFO: Primitives created: 1
+17:43:55 | INFO: Extracting primitive: Sphere.098
+17:43:55 | INFO: Primitives created: 1
+17:43:55 | INFO: Finished glTF 2.0 export in 0.058118343353271484 s
+
+PASS total time | 49s
+00:00.273  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_whiteface/low.blend"
+PASS armature | 21 deform bones
+PASS weights: every vertex weighted, <= 4 influences | unweighted 0, max influences 4
+Info: Saved as "rigged.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+17:43:56 | INFO: Starting glTF 2.0 export
+17:43:56 | INFO: Extracting primitive: Sphere.061
+17:43:56 | INFO: Primitives created: 1
+17:43:56 | INFO: Extracting primitive: Sphere.098
+17:43:56 | INFO: Primitives created: 1
+17:43:56 | INFO: Finished glTF 2.0 export in 0.3298652172088623 s
+
+PASS GLB: 3 clips, durations = photographs x interval | {'idle': 2, 'slap': 1.2, 'walk': 0.967} expected {'idle': 2.0, 'walk': 0.996, 'slap': 1.232}
+PASS GLB size | 1750 KB, skins 1, meshes 2
+00:00.274  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_whiteface/rigged.blend"
+PASS bone names have no dots
+PASS every mesh visible
+PASS every vertex weighted (sum 1) | 0 vertices off
+PASS <= 4 influences per vertex | 4
+PASS coordinates finite
+PASS height 1.7-1.9 m | 1.803 m
+PASS feet on the floor (z = 0) | min z -0.0030
+PASS no degenerate faces
+PASS head sits on its bone | 0.0 cm from the head bone
+PASS materials <= 2 | 2
+PASS body UVs: no overlaps | 0 faces
+PASS head UV: one island | 1
+PASS head UVs inside cell 0 (u 0..0.5, v 0.5..1) | u 0.000..0.500 v 0.500..1.000
+PASS the 4 face cells all differ | smallest mean difference 6.3
+RESULT 14 of 14 pass
+PASS clips are idle, walk, slap | ['idle', 'slap', 'walk']
+PASS clip lengths match the plates (within 1 frame) | {'idle': 2, 'slap': 1.2, 'walk': 0.967}
+PASS one skin | 1
+PASS two meshes (body, face) | 2
+PASS node names have no dots
+PASS at most 4 joints per vertex (no JOINTS_1)
+PASS no vertex colours (COLOR_0)
+PASS shine mask _SPEC on every mesh | [['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC'], ['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC']]
+PASS file <= 4096 KB before compression | 1750 KB
+PASS animation channels target real nodes
+RESULT 10 of 10 pass
+00:00.272  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_whiteface/rigged.blend"
+PASS rest pose = bind mesh | max 0.000 mm
+touching pairs at rest: 72
+part groups at rest: 4
+PASS idle: edge stretch p99.9 <= 1.6 | p99.9 1.34, max 1.44 on part [upper_arm_L,forearm_L,hand_L]
+PASS idle: nothing floats free (part groups stay 4) | max groups 4; parts with no contact: []
+PASS walk: edge stretch p99.9 <= 1.6 | p99.9 1.38, max 1.45 on part [chest,clavicle_R,upper_arm_R]
+PASS walk: nothing floats free (part groups stay 4) | max groups 4; parts with no contact: []
+PASS slap: edge stretch p99.9 <= 1.6 | p99.9 1.26, max 1.47 on part [chest,clavicle_R,upper_arm_R,forearm_R]
+PASS slap: nothing floats free (part groups stay 4) | max groups 4; parts with no contact: []
+00:08.076  render           | Saved: '/tmp/sheet_idle_0.png'
+00:10.629  render           | Saved: '/tmp/sheet_idle_1.png'
+00:13.174  render           | Saved: '/tmp/sheet_idle_2.png'
+00:15.705  render           | Saved: '/tmp/sheet_idle_3.png'
+00:18.249  render           | Saved: '/tmp/sheet_idle_4.png'
+00:20.778  render           | Saved: '/tmp/sheet_idle_5.png'
+00:23.474  render           | Saved: '/tmp/sheet_walk_0.png'
+00:25.968  render           | Saved: '/tmp/sheet_walk_1.png'
+00:28.478  render           | Saved: '/tmp/sheet_walk_2.png'
+00:30.972  render           | Saved: '/tmp/sheet_walk_3.png'
+00:33.477  render           | Saved: '/tmp/sheet_walk_4.png'
+00:35.976  render           | Saved: '/tmp/sheet_walk_5.png'
+00:38.627  render           | Saved: '/tmp/sheet_slap_0.png'
+00:41.143  render           | Saved: '/tmp/sheet_slap_1.png'
+00:43.700  render           | Saved: '/tmp/sheet_slap_2.png'
+00:46.287  render           | Saved: '/tmp/sheet_slap_3.png'
+00:48.843  render           | Saved: '/tmp/sheet_slap_4.png'
+00:51.367  render           | Saved: '/tmp/sheet_slap_5.png'
+PASS mutation metalbake: gate "body regions: faces of each ramp read back as that ramp" fails on the broken code
+PASS real shell build: 18 of 18 gates pass
+RESULT shell mutations 1 of 1 fired; real build PASS
+INFO whiteface front: approved {'top': 67, 'feet': 994, 'height': 928, 'width': 404, 'cx': 513.5} | v2 {'top': 68, 'feet': 994, 'height': 927, 'width': 544, 'cx': 511.5}
+PASS side-by-side whiteface: v2 height / approved = 0.999 (limit 1 +/- 0.03)
+PASS side-by-side whiteface: feet row 994 vs 994 (limit 12 px)
+INFO whiteface three_quarter: approved {'top': 67, 'feet': 998, 'height': 932, 'width': 357, 'cx': 517.4} | v2 {'top': 68, 'feet': 998, 'height': 931, 'width': 453, 'cx': 513.8}
+INFO whiteface side: approved {'top': 67, 'feet': 996, 'height': 930, 'width': 219, 'cx': 509.8} | v2 {'top': 68, 'feet': 995, 'height': 928, 'width': 218, 'cx': 509.8}
+INFO whiteface back: approved {'top': 67, 'feet': 984, 'height': 918, 'width': 406, 'cx': 509.4} | v2 {'top': 68, 'feet': 984, 'height': 917, 'width': 528, 'cx': 511.3}
+WROTE ../cast_out/whiteface/side_by_side.jpg
+INFO size: source 1750 KB, compressed 296 KB
+PASS compressed GLB 296 KB <= 800 KB
+PASS every image is KTX2: ['image/ktx2', 'image/ktx2']
+PASS meshopt used: ['EXT_meshopt_compression', 'KHR_materials_specular', 'KHR_mesh_quantization', 'KHR_texture_basisu']
+PASS skins kept: 1 -> 1
+PASS clips kept: ['idle', 'slap', 'walk'] -> ['idle', 'slap', 'walk']
+PASS meshes kept: 2 -> 2
