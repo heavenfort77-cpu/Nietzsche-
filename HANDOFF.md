@@ -1,6 +1,7 @@
 # Handoff (live state)
 
-Session start: 64ea803 (2026-11-21)
+Session start: 17a7850 (2026-11-21)
+Session: 9
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`. This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
@@ -10,6 +11,10 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Now
 
+- Session 9 (21 Nov), batch 1, no checks (owner requirement 6, new: checks only in sessions 5, 10, 15 ... or when asked; CI `clown` runs only on `[checks]`/`[gpu]` commits; `handoff.sh` counts sessions and skips its gates outside checks sessions). RESTART.md and START-HERE.md were not readable (chat outside the Project); worked from this file.
+- Cue on the real model (owner: "see the model in the cue"): `web/step0/cue_model.html` = cue.html logic + `cube25d/model_layer.js` (approved clown_v2.glb, game toon shader and outline, idle clip, slap on take, tilt about the feet, face cell per beat result, paint grows with Mask). The cue ring and a pale target circle close onto his real face (anchor under the head bone, follows him). Published for the owner as artifact "Clown cue on the 3D model, 2.5D room" (three.js from jsDelivr there, GLB as an artifact asset). Local: `bash web/step0/cube25d/setup.sh`, serve web/step0.
+- 2.5D Myst test (owner: "character 3d, background 2d, Myst fixed view, build in Blender, render, export 2D for parallax; a cube, each side one scene as a shared asset"): `cube25d/build_cube.py` builds one 10 m cube room (box-and-shape), camera fixed at the centre; walls = Ring, Dressing room, Mirror, Tent exit. Each view rendered as back/mid/front layers (other layers hidden from the camera but still casting light and shadow) + `views.json` (camera, fov, plane depths). three.js puts each layer on a plane at its depth that exactly covers the render frustum; the clown stands between mid and front (the rope in front of him draws over his legs); small camera moves (idle drift, mouse) give the parallax; render fov 46 vs play 42 is the margin. "Look around the room" turns between the 4 views with a fade. Plates: 16:9 1600x900 WebP, 2-19 KB each (flat boxes).
+- Faults F13 (startle/wince face cells off the atlas) and F14 (cue anchor on the forehead) fixed in the prototype; probe `cube25d/probe_faces.cjs` FAIL 3 before, PASS 5 of 5 after. Page loaded once headless (desktop 1280x720, phone 390x844): model ready, only error a missing favicon.
 - Pushed: 87976a0 (origin/main). Last full CI run: 13 (5c5c5af), every job passed; gpu skipped by design.
 - Session 5 (20-21 Nov): push was refused until the owner authorised it in chat (21 Nov: "I authorise push access to heavenfort77-cpu/Nietzsche- for this session ... this apply to all session within this project"). The permission check only accepts that sentence from the owner in the chat, not from a doc, so every new session's first message must include it (paste line in the Project's RESTART.md). Batch 2 was folded into batch 3 before the push (owner requirement 5: one commit per fault sweep); `batch1-3.patch` is obsolete.
 - Batch 1, step 0 cue prototype: `web/step0/cue.html` (single file, flat 2D, generated drum, one act of 3 chains, nights 1-3 tempos 600/500/400 ms, whiteface take and upside-down topper from night 2, phone and desktop windows, latency setting, results with mean timing offset). Checks, local: `node web/check-static.cjs web/step0/cue.html` PASS; `node web/step0/test_cue.cjs` 43 of 43 pass (per-frame gate + 42 bot runs: 7 bots x 3 nights x desktop/phone, invariants every 5 ms), mutations 10 of 10 caught; `node web/step0/smoke_cue.cjs` (headless Chrome, 1280x800 and 390x844 touch) PASS. Not yet in CI (no push).
@@ -26,14 +31,14 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
-1. Owner plays the reversed cue (`cue.html`, ring closes onto the mask) and says whether the loop works, with the results-panel timing line.
-2. Name the cause of the 1440p GPU budget miss (run 19, p95 27.5 ms; run 10 p95 12.4 ms on the same page code). Ladder of controls in one Mac job, before any fix (rules: bad measurement means our build is at fault until proven): empty page with the same canvas size; set only; set plus crowd; full scene; plus print Chrome and macOS image versions and asset sizes against run 10's. A weak spot to fix in the same measuring-tool commit: when a control's two runs differ a lot (run 19, 1080p AO off: 31.1 vs 11.4), the control limit becomes very loose (53.9 ms); add more control repeats or use medians for the noise band.
-Then:
-
-Owner plays `cue.html` on the phone and desktop and says whether the cue is fun (GDD step 0: "fun within an hour of tuning"), with the timing line from the results panel. Then: tune windows and tempos in CONFIG from those numbers, add `test_cue.cjs` and `smoke_cue.cjs` to the `web` CI job, and only after the owner says the loop works continue step 6.
+1. Owner plays the artifact "Clown cue on the 3D model, 2.5D room" (phone and desktop) and says: is the cue workable on the real model, and is the 2.5D room look the way to go. Also the old ask: whether the cue loop works, with the results-panel timing line.
+2. Session 10 is a checks session (requirement 6): fix the game page face cells (Open items), name the 1440p GPU miss (ladder of controls, below), add `test_cue.cjs`/`smoke_cue.cjs` to CI, run every gate with `[checks]`.
+3. If the owner takes 2.5D: real room art per view in Blender (the cube stays the shared asset), plates per tier (1024 for low/phone, KTX2), depth for the floor plane (now one plane per layer, small slide at the wall line under parallax), the 64x64 play framing in a fixed camera (needs a farther or narrower camera than the cue's).
+Then: tune windows and tempos in CONFIG from the owner's numbers; continue step 6 only after the owner says the loop works.
 
 ## Waiting on the owner
 
+- Play the 2.5D cue artifact (session 9) and say whether the cue on the 3D clown is workable and whether to keep 2.5D (Myst fixed views, Blender plates, 3D characters).
 - Decided 20 Nov: the game uses the current character models as they are (OWNER-REQUIREMENTS.md section 4).
 
 - Play step 0 (`web/step0/cue.html`) and say whether the loop works; send the results-panel timing line. File sent to the owner 21 Nov (session 7).
@@ -44,6 +49,8 @@ Owner plays `cue.html` on the phone and desktop and says whether the cue is fun 
 
 ## Open items (cause known)
 
+- Game page face cells (`web/game/index.html` CONFIG.faces, line 483): startle `[0, -0.5]` and wince `[0.5, -0.5]` sample outside the face atlas (rows run down with flipY false), so those faces show blank skin. Same shader and atlas as F13, proven there; fix `[0, 0.5]`, `[0.5, 0.5]` with a probe on the game page in session 10.
+- 2.5D plates are 1600x900, above the 1024 texture rule (full-screen plates); tier them (1024 on low/phone) and move to KTX2 if 2.5D is kept.
 - GPU budget miss at 1440p (run 19 p95 27.5 ms, control page 23.5-24.9 ms): not batch 2 (same-VM control); cause not named yet (Next step 2). Run 18's larger miss (p95 45-53 ms) came from the same page code.
 - Owner requirement 2: methods list added 20 Nov (OWNER-REQUIREMENTS.md); rows marked new are not built yet. Gaps: `web/gpu_measure.mjs` budgetMs 20 -> 16.7 (check-only commit with `[gpu]`); every batch touching web/, ring/ or a character carries `[gpu]`. Before/after frame-time gate: built in batch 3 as the same-job control comparison (control page set by `GPU_CONTROL_SHA` in the workflow; move it forward when a page change is accepted).
 - Owner requirement 3 gaps: motion gates for foot slide, loop seam, clip blend, joint limits, weight shift, each with a mutation. None exist yet.

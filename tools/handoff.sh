@@ -12,6 +12,9 @@ LIMIT=3
 # Line a new session is started with, in a new chat inside the "Nietzsche," Project.
 PASTE='Read RESTART.md and START-HERE.md, then continue the jam build from Next step in HANDOFF.md.'
 
+session_no() { grep -m1 '^Session: ' HANDOFF.md | awk '{print $2}'; }
+# Owner requirement 6: checks only in sessions 5, 10, 15, ... or when asked (CHECKS=1).
+checks_on() { local n; n=$(session_no); [ "${CHECKS:-0}" = 1 ] || { [ -n "$n" ] && [ $((n % 5)) -eq 0 ]; }; }
 start_commit() { grep -m1 '^Session start: ' HANDOFF.md | awk '{print $3}'; }
 batches() {
   local s; s=$(start_commit)
@@ -31,6 +34,8 @@ case "${1:-check}" in
   start)
     head=$(git rev-parse --short HEAD)
     sed -i "s/^Session start: .*/Session start: $head ($(date -u +%F))/" HANDOFF.md
+    n=$(session_no); [ -n "$n" ] && sed -i "s/^Session: .*/Session: $((n + 1))/" HANDOFF.md
+    if checks_on; then echo "== session $(session_no): CHECKS SESSION (requirement 6), commits carry [checks]"; else echo "== session $(session_no): no checks (requirement 6)"; fi
     bash tools/status.sh
     echo "== OWNER-REQUIREMENTS.md"
     cat OWNER-REQUIREMENTS.md
@@ -42,12 +47,13 @@ case "${1:-check}" in
     git fetch -q --depth=50 origin main 2>/dev/null
     n=$(batches)
     s=$(start_commit)
-    if [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then
+    if checks_on && [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then
       echo "$out" | grep FAIL; echo "FAIL fix HANDOFF.md before the next batch"; exit 1
     fi
-    if [ -n "$s" ] && ! out=$(bash tools/check_faults.sh "$s" HEAD); then
+    if checks_on && [ -n "$s" ] && ! out=$(bash tools/check_faults.sh "$s" HEAD); then
       echo "$out" | grep FAIL; echo "FAIL fix FAULTS.md before the next batch (owner requirement 5)"; exit 1
     fi
+    checks_on || echo "checks skipped (requirement 6: session $(session_no))"
     echo "batches this session: $n of $LIMIT (start $(start_commit))"
     if [ "$n" = "?" ]; then banner "session start commit unknown"; exit 1; fi
     if [ "$n" -ge "$LIMIT" ]; then banner "$n batches done"; exit 1; fi
@@ -64,8 +70,8 @@ case "${1:-check}" in
       echo "FAIL HANDOFF.md older than the last batch commit"; fail=1
     fi
     s=$(start_commit)
-    if [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then echo "$out" | grep FAIL; fail=1; fi
-    if [ -n "$s" ] && ! out=$(bash tools/check_faults.sh "$s" HEAD); then echo "$out" | grep FAIL; fail=1; fi
+    if checks_on && [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then echo "$out" | grep FAIL; fail=1; fi
+    if checks_on && [ -n "$s" ] && ! out=$(bash tools/check_faults.sh "$s" HEAD); then echo "$out" | grep FAIL; fail=1; fi
     grep -q '^## Next step' HANDOFF.md || { echo "FAIL HANDOFF.md has no '## Next step'"; fail=1; }
     if [ "$fail" = 0 ]; then
       echo "PASS handoff ready. Also write START-HERE.md to the Project if its rules changed."

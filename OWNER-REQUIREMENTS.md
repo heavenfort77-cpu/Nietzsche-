@@ -179,3 +179,13 @@ Owner decision after asking whether probing an incomplete build is worth it: the
 - **When prototype code is kept** (its path is taken out of `tools/prototype_paths.txt`, or its logic is copied into lasting code), every deferred fault for it is swept and fixed in that same commit, and its lasting-code checks are added then.
 - Enforced by `tools/check_faults.sh`: a deferred entry is allowed only if its Where path is under a prototype path; once a path leaves the list, any deferred entry still pointing into it fails CI. Not enforced: logic copied out of a prototype into lasting code by hand (the copying commit has to name it).
 - Areas to sweep for each fault class: `CHECK-AREAS.md`.
+
+## 6. Checks only every 5th session (owner, 21 Nov 2026)
+
+Owner: "don't any check until every 5th session unless requested. add to repo."
+- Sessions are numbered in HANDOFF.md (`Session: <n>`); `tools/handoff.sh start` adds 1.
+- Checks run only in sessions 5, 10, 15, ... or when the owner asks for them in the current chat. Checks means every gate, bot sweep, mutation run, perf or GPU measurement and the handoff/fault gates, local or CI.
+- Other sessions build and render only. Before handing the owner a build, the session still loads it once and confirms it opens with no page error (requirement: never hand over a half-finished build); that load is not a check run.
+- CI: the `clown` workflow runs only for commits whose message carries `[checks]` (or `[gpu]` for the GPU job), or a manual run. Commits in a checks session, or when the owner asked, carry `[checks]`.
+- `tools/handoff.sh check` and `close` skip `check_handoff.sh` and `check_faults.sh` outside a checks session; `CHECKS=1 tools/handoff.sh check` forces them.
+- This overrides the per-batch gate rules in requirement 2 and the Settings preferences (perf gate every batch) until the owner says otherwise.

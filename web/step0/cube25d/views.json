@@ -1,0 +1,228 @@
+{
+ "config": {
+  "half": 5.0,
+  "camZ": 1.5,
+  "pitch": -6.1,
+  "renderFov": 46.0,
+  "playFov": 42.0,
+  "res": [
+   1600,
+   900
+  ],
+  "planeDepth": {
+   "back": 5.0,
+   "mid": 3.6,
+   "front": 1.8
+  },
+  "clownAt": [
+   0.0,
+   3.0
+  ]
+ },
+ "coords": "Blender Z-up; three.js (x, y, z) = Blender (x, z, -y); yaw 0 looks Blender +Y (three -Z)",
+ "views": {
+  "ring": {
+   "title": "Ring",
+   "yaw": 0.0,
+   "files": {
+    "back": "ring_back.png",
+    "mid": "ring_mid.png",
+    "front": "ring_front.png"
+   },
+   "layers": {
+    "back": [
+     "backcloth",
+     "curtain_0",
+     "curtain_1",
+     "curtain_10",
+     "curtain_11",
+     "curtain_12",
+     "curtain_13",
+     "curtain_2",
+     "curtain_3",
+     "curtain_4",
+     "curtain_5",
+     "curtain_8",
+     "curtain_9",
+     "valance",
+     "wall_ring"
+    ],
+    "mid": [
+     "floor",
+     "poster",
+     "ring_curb",
+     "rug",
+     "sawdust",
+     "stool",
+     "stool_top",
+     "trunk",
+     "trunk_band"
+    ],
+    "front": [
+     "bulb_0",
+     "bulb_1",
+     "bulb_2",
+     "bulb_8",
+     "bulb_9",
+     "chair_leg_-0.2_0.2",
+     "chair_leg_0.2_0.2",
+     "flap_1",
+     "lantern",
+     "post_-1",
+     "post_1",
+     "post_ball_-1",
+     "post_ball_1",
+     "poster_band",
+     "rope"
+    ]
+   }
+  },
+  "dressing": {
+   "title": "Dressing room",
+   "yaw": -90.0,
+   "files": {
+    "back": "dressing_back.png",
+    "mid": "dressing_mid.png",
+    "front": "dressing_front.png"
+   },
+   "layers": {
+    "back": [
+     "bulb_0",
+     "bulb_1",
+     "bulb_2",
+     "bulb_3",
+     "bulb_4",
+     "bulb_5",
+     "bulb_6",
+     "bulb_7",
+     "bulb_8",
+     "bulb_9",
+     "curtain_13",
+     "vanity",
+     "vanity_mirror",
+     "wall_dressing"
+    ],
+    "mid": [
+     "chair_back",
+     "chair_leg_-0.2_-0.2",
+     "chair_leg_-0.2_0.2",
+     "chair_leg_0.2_-0.2",
+     "chair_leg_0.2_0.2",
+     "chair_seat",
+     "costume_0",
+     "costume_1",
+     "costume_2",
+     "costume_3",
+     "curtain_10",
+     "curtain_11",
+     "curtain_12",
+     "floor",
+     "rack_bar",
+     "rug",
+     "sawdust",
+     "trunk",
+     "trunk_band"
+    ],
+    "front": [
+     "candle_1",
+     "candle_stand_1",
+     "curtain_8",
+     "curtain_9",
+     "drape_1",
+     "flame_1",
+     "post_1",
+     "post_ball_1",
+     "stool",
+     "stool_top"
+    ]
+   }
+  },
+  "mirror": {
+   "title": "Mirror",
+   "yaw": 180.0,
+   "files": {
+    "back": "mirror_back.png",
+    "mid": "mirror_mid.png",
+    "front": "mirror_front.png"
+   },
+   "layers": {
+    "back": [
+     "big_mirror",
+     "big_mirror_frame",
+     "drape_-1",
+     "drape_1",
+     "wall_mirror"
+    ],
+    "mid": [
+     "candle_-1",
+     "candle_1",
+     "candle_stand_-1",
+     "candle_stand_1",
+     "costume_0",
+     "costume_1",
+     "crate_1",
+     "crate_2",
+     "flame_-1",
+     "flame_1",
+     "floor",
+     "rug",
+     "sawdust"
+    ],
+    "front": [
+     "bulb_3",
+     "bulb_4",
+     "bulb_5",
+     "bulb_6",
+     "bulb_7",
+     "costume_2",
+     "costume_3",
+     "crate_0",
+     "flap_-1",
+     "rack_bar"
+    ]
+   }
+  },
+  "exit": {
+   "title": "Tent exit",
+   "yaw": 90.0,
+   "files": {
+    "back": "exit_back.png",
+    "mid": "exit_mid.png",
+    "front": "exit_front.png"
+   },
+   "layers": {
+    "back": [
+     "curtain_0",
+     "door_dark",
+     "flap_-1",
+     "flap_1",
+     "poster",
+     "poster_band",
+     "wall_exit"
+    ],
+    "mid": [
+     "crate_0",
+     "crate_1",
+     "crate_2",
+     "curtain_1",
+     "curtain_2",
+     "floor",
+     "lantern",
+     "rug",
+     "sawdust"
+    ],
+    "front": [
+     "candle_-1",
+     "candle_stand_-1",
+     "curtain_3",
+     "curtain_4",
+     "curtain_5",
+     "drape_-1",
+     "flame_-1",
+     "post_-1",
+     "post_ball_-1"
+    ]
+   }
+  }
+ }
+}

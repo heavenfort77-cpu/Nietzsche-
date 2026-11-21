@@ -120,3 +120,21 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Sweep: see F9. Prototype code: fixed, not deferred, because a silent error in a key or pad handler would give the playtest a wrong answer (the cue looks broken or unfair without saying so).
 - Fix: window `error` and `unhandledrejection` listeners call `showError()`.
 - Proof: `BROWSER CHECKS PASS (6 scenarios + 2 play-throughs)`.
+
+## F13: startle and wince faces sampled off the face atlas (blank skin)
+- Found: session 9 batch 1, first look at `web/step0/cue_model.html` mid-cue: after a miss his face showed no eyes, brows or mouth.
+- Probe: `OLD=1 node web/step0/cube25d/probe_faces.cjs` (old offsets): `FAIL  face startle [0,-0.5]: dark eye and brow pixels in the eye band 0.0% (min 1%)`, `FAIL  face wince [0.5,-0.5]: dark eye and brow pixels in the eye band 0.0% (min 1%)`.
+- Cause: face cell offsets `startle: [0, -0.5]`, `wince: [0.5, -0.5]` (copied from the game page CONFIG.faces). The atlas is loaded with flipY false, so its rows run down: the lower cells are at v + 0.5; v - 0.5 lands outside the atlas and clamps to the skin edge.
+- Class: texture-atlas cell offsets that point outside the atlas (any face, card or sprite cell table).
+- Sweep: `web/step0/cube25d/model_layer.js` faces (fault, fixed). `web/game/index.html` CONFIG.faces line 483: same values, same shader and atlas, so the same blank startle and wince faces (lasting code; its own probe on the game page and fix are left for session 10, the next checks session, owner requirement 6; listed in HANDOFF open items). Crowd cards (`aCell` from `layout.card_cells`, flipY true): not swept this session.
+- Fix: `startle: [0, 0.5]`, `wince: [0.5, 0.5]` in `model_layer.js`.
+- Proof: `node web/step0/cube25d/probe_faces.cjs`: `PASS  face startle [0,0.5]: ... 18.1%`, `PASS  face wince [0.5,0.5]: ... 13.1%`, `RESULT PASS`.
+
+## F14: cue ring centred on his forehead, not his face
+- Found: session 9 batch 1, same look: the pale target circle sat between hat brim and nose; the nose was on its lower edge.
+- Probe: `node web/step0/cube25d/probe_faces.cjs` with the old anchor: `FAIL  cue centre to nose: 0.48 R (max 0.3 R), R 65 px`.
+- Cause: `faceCentre` was the middle of the head mesh bounds (1.41 m), which include the crown under the hat; the painted face is centred on the nose, about 0.12 m lower.
+- Class: screen anchors taken from mesh bounds instead of the feature they mark.
+- Sweep: `model_layer.js` face anchor (fault, fixed); blob shadow uses the root position on the floor (no fault); the cue's ring, target and feedback word all read view.cx/cy/R from the one anchor (no fault).
+- Fix: `faceCentre: [0, 1.29, 0.1]` (nose, three.js axes).
+- Proof: `PASS  cue centre to nose: 0.12 R (max 0.3 R), R 65 px`.
