@@ -1,0 +1,14 @@
+PASS route: Chrome draws WebGL on the GPU, not in software | {"vendor":"Google Inc. (Apple)","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple Paravirtual device, Unspecified Version)"}
+FAIL 1080p desktop (1920x1024, default tier, AO on): frame p95 <= 20 ms | {"median":19,"p95":48.4,"max":120.3}
+FAIL retina laptop (1800x1055, default tier, AO on): frame p95 <= 20 ms | {"median":23.2,"p95":53.4,"max":102.9}
+FAIL 1440p desktop (2560x1384, default tier, AO on): frame p95 <= 20 ms | {"median":25.5,"p95":45.6,"max":64}
+PASS timing sees GPU work: AO on costs more than AO off at every setup | [1.6,10.6,11.1]
+frame times, ms (each frame waited for on the real GPU):
+  1080p desktop  1920x1024  AO on   median 19  p95 48.4  max 120.3
+  1080p desktop  1920x1024  AO off  median 17.4  p95 49.7  max 93.8
+  retina laptop  1800x1055  AO on   median 23.2  p95 53.4  max 102.9
+  retina laptop  1800x1055  AO off  median 12.6  p95 31.8  max 65.3
+  1440p desktop  2560x1384  AO on   median 25.5  p95 45.6  max 64
+  1440p desktop  2560x1384  AO off  median 14.4  p95 24.7  max 58.2
+PASS no page or console errors | []
+RESULT gpu 3 of 6 pass

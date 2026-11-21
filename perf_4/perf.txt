@@ -1,0 +1,4 @@
+PASS mutation nowarm -> "11. no shader compiles" fires | FAIL 11. no shader compiles or texture uploads after loading (warm-up covers every state) | {"programs":[25,26],"textures":[44,44]}
+PASS mutation crowdnocull -> "4. frustum culling" fires | FAIL 4. frustum culling: no mesh skips it | [{"name":"Mesh","tris":1030}]
+PASS mutation noctx -> "12. WebGL context" fires | FAIL 12. WebGL context lost and restored: the game draws again | {"lost":true,"calls":48,"tris":139720}
+RESULT perf mutations 3 of 3 fired
