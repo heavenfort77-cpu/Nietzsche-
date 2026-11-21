@@ -22,7 +22,7 @@ const scriptOf = (html) => html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
 // ---------- 1. per-frame gate ----------
 const HOT = ['loop', 'frame', 'syncClock', 'updateAct', 'expireBeats', 'updateConfetti', 'render', 'drawClown', 'clownTilt',
-  'drawCue', 'drawMasks', 'drawMask', 'drawMaskShapes', 'drawWhitefaceShapes', 'diamond', 'drawConfetti', 'drawCrowd',
+  'drawCue', 'drawRings', 'drawRing', 'drawMaskShapes', 'diamond', 'drawConfetti', 'drawCrowd',
   'drawFeedback', 'writeHud', 'actNow', 'onKeyDown', 'onPadDown', 'onPadUp', 'eventActTime', 'pressAt', 'nearestBeat',
   'judgeTake', 'judgeHit', 'flipGrin', 'missBeat', 'addLaughs', 'feedback', 'burstConfetti', 'endAct', 'stopScheduled',
   'winGood', 'winPerfect', 'rand', 'usePageClock'];
@@ -126,7 +126,7 @@ function runBot(code, night, phone, bot) {
     G.advance(t);
     const bs = G.beats(), info = G.info();
     const visible = bs.filter((b) => b.spawn <= t && b.state === 0).length;
-    if (visible > 2) inv.push(`t=${t} masks on screen ${visible} (max 2)`);
+    if (visible > 2) inv.push(`t=${t} rings on screen ${visible} (max 2)`);
     bs.forEach((b, i) => { if (b.judged > 1) inv.push(`t=${t} beat ${i} judged ${b.judged} times`); });
     if (info.laughs < 0) inv.push(`t=${t} laughs ${info.laughs}`);
     if (info.misses > C.missesToEnd) inv.push(`t=${t} misses ${info.misses} > ${C.missesToEnd}`);
@@ -176,7 +176,7 @@ function expect(name, r, night, phone, bot) {
   return r.inv.concat(fails).map((f) => `${name}: ${f}`);
 }
 // ---------- wide probes (owner requirement 5) ----------
-// Layout at every target screen: mask start inside the screen, cue clear of HUD and pads, whiteface hat on screen.
+// Layout at every target screen: ring start inside the screen, cue clear of HUD and pads, whiteface hat on screen.
 const SIZES = [[1280, 800, false], [1920, 1080, false], [2560, 1080, false], [390, 844, true], [844, 390, true], [360, 640, true], [768, 1024, true]];
 function layoutGate(code) {
   const fails = [];
@@ -187,12 +187,32 @@ function layoutGate(code) {
     const padW = Math.min(180, Math.max(96, 0.3 * w)), padTop = h - 18 - 96;
     const pads = [[18, 18 + padW], [w - 18 - padW, w - 18]];
     const hitsPad = (x0, x1, y0, y1) => pads.some(([a, b]) => x0 < b && x1 > a && y1 > padTop && y0 < h - 18);
-    if (i.cx - i.R0 < -1 || i.cy - i.R0 < -1 || i.cx + i.R0 > w + 1 || i.cy + i.R0 > h + 1) fails.push(`${tag}: mask start r ${i.R0.toFixed(0)} at (${i.cx.toFixed(0)},${i.cy.toFixed(0)}) leaves the screen`);
-    if (i.R0 < i.R * 1.3) fails.push(`${tag}: mask start r ${i.R0.toFixed(0)} < 1.3 x cue ${i.R.toFixed(0)}`);
+    if (i.cx - i.R0 < -1 || i.cy - i.R0 < -1 || i.cx + i.R0 > w + 1 || i.cy + i.R0 > h + 1) fails.push(`${tag}: ring start r ${i.R0.toFixed(0)} at (${i.cx.toFixed(0)},${i.cy.toFixed(0)}) leaves the screen`);
+    if (i.R0 < i.R * 1.3) fails.push(`${tag}: ring start r ${i.R0.toFixed(0)} < 1.3 x cue ${i.R.toFixed(0)}`);
     if (i.cy - i.R < 40) fails.push(`${tag}: cue top ${(i.cy - i.R).toFixed(0)} under the HUD (40)`);
     if (i.cy - 2 * i.R < 0) fails.push(`${tag}: whiteface hat top ${(i.cy - 2 * i.R).toFixed(0)} off screen at fit`);
     if (hitsPad(i.cx - i.R, i.cx + i.R, i.cy - i.R, i.cy + i.R)) fails.push(`${tag}: cue overlaps a pad`);
     if (hitsPad(i.cx - 0.9 * i.R, i.cx + 0.9 * i.R, i.cy + 1.15 * i.R, i.cy + 1.5 * i.R)) fails.push(`${tag}: result word overlaps a pad`);
+  }
+  return fails;
+}
+// Cue direction (owner, 21 Nov: "ring to a mask, not mask to ring"): the mask stays fixed at the cue size on his face,
+// the ring starts at the ring start radius and closes onto the mask's edge at the fit moment. Desktop and phone.
+function cueDirectionGate(code) {
+  const fails = [];
+  for (const [w, h, phone] of [[1280, 800, false], [390, 844, true]]) {
+    const { G } = makeGame(code, [w, h]);
+    G.useVirtual(phone);
+    G.start(1);
+    const b = G.beats()[0], tag = `cue ${w}x${h}`;
+    for (const [frac, want] of [[0, 'R0'], [0.5, 'mid'], [1, 'R']]) {
+      G.advance(Math.round(b.spawn + (b.fit - b.spawn) * frac) + (frac === 0 ? 1 : 0));
+      const i = G.info();
+      if (Math.abs(i.maskR - i.R) > 0.5) fails.push(`${tag} ${want}: mask r ${i.maskR.toFixed(1)} != cue ${i.R.toFixed(1)}`);
+      if (want === 'R0' && Math.abs(i.ringR - i.R0) > i.R0 * 0.02) fails.push(`${tag}: ring at spawn r ${i.ringR.toFixed(1)}, want start ${i.R0.toFixed(1)}`);
+      if (want === 'mid' && !(i.ringR > i.R + 1 && i.ringR < i.R0 - 1)) fails.push(`${tag}: ring half-way r ${i.ringR.toFixed(1)} not between ${i.R.toFixed(1)} and ${i.R0.toFixed(1)}`);
+      if (want === 'R' && Math.abs(i.ringR - i.R) > 1) fails.push(`${tag}: ring at fit r ${i.ringR.toFixed(1)}, want mask edge ${i.R.toFixed(1)}`);
+    }
   }
   return fails;
 }
@@ -273,6 +293,7 @@ function suite(html) {
   const add = (list) => { out.checks++; out.fails.push(...list); };
   add(hotGate(code));
   add(layoutGate(code));
+  add(cueDirectionGate(code));
   add(callGraphGate(code));
   add(sameRunProbe(code));
   add(noAudioClockProbe(code));
@@ -293,14 +314,16 @@ function suite(html) {
 
 // ---------- 3. mutations ----------
 const MUTATIONS = [
-  ['used-up mask rule removed', '    if (b.state !== PENDING) return;\n    b.state = DONE; b.judged++;', '    b.state = DONE; b.judged++;'],
+  ['used-up ring rule removed', '    if (b.state !== PENDING) return;\n    b.state = DONE; b.judged++;', '    b.state = DONE; b.judged++;'],
   ['perfect window widened', 'perfectMs: [60, 80]', 'perfectMs: [200, 200]'],
   ['two-miss rule removed', 'if (S.misses >= CONFIG.missesToEnd) endAct', 'if (false) endAct'],
-  ['late masks linger', 'const limit = b.kind === TAKE ? CONFIG.takeMs : winGood();', 'const limit = winGood() * 4;'],
+  ['late rings linger', 'const limit = b.kind === TAKE ? CONFIG.takeMs : winGood();', 'const limit = winGood() * 4;'],
   ['flip groan removed', 'if (!S.flipUsed[S.night]) {', 'if (true) {'],
   ['laughs floor removed', 'if (S.actLaughs < CONFIG.laughsFloor)', 'if (false)'],
   ['night 1 take not ignored', 'if (btn === TAKE && S.night < CONFIG.secondButtonFromNight) return;', ''],
-  ['mask start sized from the screen, not the face position (batch 2 fault)', 'Math.min(view.cx, view.cy, w - view.cx, h - view.cy) * CONFIG.maskStartFrac', 'Math.min(w, h) * 0.48'],
+  ['ring start sized from the screen, not the face position (batch 2 fault)', 'Math.min(view.cx, view.cy, w - view.cx, h - view.cy) * CONFIG.ringStartFrac', 'Math.min(w, h) * 0.48'],
+  ['old cue: mask closes onto the face', '      drawRing(view.cx, view.cy, r, first ? 1 : 0.35, b.kind);', '      drawRing(view.cx, view.cy, view.R, first ? 1 : 0.35, b.kind); view.maskR = r;'],
+  ['ring fixed, does not close', 'const r = view.R + (view.R0 - view.R) * (1 - p) - Math.min(view.R * 0.2, over * 0.6);', 'const r = view.R0;'],
   ['no page clock without audio', 'return performance.now() - S.actStartPerf;', 'return S.vclock;'],
   ['hidden time counted', 'if (!document.hidden && S.paused) S.actStartPerf += now - S.hiddenAt;', ''],
   ['new helper called per frame but not hot-checked', '  function drawCrowd(t) {\n', '  function crowdHelper() { return { a: 1 }; }\n  function drawCrowd(t) {\n    crowdHelper();\n'],

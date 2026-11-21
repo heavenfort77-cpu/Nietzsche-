@@ -1,6 +1,6 @@
 # Handoff (live state)
 
-Session start: 4e3e27d (2026-11-21)
+Session start: 64ea803 (2026-11-21)
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`. This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
@@ -17,6 +17,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 - Batch 3 (owner requirement 5, 21 Nov): rule written in OWNER-REQUIREMENTS.md section 5, fault log `FAULTS.md` (F1-F7), gate `tools/check_faults.sh` (CI job `handoff`, `handoff.sh check` and `close`; scratch-repo test 10 of 10). New CI job `step0` runs the step 0 checks. Wide sweep of step 0 found and fixed 4 more faults in one commit: F4 the batch 2 mask fix still left the screen top (face sits at 40% height), F5 helpers outside the per-frame gate, F6 act froze without a running audio clock (3 cases), F7 touch pad stuck after a cancelled touch. Local: `test_cue.cjs` 47 of 47, mutations 14 of 14; `smoke_cue.cjs` PASS (5 scenarios + 2 play-throughs). The batch 2 `maskStartGate` was replaced by `layoutGate` (7 screens, every edge from the real face centre).
 - Pushed 21 Nov: bd140a2 (run 14: `handoff` and `step0` success; rest of run 14 checked by a scheduled follow-up).
 - Batch 3 of session 5 (21 Nov): requirement 5 now has a scope rule (owner decision): full sweep for lasting code; prototype code (`tools/prototype_paths.txt`, now `web/step0/`) gets only playtest-blocking fixes, other faults logged as deferred. `tools/check_faults.sh` enforces it (scratch test 15 of 15). `CHECK-AREAS.md`: 13 areas to sweep with the gate each has now. `references/controls-reference.jpg`: owner's controls chart (third-party, never ships).
+- Session 8, batch 1 (21 Nov): session 7's cue reversal (owner: "the cue should be opposite ring to a mask, not mask to ring") never reached the repo (that session stopped before its commit); redone. The painted mask now sits fixed on his face at the cue size and a thin ring closes in on it (gold for hit, crimson under the silver cone hat for take); press when the ring fits the mask's edge; the mask's edge flashes at the fit; the grin shows upside down for `flipShowMs` after a flip (before, the flip had no picture). CONFIG: `ringStartFrac` (was `maskStartFrac`), new `ringWidth`, `flipShowMs`. `drawRings`/`drawRing` replace `drawMasks`/`drawMask`/`drawWhitefaceShapes`. New gate `cueDirectionGate`: mask radius equals the cue size and the ring goes start radius -> between -> mask edge, desktop and phone; mutations "old cue: mask closes onto the face" and "ring fixed, does not close". Local: static PASS, `test_cue.cjs` 48 of 48, mutations 16 of 16, `smoke_cue.cjs` PASS.
 - Not in step 0, on purpose: encore dial, whiteface's late spoken call (nights 3+), soldier-drill calls, Mirror World, shop. Step 0 is the cue alone (GDD build plan).
 
 ## Next step

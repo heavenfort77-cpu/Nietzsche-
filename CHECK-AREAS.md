@@ -109,7 +109,7 @@ Also check: 5 (CPU side), 8 (assets failing to load).
 
 | Probe | Pages | Gate now |
 | --- | --- | --- |
-| Always-true invariants checked every tick in bot runs (never three masks, meters in range, one judgement per beat) | S, G | S: bot sweep invariants |
+| Always-true invariants checked every tick in bot runs (never three rings, meters in range, one judgement per beat) | S, G | S: bot sweep invariants |
 | Bot sweep at several skills (perfect, good, late, idle, masher); a profile that stops finishing is a regression | S, G | S: 7 bots x 3 nights x 2 window sets |
 | Every failure has a tell of at least 0.4 s at the hardest setting; only the real hazard causes it | S, G | S: whiteface spawn is the tell (600 ms at night 3); no gate |
 | No exploit: mashing, holding, pressing both buttons, buying and wiping to farm shards | S, G | S: masher bot. Shop: none yet |
