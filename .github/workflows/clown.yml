@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: Step 0 cue checks (static, bot sweep, wide probes, mutations, browser probes)
+      - name: Step 0 cue checks (static, bot sweep, wide probes, mutations, browser probes) and game page input and loop probes
         run: |
           npm i --prefix /tmp/n --no-save acorn acorn-walk playwright-core > /dev/null
           export NODE_PATH=/tmp/n/node_modules
@@ -42,6 +42,7 @@ jobs:
           node check-static.cjs step0/cue.html | tee step0.txt
           node step0/test_cue.cjs | tee -a step0.txt
           node step0/smoke_cue.cjs | tee -a step0.txt
+          node check_input_loop.cjs game/index.html | tee -a step0.txt
           ! grep -q '^FAIL\|RESULT FAIL' step0.txt
   build:
     runs-on: ubuntu-latest

@@ -21,6 +21,8 @@ body { display: flex; flex-direction: column; }
 .bar__slider { width: 110px; min-height: 44px; }
 .bar__label { font-size: 12px; }
 .hud { position: fixed; top: calc(env(safe-area-inset-top) + 6px); left: 8px; pointer-events: none; font-size: 12px; }
+.err { position: fixed; inset: 0; margin: 0; padding: 16px; overflow: auto; white-space: pre-wrap; font-size: 13px; color: var(--ink); background: var(--bg); }
+.err[hidden] { display: none; }
 /* ===== CSS: STATES ===== */
 .is-active { background: var(--accent); }
 .is-hidden { display: none; }
@@ -355,6 +357,7 @@ void main() {
   <canvas id="view" class="stage__canvas" aria-label="Circus ring"></canvas>
 </main>
 <p id="hud" class="hud">loading</p>
+<pre id="err" class="err" role="alert" hidden></pre>
 <nav class="bar" aria-label="Controls">
   <div class="bar__group" data-group="world"></div>
   <div class="bar__group" data-group="clip"></div>
@@ -584,14 +587,10 @@ const CONFIG = Object.freeze({
   exposure: 1.15,
   // outline hull bounding sphere scale over the posed mesh (outline width plus limbs swinging out)
   hullBoundsGrow: 1.3,
-  // pixel-ratio steps on desktop and laptop, sharpest first (developer rule: pixel ratio 1.25 at most)
-  dprStepsDesktop: Object.freeze([1.25, 1]),
-  // pixel-ratio steps on touch devices, sharpest first
-  dprStepsTouch: Object.freeze([1.25, 1]),
-  // starting step on desktop (index into dprStepsDesktop)
-  dprStartDesktop: 0,
-  // starting step on touch (index into dprStepsTouch)
-  dprStartTouch: 0,
+  // pixel-ratio steps, sharpest first, the same on every device; the governor steps down by measured frame time (rules 31, 1.25 at most)
+  dprSteps: Object.freeze([1.25, 1]),
+  // starting step (index into dprSteps)
+  dprStart: 0,
   // most texture anisotropy (developer rule: 4)
   maxAniso: 4,
   // extra bounding radius for instanced effects (sway, bob, card height), metres
@@ -939,12 +938,23 @@ function draw() {
 }
 
 // ===== INPUT =====
-let dragX = null;
+// one drag at a time, owned by the pointer that started it; any interruption ends it
+let dragX = null, dragId = -1;
+function endDrag() { dragX = null; dragId = -1; }
+function endDragOf(e) { if (e.pointerId === dragId) endDrag(); }
+// hidden tab: pause, end any drag; back: the first frame has no measured gap (fps meter and governor skip it)
+function onVisibility() {
+  view.paused = document.hidden;
+  if (document.hidden) endDrag(); else last = 0;
+}
 function bindInput() {
-  canvas.addEventListener('pointerdown', (e) => { dragX = e.clientX; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', (e) => { if (dragX === null) return; view.yaw += (e.clientX - dragX) * CONFIG.turnPerPx; dragX = e.clientX; });
-  addEventListener('pointerup', () => { dragX = null; });
-  addEventListener('blur', () => { dragX = null; });
+  canvas.addEventListener('pointerdown', (e) => { if (dragId !== -1) return; dragId = e.pointerId; dragX = e.clientX; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', (e) => { if (e.pointerId !== dragId) return; view.yaw += (e.clientX - dragX) * CONFIG.turnPerPx; dragX = e.clientX; });
+  canvas.addEventListener('lostpointercapture', endDragOf);
+  addEventListener('pointerup', endDragOf);
+  addEventListener('pointercancel', endDragOf);
+  addEventListener('blur', endDrag);
+  document.addEventListener('visibilitychange', onVisibility);
   addEventListener('keydown', onKey);
   document.getElementById('paint').addEventListener('input', (e) => { view.paint = Number(e.target.value); applyFace(); });
   document.getElementById('flake').addEventListener('input', (e) => { view.flake = Number(e.target.value); applyFace(); });
@@ -1005,23 +1015,23 @@ function playClip(name) {
   view.clip = name; markActive('clip', name);
 }
 let fpsAcc = 0, fpsN = 0;
-// returns true when the fps reading changed (twice a second)
+// returns true when the fps reading changed (twice a second); a frame with no measured gap (dt 0) is not counted
 function stepFps(dt) {
+  if (dt <= 0) return false;
   fpsAcc += dt; fpsN++;
   if (fpsAcc < 0.5) return false;
   view.fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
   return true;
 }
 // frame governor: keeps the frame time under CONFIG.gov.slowMs by changing pixel ratio, then AO; never scene density
-const gov = { on: !isTest, steps: CONFIG.dprStepsDesktop, level: 0, cap: 0, acc: 0, n: 0, skip: 0, fastFor: 0 };
+const gov = { on: !isTest, steps: CONFIG.dprSteps, level: 0, cap: 0, acc: 0, n: 0, skip: 0, fastFor: 0 };
 function govInit() {
-  const touch = matchMedia('(pointer: coarse)').matches;
-  gov.steps = touch ? CONFIG.dprStepsTouch : CONFIG.dprStepsDesktop;
-  gov.level = touch ? CONFIG.dprStartTouch : CONFIG.dprStartDesktop; gov.cap = 0;
+  gov.steps = CONFIG.dprSteps;
+  gov.level = CONFIG.dprStart; gov.cap = 0;
 }
 function govStep(dt) {
   const g = CONFIG.gov;
-  if (dt > g.ignoreOver) return;
+  if (dt <= 0 || dt > g.ignoreOver) return;
   gov.acc += dt; gov.n++;
   if (gov.acc < g.window) return;
   const ms = gov.acc / gov.n * 1000;
@@ -1071,10 +1081,16 @@ function warmUp() {
 }
 
 // ===== LOOP =====
-let last = 0;
+// last frame time; 0 means no measured gap yet (first frame, or first frame after a hidden tab)
+let last = 0, loopError = false;
+// the next frame is scheduled first; an error stops the body, shows the error screen once and is not repeated
 function frame(now) {
   requestAnimationFrame(frame);
-  const raw = (now - last) / 1000 || 0;
+  if (loopError) return;
+  try { frameBody(now); } catch (e) { showError(e); }
+}
+function frameBody(now) {
+  const raw = last ? (now - last) / 1000 : 0;
   last = now;
   const fpsChanged = stepFps(raw);
   if (gov.on) govStep(raw);
@@ -1083,6 +1099,18 @@ function frame(now) {
   if (view.lost) return;
   draw();
   if (fpsChanged) drawHud();
+}
+
+function showError(e) {
+  loopError = true;
+  const box = document.getElementById('err');
+  box.textContent = 'Something broke. Reload the page.\n\n' + (e && e.stack ? e.stack : String(e));
+  box.hidden = false;
+}
+// errors outside the frame (resize, context restore, loading) reach the same error screen
+function bindErrors() {
+  addEventListener('error', (e) => showError(e.error || e.message));
+  addEventListener('unhandledrejection', (e) => showError(e.reason));
 }
 
 // ===== BOOT =====
@@ -1153,10 +1181,9 @@ function testApi() {
   };
 }
 async function boot() {
-  buildBar(); bindInput(); govInit();
+  bindErrors(); buildBar(); bindInput(); govInit();
   new ResizeObserver(() => resize()).observe(canvas); watchDpr();
   addEventListener('resize', resize);
-  document.addEventListener('visibilitychange', () => { view.paused = document.hidden; });
   // phones drop the WebGL context when backgrounded: wait for it, then rebuild GPU state and carry on
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); view.lost = true; });
   canvas.addEventListener('webglcontextrestored', () => { view.lost = false; warmUp(); });

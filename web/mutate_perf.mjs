@@ -9,7 +9,7 @@ const CASES = {
   aofullres: [[['ao.configuration.halfRes = true;', 'ao.configuration.halfRes = false;']], '2. ambient occlusion'],
   nocull: [[['  hull.computeBoundingSphere(); hull.boundingSphere.radius *= CONFIG.hullBoundsGrow;', '  hull.frustumCulled = false;']], '4. frustum culling'],
   bigtex: [[['  scene.add(parts.set);', '  scene.add(parts.set);\n  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(0.01, 0.01), new THREE.MeshBasicMaterial({ map: new THREE.DataTexture(new Uint8Array(4096 * 4096 * 4), 4096, 4096) })));']], '5. texture memory'],
-  maxdpr: [[['dprStepsDesktop: Object.freeze([1.25, 1]),', 'dprStepsDesktop: Object.freeze([2, 1.25, 1]),']], '6. desktop starts'],
+  maxdpr: [[['dprSteps: Object.freeze([1.25, 1]),', 'dprSteps: Object.freeze([2, 1.25, 1]),']], '6. desktop starts'],
   aosamples: [[["ao.setQualityMode('Performance');", "ao.setQualityMode('Medium');"]], '2. ambient occlusion'],
   aniso: [[['t.anisotropy = CONFIG.maxAniso;', 't.anisotropy = 16;']], '5. texture memory'],
   zerolight: [[['  const spot = new THREE.SpotLight(s.color, 1, 0,', '  const spot = new THREE.SpotLight(s.color, 0, 0,']], '7. lights'],

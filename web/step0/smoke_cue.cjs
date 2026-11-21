@@ -1,7 +1,7 @@
 // Browser checks for cue.html in headless Chrome. Usage: node smoke_cue.cjs
 // 1. Boots and plays a night-3 act to the results panel at desktop and phone sizes, no page errors.
 // 2. Probes: no Web Audio; an audio clock that never runs; Space on a focused panel button during an act;
-//    a pad touch cancelled by the browser must release the pad.
+//    a pad touch cancelled by the browser must release the pad; errors outside the loop reach the error panel.
 'use strict';
 const path = require('path');
 function need(names) {
@@ -53,6 +53,19 @@ async function padCancel(browser, fails) {
   if (stuck) fails.push('pad-cancel: hit pad stays pressed after the browser cancels the touch');
   await page.close();
 }
+// errors outside the loop (an event handler, a timer, a rejected promise) must reach the error panel, not fail silently
+async function lateErrors(browser, fails) {
+  for (const [kind, js] of [['timer error', 'setTimeout(() => { throw new Error("probe late"); }, 0)'],
+    ['rejected promise', 'void Promise.reject(new Error("probe late"))']]) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(URL);
+    await page.evaluate(js);
+    await page.waitForTimeout(200);
+    const shown = await page.evaluate(() => { const p = document.getElementById('errPanel'); return !p.classList.contains('hidden') && /probe late/.test(document.getElementById('errText').textContent); });
+    if (!shown) fails.push(`late-error: ${kind} outside the loop not shown on the error panel`);
+    await page.close();
+  }
+}
 (async () => {
   const browser = await pw.chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
   const fails = [];
@@ -74,9 +87,10 @@ async function padCancel(browser, fails) {
   }
   await spaceOnFocusedButton(browser, fails);
   await padCancel(browser, fails);
+  await lateErrors(browser, fails);
   await browser.close();
   fails.forEach((f) => console.log('FAIL  ' + f));
-  console.log(`BROWSER CHECKS ${fails.length ? 'FAIL' : 'PASS'} (5 scenarios + 2 play-throughs)`);
+  console.log(`BROWSER CHECKS ${fails.length ? 'FAIL' : 'PASS'} (6 scenarios + 2 play-throughs)`);
   console.log('RESULT ' + (fails.length ? 'FAIL' : 'PASS'));
   process.exit(fails.length ? 1 : 0);
 })();

@@ -748,6 +748,9 @@
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('resize', onResize);
     window.addEventListener('blur', releaseAll);
+    // errors outside the loop (handlers, timers, promises) reach the error panel too
+    window.addEventListener('error', (e) => showError(e.error || e.message));
+    window.addEventListener('unhandledrejection', (e) => showError(e.reason));
     document.addEventListener('visibilitychange', onVisibility);
     el.padHit.addEventListener('pointerdown', onPadDown);
     el.padTake.addEventListener('pointerdown', onPadDown);

@@ -75,3 +75,48 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Sweep: pads (fault); keyboard (no held state, key repeat and modifiers ignored); window blur and tab hidden release both pads. Space pressed while a panel button has focus during an act: probed, does not restart the act (no fault).
 - Fix: `pointercancel`, `pointerleave` and `lostpointercapture` release the pad.
 - Proof: `BROWSER CHECKS PASS (5 scenarios + 2 play-throughs)`.
+
+## F8: camera drag kept running after an interrupted touch, and a second finger took it over
+- Found: session 6 static read (suspected S1), proven in session 8 batch 2.
+- Probe: `node web/check_input_loop.cjs` on 64ea803: `FAIL  S1 drag released by pointercancel: camera turned 200 px after the drag ended`; same for `lostpointercapture` and `tab hidden`; `FAIL  S1 second finger down keeps the first drag: first finger moved 1 px, camera turned -199 px`; `FAIL  S1 second finger move ignored: second finger turned the camera 249 px`.
+- Cause: `web/game/index.html` `bindInput()` cleared `dragX` on `pointerup` and `blur` only and never stored which pointer owned the drag.
+- Class: input state across interruptions and multiple pointers.
+- Sweep: game page: `pointerup`, `blur` (no fault); `pointercancel`, `lostpointercapture`, tab hidden, second finger down, move and up (fault); keys (`onKey` holds no state, ignores repeat and modifiers: no fault); sliders and bar buttons (no held state: no fault). `cue.html`: pads release on cancel, leave, lost capture, blur and tab hidden (F7, no fault); two pads at once is intended; keys hold no state (no fault).
+- Fix: one drag owned by `dragId`; other pointers ignored; `pointercancel`, `lostpointercapture`, `pointerup` of that pointer, `blur` and tab hidden end it (`endDrag`, `endDragOf`, `onVisibility`).
+- Proof: `node web/check_input_loop.cjs`: `CHECKS 18 of 18 pass`, `MUTATIONS 12 of 12 caught`, `RESULT PASS` (5 S1 mutations).
+
+## F9: an error in the game loop repeated every frame with nothing on screen
+- Found: session 6 static read (suspected S2), proven in session 8 batch 2.
+- Probe: `FAIL  S2 frame error does not escape the loop: frame() threw "probe boom"`, `FAIL  S2 frame error shown on screen: no visible element shows the error`, `FAIL  S2 frame error not repeated every frame: the failing body ran 5 times in 5 frames`, `FAIL  S2 error outside the frame shown on screen: no visible element shows the error`, `FAIL  S2 unhandledrejection outside the frame shown on screen: no visible element shows the error` (64ea803).
+- Cause: `frame()` had no try/catch, and the page had no error screen or `error`/`unhandledrejection` listener.
+- Class: errors that fail silently, in the loop or in any callback.
+- Sweep: game page: frame loop (fault); resize observer, context restore, loading promise, event handlers (fault, covered by the window listeners); load failure already wrote the HUD (kept). `cue.html`: loop already caught and showed errors (no fault); errors outside the loop (fault, F12).
+- Fix: `frame()` schedules the next frame, then runs `frameBody()` in try/catch; `showError()` shows a full-screen `#err` panel once and stops the body; `bindErrors()` sends window `error` and `unhandledrejection` to it.
+- Proof: `node web/check_input_loop.cjs`: `RESULT PASS` (4 S2 mutations caught).
+
+## F10: fps meter counted the page-open time and the hidden-tab gap
+- Found: session 6 static read (suspected S4), proven in session 8 batch 2.
+- Probe: `FAIL  S4 first frame not counted: first reading 0.50 fps (page open 2 s before the loop)`, `FAIL  S4 hidden-tab gap not counted: reading 2.68 fps after a 5 s hidden tab at a steady 60` (64ea803).
+- Cause: `last` started at 0 and was never reset after a hidden tab, so the first frame's `raw` was the whole gap, and `stepFps(raw)` counted it unclamped.
+- Class: clocks after a gap (first frame, hidden tab).
+- Sweep: game page: fps meter (fault); governor (already ignored frames over `ignoreOver`, now also frames with no gap: no fault); mixer and effects use the clamped `dt` (no fault). `cue.html`: `dt` clamped from the first frame, act clock paused while hidden (F6, no fault); no fps meter.
+- Fix: `raw` is 0 when there is no measured gap (first frame; `onVisibility` sets `last = 0` on return); `stepFps` and `govStep` skip `dt <= 0`.
+- Proof: `node web/check_input_loop.cjs`: `RESULT PASS` (2 S4 mutations caught).
+
+## F11: starting quality tier picked by input type
+- Found: session 6 static read (suspected S3), proven in session 8 batch 2.
+- Probe: `FAIL  S3 tier start not picked by input type: govInit calls matchMedia 1 time(s) and reads the input type` (64ea803).
+- Cause: `govInit()` chose steps and start from `(pointer: coarse)`; rule 31 says measured frame time. Both lists and starts were equal ([1.25, 1], start 0), so the look did not change and no owner call was needed.
+- Class: device decisions made from input type instead of measurement.
+- Sweep: game page: `govInit` (fault); `watchDpr` and resize use the real ratio (no fault). `cue.html`: `(pointer: coarse)` picks the phone timing windows, a design setting with a player override, not a quality tier (no fault).
+- Fix: one `dprSteps` and `dprStart` in CONFIG; `govInit` takes them; the governor steps down by frame time. `web/mutate_perf.mjs` mutation `maxdpr` retargeted to `dprSteps` (the game changed on purpose; the mutation is unchanged otherwise).
+- Proof: `node web/check_input_loop.cjs`: `RESULT PASS` (S3 mutation caught).
+
+## F12: errors outside the cue loop failed silently
+- Found: session 8 batch 2 sweep of F9's class.
+- Probe: `node web/step0/smoke_cue.cjs`: `FAIL  late-error: timer error outside the loop not shown on the error panel`, `FAIL  late-error: rejected promise outside the loop not shown on the error panel`.
+- Cause: `cue.html` caught errors only inside `loop()`.
+- Class: errors that fail silently (as F9).
+- Sweep: see F9. Prototype code: fixed, not deferred, because a silent error in a key or pad handler would give the playtest a wrong answer (the cue looks broken or unfair without saying so).
+- Fix: window `error` and `unhandledrejection` listeners call `showError()`.
+- Proof: `BROWSER CHECKS PASS (6 scenarios + 2 play-throughs)`.

@@ -15,8 +15,8 @@ Reference: `references/controls-reference.jpg` (third-party, never ships). It sh
 | Every action in the design has a binding on each input the build supports (keyboard, mouse, touch; gamepad once the owner decides it) | G, S | none yet |
 | One table of bindings in CONFIG is the only source; the help or controls screen is drawn from it, so they can never disagree | G, S | none yet |
 | No two actions share a key in the same scene; modifier keys and key repeat are ignored for menus and cues | G, S | S: key repeat and modifiers ignored (code), no gate |
-| Held input is released on pointerup, pointercancel, lostpointercapture, blur, tab hidden and pause | G, S | S: browser probe `pad-cancel` (F7). G: none (suspected S1) |
-| Multi-touch: each finger tracked by pointerId; a second finger never moves the first one's control | G, S | none yet (suspected S1) |
+| Held input is released on pointerup, pointercancel, lostpointercapture, blur, tab hidden and pause | G, S | S: browser probe `pad-cancel` (F7). G: `check_input_loop.cjs` (F8) |
+| Multi-touch: each finger tracked by pointerId; a second finger never moves the first one's control | G, S | G: `check_input_loop.cjs` (F8). S: two pads at once is intended, no probe |
 | Keyboard and gamepad (or touch and mouse) used at the same time do not fight | G, S | none yet |
 | A focused DOM button never swallows or doubles a game key (Space, Enter) | G, S | S: browser probe `space-focus` |
 | Touch targets at least 44 px, never covering the cue, HUD or result text | G, S | S: `layoutGate` (pads vs cue and result word) |
@@ -31,7 +31,7 @@ Also check: 3 (scene changes drop held input), 4 (pads on every screen size).
 | Game time keeps running when the audio clock is missing, suspended or stuck | S, G | S: browser probes for all three (F6) |
 | Hidden tab, minimised app, phone call: time stops and nothing expires while away | S, G | S: `noAudioClockProbe` |
 | Same play at 30, 60, 120 and 144 Hz displays: logic in fixed steps, drawing interpolates | G, S | none yet |
-| Frame step clamped to about 0.05 s; first frame and the frame after a hidden tab clamped | G, S | G: none (suspected S4) |
+| Frame step clamped to about 0.05 s; first frame and the frame after a hidden tab clamped and not counted by the fps meter or governor | G, S | G: `check_input_loop.cjs` (F10) |
 | Checks wait on game time or a condition, never on wall-clock seconds | T | gate 10 weak spot on slow runners (HANDOFF open item) |
 
 Also check: 7 (sounds scheduled on the same clock), 9 (tells and windows measured in game time).
@@ -80,7 +80,7 @@ Also check: 6 (GPU side of the same frame).
 | --- | --- | --- |
 | Context lost and restored mid-play, including on a phone sent to the background | G | G: handled in code; no restore probe yet |
 | Shaders and textures warmed under a card; warm-up proven to have drawn | G | G: warm-up gate |
-| Quality tier changed mid-game; tier chosen by measured frame time, not input type | G | none yet (suspected S3) |
+| Quality tier changed mid-game; tier chosen by measured frame time, not input type | G | tier start: `check_input_loop.cjs` (F11); mid-game change: none yet |
 | Draw calls, triangles and texture memory within budget in the heaviest scene | G | G: perf gates 1-18 |
 | Culling on everything; skinned bounds grown | G | G: perf gate |
 
@@ -127,7 +127,8 @@ Also check: 5 (CPU side), 8 (assets failing to load).
 
 | Probe | Pages | Gate now |
 | --- | --- | --- |
-| A frame error never stops the loop silently: next frame scheduled first, body in try/catch, error screen shown | S, G | S: code, no probe. G: none (suspected S2) |
+| A frame error never stops the loop silently: next frame scheduled first, body in try/catch, error screen shown | S, G | G: `check_input_loop.cjs` (F9). S: code, no probe |
+| Errors outside the loop (handlers, timers, resize, context restore, loading, rejected promises) reach the error screen | S, G | G: `check_input_loop.cjs` (F9). S: browser probe `late-error` (F12) |
 | No silent guards that hide a bug | all | review only |
 
 ## 12. The checks themselves
