@@ -236,11 +236,16 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: ring, path: ring_out }
       - name: Frame times on the Mac GPU
+        env:
+          # control page timed in the same job (same VM): the game page before session 8 batch 2 (same page as run 10)
+          GPU_CONTROL_SHA: 1356a358e24548d96980a71d27d54d520cb17962
         run: |
           bash web/ci_setup.sh
+          git fetch -q --depth=1 origin "$GPU_CONTROL_SHA"
+          git show FETCH_HEAD:web/game/index.html > web/game/control.html
           cd web
           system_profiler SPDisplaysDataType | grep -E 'Chipset|Metal|VRAM' | tee gpu.txt || true
-          node gpu_measure.mjs game index.html 2>&1 | tee -a gpu.txt
+          node gpu_measure.mjs game index.html control.html 2>&1 | tee -a gpu.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
