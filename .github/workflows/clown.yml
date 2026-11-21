@@ -37,11 +37,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
       - name: Step 0 cue checks (static, bot sweep, wide probes, mutations, browser probes) and game page input and loop probes
         run: |
           npm i --prefix /tmp/n --no-save acorn acorn-walk playwright-core > /dev/null
           export NODE_PATH=/tmp/n/node_modules
-          pip install -q numpy pillow
+          python -m pip install -q numpy pillow
           bash web/step0/cube25d/setup.sh
           cd web
           node check-static.cjs step0/cue.html | tee step0.txt
@@ -50,7 +52,7 @@ jobs:
           node check_input_loop.cjs game/index.html | tee -a step0.txt
           node check-static.cjs step0/walk.html | tee -a step0.txt
           node step0/smoke_walk.cjs | tee -a step0.txt
-          python3 -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt
+          python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt
           ! grep -q '^FAIL\|RESULT FAIL' step0.txt
   build:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]') || startsWith(github.event.head_commit.message, '[gpu]')
