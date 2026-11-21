@@ -389,7 +389,7 @@ void main() {
 // BOOT    boot(); test hook window.__game = { newRun, state, api } when ?test
 // TEST    api.mode(0 lit, 1 texture colour, 2 blouse mask), api.bg(hex), api.isolate(on), api.direct(on: no post),
 //         api.only(list), api.time(t), api.place(x, z), api.keyNow(), api.bloom(on), api.cast(on), api.clipBelowFloor(on), api.counts(),
-//         api.governor(on), api.aoEnabled(on), api.dprLevel(i), api.loseContext(lose), api.lost(), api.renderSynced(), api.feedFrames(ms, n), api.resetGovernor(), api.audit() (read-only performance audit)
+//         api.governor(on), api.aoEnabled(on), api.dprLevel(i), api.scale(s), api.loseContext(lose), api.lost(), api.renderSynced(), api.feedFrames(ms, n), api.resetGovernor(), api.audit() (read-only performance audit)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -1149,6 +1149,8 @@ function testApi() {
     governor(on) { gov.on = on; },
     aoEnabled(on) { parts.ao.enabled = on; },
     dprLevel(i) { gov.level = i; resize(); return currentDpr(); },
+    // render scale for measuring a pixel cap: s replaces the pixel-ratio steps (null restores them); the canvas keeps its CSS size
+    scale(sc) { if (sc == null) govInit(); else { gov.steps = [sc]; gov.level = 0; gov.cap = 0; } resize(); return { dpr: currentDpr(), w: canvas.width, h: canvas.height }; },
     loseContext(lose) { if (lose) { loseExt = renderer.getContext().getExtension('WEBGL_lose_context'); loseExt.loseContext(); } else loseExt.restoreContext(); },
     lost() { return view.lost === true; },
     renderSynced() {

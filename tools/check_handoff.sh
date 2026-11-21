@@ -10,7 +10,7 @@ if [ "$base" = "0000000000000000000000000000000000000000" ]; then range="$head";
 for c in $(git rev-list "$range"); do
   subj=$(git log -1 --format=%s "$c")
   case "$subj" in
-    "Batch "*)
+    "Batch "*|"[checks] Batch "*|"[gpu] Batch "*)
       if grep -qx "$c" "$(git rev-parse --git-dir)/shallow" 2>/dev/null; then
         echo "FAIL ${c:0:7} parent not in this clone, cannot check (run: git fetch --depth=50 origin main): $subj"; fail=1
       elif git diff-tree --no-commit-id --name-only -r "$c" | grep -qx 'HANDOFF.md'; then

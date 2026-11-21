@@ -3,7 +3,7 @@
 #   tools/handoff.sh start  : first command of every new session. Records the session's start commit, prints status, OWNER-REQUIREMENTS.md and HANDOFF.md.
 #   tools/handoff.sh        : run after every batch. Counts batch commits this session; prints NEW SESSION NOW at the limit.
 #   tools/handoff.sh close  : before handing over. PASS only if HANDOFF.md is committed, current and pushed.
-# A batch commit is one whose subject starts with "Batch " (CI fails a batch commit that does not touch HANDOFF.md).
+# A batch commit is one whose subject starts with "Batch " ("[checks] Batch " or "[gpu] Batch " when it asks CI to run, requirement 6) (CI fails a batch commit that does not touch HANDOFF.md).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,7 +19,7 @@ start_commit() { grep -m1 '^Session start: ' HANDOFF.md | awk '{print $3}'; }
 batches() {
   local s; s=$(start_commit)
   if [ -z "$s" ] || ! git cat-file -e "$s" 2>/dev/null; then echo "?"; return; fi
-  git log --format=%s "$s"..HEAD | grep -c '^Batch ' || true
+  git log --format=%s "$s"..HEAD | grep -cE '^(\[(checks|gpu)\] )?Batch ' || true
 }
 banner() {
   echo "=================================================="
@@ -64,7 +64,7 @@ case "${1:-check}" in
     git fetch -q --depth=50 origin main 2>/dev/null
     if [ -n "$(git status --porcelain)" ]; then echo "FAIL uncommitted changes:"; git status --short | head -10; fail=1; fi
     if [ -n "$(git log --oneline FETCH_HEAD..HEAD 2>/dev/null)" ]; then echo "FAIL commits not pushed"; fail=1; fi
-    last_batch=$(git log --format=%H --grep='^Batch ' -1)
+    last_batch=$(git log --format=%H -E --grep='^(\[(checks|gpu)\] )?Batch ' -1)
     last_handoff=$(git log --format=%H -1 -- HANDOFF.md)
     if [ -n "$last_batch" ] && ! git merge-base --is-ancestor "$last_batch" "$last_handoff" 2>/dev/null; then
       echo "FAIL HANDOFF.md older than the last batch commit"; fail=1
