@@ -11,6 +11,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Now
 
+- Owner 21 Nov: Mirror World = 2.5D turning camera (360 colour+depth render per arena, fixed spot, turn/tilt/zoom to keep him in full view; clown and enemies 3D). No first- or third-person camera (requirement 7).
 - Owner 21 Nov: cube room = backstage only; 3 walls for before the performance and before the Mirror World, 1 wall for the nightly act (requirement 7). Other events: owner picked fixed-camera rooms (walk from the cube to the performance, meet performers); Mirror World action default = fixed-camera arena shots, no cuts mid-fight (requirement 7).
 - Owner verdict 21 Nov on the 2.5D cue artifact: "cue is ok" (step 0 loop accepted on the 3D clown). Framing decision recorded as OWNER-REQUIREMENTS.md section 7: this close framing is the zoom in (nightly act, before going out, before the Mirror World); zoom out for showing the performance and other events (64x64 characters there).
 - Session 9 (21 Nov), batch 1, no checks (owner requirement 6, new: checks only in sessions 5, 10, 15 ... or when asked; CI `clown` runs only when the commit subject starts with `[checks]` or `[gpu]` (first push quoted the tags in its body and started run 44918259504; cancelled, gate tightened to the subject start); `handoff.sh` counts sessions and skips its gates outside checks sessions). RESTART.md and START-HERE.md were not readable (chat outside the Project); worked from this file.
@@ -33,7 +34,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
-1. Fixed-camera room sample (requirement 7): the clown leaves the cube, walks through 2-3 Blender shots with camera cuts at zones (controls held across a cut), meets one performer; then the zoom-out performance view: one fixed performance view, Blender plates of the ring tent from far back (back/mid/front layers, same pipeline as `cube25d/build_cube.py`), clown at 64 px tall, cue framing switching to zoom in for the act. One play-size sample for owner approval before anything else.
+1. Fixed-camera room sample (requirement 7): the clown leaves the cube, walks through 2-3 Blender shots with camera cuts at zones (controls held across a cut), meets one performer; then a Mirror World arena sample (360 colour and depth cube map from Blender, depth-tested 3D clown and one 3D enemy, camera turns to follow), then the zoom-out performance view: one fixed performance view, Blender plates of the ring tent from far back (back/mid/front layers, same pipeline as `cube25d/build_cube.py`), clown at 64 px tall, cue framing switching to zoom in for the act. One play-size sample for owner approval before anything else.
 2. Session 10 is a checks session (requirement 6): fix the game page face cells (Open items), GPU miss fixes 1-5 from Open items in one `[gpu]` run (pinned Chrome first, then pixel cap and AO-off measured against the control), add `test_cue.cjs`/`smoke_cue.cjs` to CI, run every gate with a `[checks]` subject.
 3. Then step 6 of the GDD build plan (the loop is accepted), tuning windows and tempos from the owner's results-panel timing line when sent.
 
