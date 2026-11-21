@@ -104,14 +104,14 @@ function occlusion(spot) {
 async function run() {
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}/walk.html`;
-  const browser = await pw.chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const browser = await pw.chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   let pass = 0, total = 0;
   const report = (ok, what) => { total++; if (ok) pass++; console.log(`${ok ? 'PASS' : 'FAIL'} ${what}`); };
   for (const vp of SCREENS) {
     const errs = [];
     const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.mobile, hasTouch: vp.mobile });
     page.on('pageerror', (e) => errs.push('page error ' + e.message));
-    page.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) errs.push('console error ' + m.text()); });
+    page.on('console', (m) => { if (m.type() === 'error') errs.push('console error ' + m.text()); });
     await page.goto(base);
     const ready = await page.waitForFunction(() => window.__walk.ready || window.__walk.error, null, { timeout: 90000 }).then(() => true, () => false);
     const st = await page.evaluate(() => ({ ready: window.__walk.ready, error: window.__walk.error, m: window.__walk.walkMeasure }));

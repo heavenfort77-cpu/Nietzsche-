@@ -138,3 +138,21 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Sweep: `model_layer.js` face anchor (fault, fixed); blob shadow uses the root position on the floor (no fault); the cue's ring, target and feedback word all read view.cx/cy/R from the one anchor (no fault).
 - Fix: `faceCentre: [0, 1.29, 0.1]` (nose, three.js axes).
 - Proof: `PASS  cue centre to nose: 0.12 R (max 0.3 R), R 65 px`.
+
+## F15: game page startle and wince faces sampled off the face atlas (blank skin)
+- Found: F13 sweep (session 9): `web/game/index.html` CONFIG.faces had the same off-atlas offsets; probed and fixed in session 10, the next checks session (owner requirement 6).
+- Probe: `OLD=1 python3 -I web/game/probe_face_cells.py web/game/index.html web/game/assets/clown_v2.glb web/game/assets/face_atlas.png`: `FAIL  face startle [0,-0.5]: face UV area u 0.00-0.50 v -0.50-0.00 inside the atlas no, feature pixels 0.0% (min 1%)`, `FAIL  face wince [0.5,-0.5]: ... inside the atlas no, feature pixels 0.0% (min 1%)`.
+- Cause: same as F13: the atlas is loaded with flipY false, so its rows run down and the lower cells are at v + 0.5; v - 0.5 lands outside the atlas and clamps to the skin edge.
+- Class: texture-atlas cell offsets that point outside the atlas (any face, card or sprite cell table).
+- Sweep: `web/game/index.html` CONFIG.faces (fault, fixed); `web/step0/cube25d/model_layer.js` and `web/step0/walk.html` faces (correct, [0, 0.5] and [0.5, 0.5]); crowd cards (`cell = (i * 5 + tier * 3) % card_cells`, 12 cells in a 3072x384 one-row atlas, flipY true: always inside, no fault); the v2 Whiteface and Performer atlases with the fixed offsets: probe PASS for both.
+- Fix: `startle: [0, 0.5]`, `wince: [0.5, 0.5]` in the game page CONFIG.faces, with the row direction written in the comment above. New probe `web/game/probe_face_cells.py` (face UV area per cell inside the atlas and holding feature pixels), added to CI job `step0`.
+- Proof: `python3 -I web/game/probe_face_cells.py ...`: `PASS  face startle [0,0.5]: ... inside the atlas yes, feature pixels 9.6% (min 1%)`, `PASS  face wince [0.5,0.5]: ... feature pixels 5.8% (min 1%)`, `RESULT PASS`.
+
+## F16: pages served over http ask for a missing favicon (HTTP 404 in the console)
+- Found: session 10, `smoke_walk.cjs` under the system Chrome (the bundled test browser did not ask for the icon). Session 9 had seen the same 404 on `cue_model.html` and set it aside.
+- Probe: `node web/step0/smoke_walk.cjs`: `FAIL desktop 1280x720: loads, no page error console error Failed to load resource: the server responded with a status of 404 (Not Found)`.
+- Cause: no `<link rel="icon">` in the page, so Chrome requests `/favicon.ico`, which no page ships.
+- Class: page requests for resources that do not exist (missing icon, asset path typos).
+- Sweep: `web/step0/walk.html`, `web/step0/cue_model.html`, `web/step0/cue.html`, `web/game/index.html`: all had no icon link (fault, fixed). The game page checks (`check_step4.mjs`, `check_step5.mjs`, `check_perf.mjs`, `check-runtime.cjs`) skip favicon 404s; left as they are (not loosened; the pages no longer ask).
+- Fix: `<link rel="icon" href="data:,">` after the title in all four pages.
+- Proof: `node web/step0/smoke_walk.cjs`: `RESULT walk smoke 22 of 22 pass`; one-off load of the other three pages in Chrome: `PASS step0/cue_model.html HTTP errors: 0`, same for `cue.html` and `game/index.html`.

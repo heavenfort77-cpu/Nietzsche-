@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Clown and the Mirror: ring</title>
+<link rel="icon" href="data:,">
 <!-- ===== HTML SHELL ===== -->
 <style>
 /* ===== CSS: BASE ===== */
@@ -479,8 +480,8 @@ const CONFIG = Object.freeze({
   }),
   // outline thickness in metres
   outlineThick: 0.006,
-  // face cells in the 2 x 2 atlas: uv offset from the sad cell
-  faces: Object.freeze({ sad: [0, 0], smile: [0.5, 0], startle: [0, -0.5], wince: [0.5, -0.5] }),
+  // face cells in the 2 x 2 atlas: uv offset from the sad cell (atlas loaded with flipY false, rows run down: lower cells at v + 0.5)
+  faces: Object.freeze({ sad: [0, 0], smile: [0.5, 0], startle: [0, 0.5], wince: [0.5, 0.5] }),
   // clips in the GLB
   clips: ['idle', 'walk', 'slap'],
   cam: Object.freeze({
