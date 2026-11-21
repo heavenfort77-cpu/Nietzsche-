@@ -1,0 +1,5 @@
+PASS mutation dense -> "1. 1920x1080: density held and triangles" fires | FAIL 1. 1920x1080: density held and triangles <= 500000 (all passes) | {"tris":734720,"crowd":515,"scatter":2100,"confetti":300000,"bulbs":3
+PASS mutation aofullres -> "2. ambient occlusion" fires | FAIL 2. ambient occlusion: no second scene render, full-screen passes only, half resolution | {"extraCalls":12,"extraTris":562,"halfRes":fal
+PASS mutation nocull -> "4. frustum culling" fires | FAIL 4. frustum culling: no mesh skips it | [{"name":"SkinnedMesh","tris":18006}]
+PASS mutation bigtex -> "5. texture memory" fires | FAIL 5. texture memory <= 64 MB, anisotropy <= 4 | 112.7 MB, anisotropy 4
+RESULT perf mutations 4 of 4 fired
