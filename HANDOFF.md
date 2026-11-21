@@ -11,6 +11,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Now
 
+- Owner 21 Nov: cube room = backstage only; 3 walls for before the performance and before the Mirror World, 1 wall for the nightly act (requirement 7). Other events: owner picks an interactive 2.5D method (options asked in chat; answer goes here).
 - Owner verdict 21 Nov on the 2.5D cue artifact: "cue is ok" (step 0 loop accepted on the 3D clown). Framing decision recorded as OWNER-REQUIREMENTS.md section 7: this close framing is the zoom in (nightly act, before going out, before the Mirror World); zoom out for showing the performance and other events (64x64 characters there).
 - Session 9 (21 Nov), batch 1, no checks (owner requirement 6, new: checks only in sessions 5, 10, 15 ... or when asked; CI `clown` runs only when the commit subject starts with `[checks]` or `[gpu]` (first push quoted the tags in its body and started run 44918259504; cancelled, gate tightened to the subject start); `handoff.sh` counts sessions and skips its gates outside checks sessions). RESTART.md and START-HERE.md were not readable (chat outside the Project); worked from this file.
 - Cue on the real model (owner: "see the model in the cue"): `web/step0/cue_model.html` = cue.html logic + `cube25d/model_layer.js` (approved clown_v2.glb, game toon shader and outline, idle clip, slap on take, tilt about the feet, face cell per beat result, paint grows with Mask). The cue ring and a pale target circle close onto his real face (anchor under the head bone, follows him). Published for the owner as artifact "Clown cue on the 3D model, 2.5D room" (three.js from jsDelivr there, GLB as an artifact asset). Local: `bash web/step0/cube25d/setup.sh`, serve web/step0.
@@ -32,7 +33,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
-1. Zoom-out sample (requirement 7): one fixed performance view, Blender plates of the ring tent from far back (back/mid/front layers, same pipeline as `cube25d/build_cube.py`), clown at 64 px tall, cue framing switching to zoom in for the act. One play-size sample for owner approval before anything else.
+1. Wait for the owner's pick of the 2.5D method for performances and other events, then the zoom-out sample in that method (requirement 7). Default if no pick: one fixed performance view, Blender plates of the ring tent from far back (back/mid/front layers, same pipeline as `cube25d/build_cube.py`), clown at 64 px tall, cue framing switching to zoom in for the act. One play-size sample for owner approval before anything else.
 2. Session 10 is a checks session (requirement 6): fix the game page face cells (Open items), name the 1440p GPU miss, add `test_cue.cjs`/`smoke_cue.cjs` to CI, run every gate with a `[checks]` subject.
 3. Then step 6 of the GDD build plan (the loop is accepted), tuning windows and tempos from the owner's results-panel timing line when sent.
 
