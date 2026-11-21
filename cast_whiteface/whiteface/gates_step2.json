@@ -1,0 +1,92 @@
+[
+ {
+  "name": "body: parts joined, hidden faces removed",
+  "ok": true,
+  "info": "47 parts, 12100 tris before, 1271 hidden faces removed, 9766 tris, 0.2s"
+ },
+ {
+  "name": "body UVs: no overlaps",
+  "ok": true,
+  "info": "0 overlapping faces, 69 islands"
+ },
+ {
+  "name": "head UV: one island",
+  "ok": true,
+  "info": "1 islands"
+ },
+ {
+  "name": "body bakes (colour, AO, edge/top/noise)",
+  "ok": true,
+  "info": "0.6s / 29.2s / 0.4s"
+ },
+ {
+  "name": "body regions: every part ramp present in the atlas",
+  "ok": true,
+  "info": "{'BLACK': 123533, 'CRIMSON': 483843, 'GOLD': 82917, 'PAINT': 231882, 'SILVER': 126401}"
+ },
+ {
+  "name": "body regions: faces of each ramp read back as that ramp (>= 95%)",
+  "ok": true,
+  "info": "{'BLACK': 1.0, 'PAINT': 1.0, 'CRIMSON': 1.0, 'GOLD': 1.0, 'SILVER': 1.0}"
+ },
+ {
+  "name": "face bake neutral",
+  "ok": true,
+  "info": "0.3s, feature texels 16772"
+ },
+ {
+  "name": "paint layer neutral: paint present, eyes cut it",
+  "ok": true,
+  "info": "2.4% of the cell painted"
+ },
+ {
+  "name": "face bake stern",
+  "ok": true,
+  "info": "0.3s, feature texels 16443"
+ },
+ {
+  "name": "paint layer stern: paint present, eyes cut it",
+  "ok": true,
+  "info": "1.6% of the cell painted"
+ },
+ {
+  "name": "face bake call",
+  "ok": true,
+  "info": "0.3s, feature texels 22397"
+ },
+ {
+  "name": "paint layer call: paint present, eyes cut it",
+  "ok": true,
+  "info": "2.6% of the cell painted"
+ },
+ {
+  "name": "face bake sigh",
+  "ok": true,
+  "info": "0.3s, feature texels 13214"
+ },
+ {
+  "name": "paint layer sigh: paint present, eyes cut it",
+  "ok": true,
+  "info": "2.2% of the cell painted"
+ },
+ {
+  "name": "spec mask: some body vertices shine, most do not",
+  "ok": true,
+  "info": "726 of 5430 vertices"
+ },
+ {
+  "name": "triangles <= 30k (body + head)",
+  "ok": true,
+  "info": "9766 + 2208 = 11974"
+ },
+ {
+  "name": "materials (= draw calls before hull) <= 2",
+  "ok": true,
+  "info": "['body', 'face']"
+ },
+ {
+  "name": "total time",
+  "ok": true,
+  "info": "49s"
+ }
+]
