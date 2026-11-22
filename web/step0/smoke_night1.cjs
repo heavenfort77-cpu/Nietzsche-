@@ -1,6 +1,7 @@
 // One pass through night1.html in GDD order (desktop 1280x720, phone 390x844): page errors, each scene reached, a few frames.
 // Needs web/step0/cube25d/setup.sh first. Usage: node web/step0/smoke_night1.cjs [out dir]; ONLY=desk|phone; CHROME=<path>; N_AT=out|in|both overrides N1.nietzscheAt.
-// MUTATE=hurt|learn|endtext serves night1.html with that feature broken (panel fix 2 off, fix 5 off, end card heading lost); the matching step must FAIL.
+// MUTATE=<name> serves a page with one feature broken (see MUTS); the matching step must FAIL.
+// Screens: desk 1280x720, phone 390x844, land 844x390 (land plays the Mirror World as a loss to cover the small win's loss branch).
 // Ends with RESULT night1 smoke <passed> of <steps> pass.
 // Waits are on game state (software GL runs about 9 fps and frame time is capped at 0.05 s, so game time runs slower than wall time).
 const path = require('path'), http = require('http'), fs = require('fs');
@@ -9,13 +10,22 @@ const pw = need(['playwright-core', path.join(__dirname, '..', 'node_modules', '
 const ROOT = __dirname, OUT = process.argv[2] || '/tmp/night1';
 fs.mkdirSync(OUT, { recursive: true });
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary' };
-const MUT = { hurt: ['hurtPays: true,', 'hurtPays: false,'], learn: ['performerLearns: true,', 'performerLearns: false,'], endtext: ["endKnows: 'The shame of living:',", "endKnows: 'The Performer now knows:',"] }[process.env.MUTATE || ''];
+const MUTS = {
+  hurt: ['night1.html', 'hurtPays: true,', 'hurtPays: false,'],
+  learn: ['night1.html', 'performerLearns: true,', 'performerLearns: false,'],
+  endtext: ['night1.html', "endKnows: 'The shame of living:',", "endKnows: 'The Performer now knows:',"],
+  fallsound: ['night1.html', 'if (!NS.cue.contentWindow.__cueOpts) NS.cue.contentWindow.__cueOpts = { hurt: N1.hurtPays };', ''],
+  lean: ['model_layer.js', 'parts.root.rotation.x = -pose.tilt * CFG.leanBack;', 'parts.root.rotation.z = -pose.tilt;'],
+  smallwin: ['night1.html', 'smallWin: true,', 'smallWin: false,'],
+  shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
+};
+const MUT = MUTS[process.env.MUTATE || ''];
 if (process.env.MUTATE && !MUT) { console.error('unknown MUTATE ' + process.env.MUTATE); process.exit(2); }
 const srv = http.createServer((q, r) => {
   const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; }
   r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
-  if (MUT && path.basename(f) === 'night1.html') { const t = fs.readFileSync(f, 'utf8'); if (t.split(MUT[0]).length !== 2) throw new Error('mutation anchor not found once: ' + MUT[0]); r.end(t.replace(MUT[0], MUT[1])); return; }
+  if (MUT && path.basename(f) === MUT[0]) { const t = fs.readFileSync(f, 'utf8'); if (t.split(MUT[1]).length !== 2) throw new Error('mutation anchor not found once: ' + MUT[1]); r.end(t.replace(MUT[1], MUT[2])); return; }
   fs.createReadStream(f).pipe(r);
 });
 let nOk = 0, nAll = 0;
@@ -24,7 +34,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await new Promise((r) => srv.listen(0, r));
   const url = `http://127.0.0.1:${srv.address().port}/night1.html`;
   const b = await pw.chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
-  const screens = [{ n: 'desk', w: 1280, h: 720, m: false }, { n: 'phone', w: 390, h: 844, m: true }].filter((s) => !process.env.ONLY || s.n === process.env.ONLY);
+  const screens = [{ n: 'desk', w: 1280, h: 720, m: false }, { n: 'phone', w: 390, h: 844, m: true }, { n: 'land', w: 844, h: 390, m: true }].filter((s) => !process.env.ONLY || s.n === process.env.ONLY);
   for (const sc of screens) {
     const ctx = await b.newContext({ viewport: { width: sc.w, height: sc.h }, isMobile: sc.m, hasTouch: sc.m });
     const pg = await ctx.newPage(); const errs = [];
@@ -48,6 +58,31 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('trip for the child', async () => { await verb(-1.3, 17.0, 'trip'); await pg.waitForFunction(() => /on purpose/.test(window.__night.crew[4].lab.textContent), null, { timeout: 8000 }); await shot('child'); });
     await step('ring edge: board', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForSelector('#card_board', { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); });
     await step('board: act page opens', async () => { await pg.click('[data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
+    // panel item 1: night 1 tells the cue page that a fall gets the big laugh; one forced early press is a miss
+    await step('a fall in the act gets the big laugh, not the cough (item 1)', async () => {
+      const fr = pg.frames().find((f) => /cue_model/.test(f.url()));
+      await fr.waitForFunction(() => !!window.__cueOpts, null, { timeout: 5000 });
+      const r = await fr.evaluate(() => { const g = window.__game; g.useVirtual(false); g.start(1); const f0 = g.beats()[0].fit; g.input(g.HIT, f0 + 2 * g.config.goodMs[0]); const i = g.info(); return { misses: i.misses, sound: i.fallSound, scene: i.scene }; });
+      if (r.misses !== 1) throw new Error('forced press was not one miss: ' + JSON.stringify(r));
+      if (r.sound !== 'laughBig') throw new Error('fall sound ' + r.sound);
+    });
+    // owner item 8: the cue's tilt is a lean backwards: his face moves away from the camera, not sideways (camera space, metres)
+    await step('cue: he leans backwards, not sideways (item 8)', async () => {
+      const fr = pg.frames().find((f) => /cue_model/.test(f.url()));
+      await fr.waitForFunction(() => window.__model && window.__model.ready, null, { timeout: 60000 });
+      const r = await fr.evaluate(() => {
+        const M = window.__model, view = { w: 800, h: 600 }, at = (tilt) => {
+          M.frame(1000, { scene: 'act', tilt, flip: false, miss: false, snap: false, mask: 0 }, view);
+          const e = M.parts.anchor.matrixWorld.elements, c = M.camera.matrixWorldInverse.elements, x = e[12], y = e[13], z = e[14];
+          return [c[0] * x + c[4] * y + c[8] * z + c[12], c[1] * x + c[5] * y + c[9] * z + c[13], c[2] * x + c[6] * y + c[10] * z + c[14]];
+        };
+        const a = at(0), b = at(1.1); at(0);
+        return { side: b[0] - a[0], back: a[2] - b[2] };
+      });
+      if (!(r.back > 0.1)) throw new Error('face not moved away from the camera: ' + r.back.toFixed(3) + ' m');
+      if (Math.abs(r.side) > 0.05) throw new Error('face moved sideways ' + r.side.toFixed(3) + ' m');
+      console.log('    lean: back', r.back.toFixed(2), 'm, side', r.side.toFixed(3), 'm');
+    });
     await step('crowd card (stand-in act result)', async () => { await pg.evaluate(() => { const N = window.__night; N.NS.actInfo = { scene: 'results', perfects: 2, goods: 4, misses: 1, actLaughs: 45, mask: 2 }; N.crowdCard(); }); await pg.waitForSelector('#card_crowd'); });
     // panel fix 2: with 1 fall, a pie in hand and the trip done, each hurt pays more than a clean Perfect (10, cue_model.html) and the card says so
     await step('crowd pays most for what hurts him (fix 2)', async () => {
@@ -65,8 +100,27 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('fog into the Mirror World', async () => { await pg.waitForFunction(() => window.__night.S.mode === 'mw', null, { timeout: 8000 }); await sleep(1500); await shot('mw'); const k = await pg.evaluate(() => window.__night.foes.map((f) => f.kind).join(',')); console.log('   foes', k); });
     await step('gags: slap, pie, pratfall', async () => { await pg.keyboard.press('KeyJ'); await sleep(600); await pg.keyboard.press('KeyK'); await sleep(700); await pg.keyboard.press('Space'); await sleep(900); const M = await pg.evaluate(() => { const M = window.__night.M; return { l: M.laughs, p: window.__night.NS.pies }; }); console.log('   laughs', M.l.toFixed(1), 'pies', M.p); });
     await step('stand still in the beam beats the Light', async () => { await pg.evaluate(() => { const N = window.__night, L = N.foes[0]; N.M.x = L.spotX; N.M.z = L.spotZ; }); await pg.waitForFunction(() => !window.__night.foes[0].alive, null, { timeout: 20000 }); });
-    await step('others beaten, shards, out', async () => { await pg.evaluate(() => { const N = window.__night; for (const f of N.foes) if (f.alive) { f.hp = 0; f.alive = false; f.sink = 0.6; } }); await pg.waitForSelector(nAt === 'in' ? '#card_kept' : '#card_nietzsche', { timeout: 12000 }); });
-    if (nAt !== 'in') await step('Nietzsche line leaving the mirror, then shards kept', async () => { const t = await pg.textContent('#card_nietzsche .quote'); console.log('   out:', t.slice(0, 60)); await shot('nietzsche_out'); await pg.waitForSelector('#toKept', { state: 'visible', timeout: 8000 }); await pg.click('#toKept'); await pg.waitForSelector('#card_kept', { timeout: 3000 }); });
+    const lose = sc.n === 'land';
+    await step(lose ? 'lost in the Mirror (land screen: loss branch), out' : 'others beaten, shards, out', async () => { await pg.evaluate((lose) => { const N = window.__night; if (lose) { N.endMW('lose'); return; } for (const f of N.foes) if (f.alive) { f.hp = 0; f.alive = false; f.sink = 0.6; } }, lose); await pg.waitForSelector(nAt === 'in' ? '#card_small' : '#card_nietzsche', { timeout: 12000 }); });
+    if (nAt !== 'in') await step('Nietzsche line leaving the mirror, then shards kept', async () => { const t = await pg.textContent('#card_nietzsche .quote'); console.log('   out:', t.slice(0, 60)); await shot('nietzsche_out'); await pg.waitForSelector('#toKept', { state: 'visible', timeout: 8000 }); await pg.click('#toKept'); await pg.waitForSelector('#card_small', { timeout: 3000 }); });
+    // small win (owner pitch, panel 11 of 12): win wipes one line of paint (Mask -1, floor the night's start) and one laugh answers; loss stands up by himself
+    await step(lose ? 'small win, loss: he stands up by himself' : 'small win, win: he wipes one line of paint, one laugh answers', async () => {
+      const a = await pg.evaluate(() => { const N = window.__night; return { mirror: N.S.mirror, run: N.S.running, text: document.querySelector('#smallGo').textContent, mask: N.NS.mask, start: N.NS.maskStart, paint: N.chars.clown.face.material.uniforms.uPaintAmt.value, want: N.NS.result === 'win' ? N.N1.winText : N.N1.loseText }; });
+      if (a.mirror !== 'after' || !a.run || a.text !== a.want) throw new Error('not at the mirror with the prompt ' + JSON.stringify(a));
+      await pg.click('#smallGo');
+      if (!lose) {
+        await pg.waitForFunction(() => window.__night.NS.laughed, null, { timeout: 30000 }).catch(async (e) => { const d = await pg.evaluate(() => { const N = window.__night; return { wipe: N.NS.wipe, run: N.S.running, raf: N.S.raf, mirror: N.S.mirror, mode: N.S.mode, room: N.S.room, scene: N.NS.scene, done: N.NS.smallDone, lost: N.S.lost }; }); throw new Error('no laugh ' + JSON.stringify(d)); });
+        const b = await pg.evaluate(() => { const N = window.__night; return { mask: N.NS.mask, paint: N.chars.clown.face.material.uniforms.uPaintAmt.value, done: N.NS.smallDone, want: N.N1.winDone }; });
+        if (b.mask !== Math.max(a.start, a.mask - 1)) throw new Error(`Mask ${a.mask} -> ${b.mask}, start ${a.start}`);
+        if (!(b.paint < a.paint - 0.01) || b.done !== b.want) throw new Error('paint not wiped ' + JSON.stringify(b));
+      } else {
+        await pg.waitForFunction(() => window.__night.NS.sit <= 0, null, { timeout: 30000 });
+        const b = await pg.evaluate(() => { const N = window.__night; return { mask: N.NS.mask, laughed: N.NS.laughed, done: N.NS.smallDone, want: N.N1.loseDone }; });
+        if (b.mask !== a.mask || b.laughed || b.done !== b.want) throw new Error('loss branch ' + JSON.stringify(b));
+      }
+      await pg.waitForSelector('#card_kept', { timeout: 30000 });
+      if (await pg.evaluate(() => window.__night.S.running)) throw new Error('loop still running behind the shards card');
+    });
     // panel fix 5: the shop is at the mirror; each purchase: the reflection stands (he stays seated), steps toward him by learnStep, performs, and a crack shows
     await step('shop at the mirror: the reflection performs each buy back at him (fix 5)', async () => {
       await pg.evaluate(() => { window.__night.NS.shards = 11; });
@@ -77,6 +131,26 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         await pg.click('.opt:not([disabled])');
         await pg.waitForFunction(() => { const L = window.__night.NS.learn; return L && L.phase === 2; }, null, { timeout: 30000 });
         if (k === 1) await shot('shop_learn');
+        // panel item 5: the shop card's content never covers the performing reflection inside the glass (more than 5% of its visible box)
+        const ov = await pg.evaluate(() => {
+          // the room picture can be letterboxed (phone portrait): project into the canvas (S.w x S.h, where NS.mrect lives), then offset by the canvas box
+          const N = window.__night, W = window.__walkTest, w = N.S.w, h = N.S.h, m = N.NS.mrect, cb = W.renderer.domElement.getBoundingClientRect();
+          const p = (y) => { const v = N.refl.root.position.clone(); v.y += y; v.project(W.roomCam); return [cb.left + (v.x + 1) / 2 * w, cb.top + (1 - v.y) / 2 * h]; };
+          const top = p(1.9), feet = p(0), hw = (feet[1] - top[1]) * 0.25;
+          const gx0 = cb.left + m[0], gx1 = gx0 + m[2], gy0 = cb.top + h - m[1] - m[3], gy1 = cb.top + h - m[1];
+          const box = [Math.max(gx0, top[0] - hw), Math.max(gy0, top[1]), Math.min(gx1, top[0] + hw), Math.min(gy1, feet[1])];
+          const area = Math.max(0, box[2] - box[0]) * Math.max(0, box[3] - box[1]);
+          let worst = 0, who = '';
+          for (const el of N.NS.card.children) {
+            const r = el.getBoundingClientRect();
+            const o = Math.max(0, Math.min(box[2], r.right) - Math.max(box[0], r.left)) * Math.max(0, Math.min(box[3], r.bottom) - Math.max(box[1], r.top));
+            if (o / Math.max(1, area) > worst) { worst = o / Math.max(1, area); who = el.id || el.className || el.tagName; }
+          }
+          return { area: Math.round(area), worst, who };
+        });
+        if (ov.area < 400) throw new Error('reflection not visible in the glass: ' + ov.area + ' px2');
+        if (ov.worst > 0.05) throw new Error(`shop card covers ${(ov.worst * 100).toFixed(0)}% of the reflection (${ov.who})`);
+        console.log('    reflection box', ov.area, 'px2, covered', (ov.worst * 100).toFixed(1) + '%');
         await pg.waitForFunction((k) => window.__night.NS.learnDone === k, k, { timeout: 30000 });
         const r = await pg.evaluate(() => { const N = window.__night, b = N.NS.reflBase, p = N.refl.root.position; return { off: Math.hypot(p.x - b.x, p.z - b.z), up: N.NS.reflUp, sit: N.NS.sit, step: N.N1.learnStep, cracks: N.NS.cracks }; });
         if (Math.abs(r.off - k * r.step) > 0.05) throw new Error(`buy ${k}: reflection ${r.off.toFixed(2)} m closer, want ${k * r.step}`);
@@ -90,6 +164,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const r = await pg.evaluate(() => { const N = window.__night; return { t: (document.querySelector('#card_end .knows') || {}).textContent || '', want: N.N1.endKnows, titles: N.NS.bought.map((id) => N.N1.shop.find((x) => x.id === id).title), run: N.S.running, mirror: N.S.mirror }; });
       if (r.want !== 'The shame of living:' || r.t.indexOf(r.want) !== 0) throw new Error('heading "' + r.t.slice(0, 40) + '", owner asked "The shame of living:"');
       if (!r.titles.length || r.titles.some((x) => r.t.indexOf(x) < 0)) throw new Error('purchases not all listed: ' + r.titles);
+      const learned = await pg.evaluate(() => window.__night.N1.endLearned);
+      if (r.t.indexOf(learned) < 0) throw new Error('missing the line "' + learned + '" (item 4)');
       if (r.run || r.mirror) throw new Error('loop still running behind the end card');
     });
     console.log(sc.n, errs.length ? 'ERRORS\n  ' + errs.slice(0, 8).join('\n  ') : 'no page errors');

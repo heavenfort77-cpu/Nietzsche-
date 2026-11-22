@@ -178,7 +178,7 @@
     scene: 'title', night: 1, phone: false, phoneSetByUser: false, latencyMs: 0,
     laughs: 0, mask: 0, actCount: 0, flipUsed: [false, false, false, false],
     beatCount: 0, chainLastFit: [0, 0, 0, 0, 0, 0], lastFit: 0,
-    misses: 0, perfects: 0, goods: 0, takes: 0, takeBeats: 0, flips: 0, actLaughs: 0,
+    misses: 0, perfects: 0, goods: 0, takes: 0, takeBeats: 0, flips: 0, actLaughs: 0, fallSound: '',
     offSum: 0, offSq: 0, offN: 0,
     ended: false, endReason: '', endAt: 0, resultsShown: false,
     excite: CONFIG.exciteRest, fbWord: '', fbCol: '', fbUntil: -1e9, snapUntil: -1e9, fallAt: -1e9, flipUntil: -1e9,
@@ -330,7 +330,7 @@
     }
   }
   function resetActCounters() {
-    S.misses = 0; S.perfects = 0; S.goods = 0; S.takes = 0; S.flips = 0; S.actLaughs = 0;
+    S.misses = 0; S.perfects = 0; S.goods = 0; S.takes = 0; S.flips = 0; S.actLaughs = 0; S.fallSound = '';
     S.offSum = 0; S.offSq = 0; S.offN = 0;
     S.ended = false; S.endReason = ''; S.endAt = 0; S.resultsShown = false;
     S.fbUntil = -1e9; S.snapUntil = -1e9; S.fallAt = -1e9; S.flipUntil = -1e9; S.excite = CONFIG.exciteRest;
@@ -427,7 +427,9 @@
     S.misses++;
     feedback(word, CONFIG.col.miss, CONFIG.exciteStep[2]);
     S.fallAt = S.now;
-    playSound('slip', 0); playSound('cough', 0.25 + (A.ctx ? A.ctx.currentTime : 0));
+    // a host page that pays for falls (night1.html sets window.__cueOpts.hurt) gets the big laugh at the fall; alone the page keeps the cough
+    S.fallSound = window.__cueOpts && window.__cueOpts.hurt ? 'laughBig' : 'cough';
+    playSound('slip', 0); playSound(S.fallSound, 0.25 + (A.ctx ? A.ctx.currentTime : 0));
     if (S.misses >= CONFIG.missesToEnd) endAct('two misses');
   }
   function addLaughs(n) { S.laughs += n; S.actLaughs += n; }
@@ -815,7 +817,7 @@
     setLatency(v) { setLatency(v); },
     info() {
       return { scene: S.scene, ended: S.ended, endReason: S.endReason, misses: S.misses, perfects: S.perfects, goods: S.goods,
-        takes: S.takes, takeBeats: S.takeBeats, flips: S.flips, laughs: S.laughs, actLaughs: S.actLaughs, mask: S.mask,
+        takes: S.takes, takeBeats: S.takeBeats, flips: S.flips, fallSound: S.fallSound, laughs: S.laughs, actLaughs: S.actLaughs, mask: S.mask,
         beatCount: S.beatCount, lastFit: S.lastFit, endAt: S.endAt, phone: S.phone, w: view.w, h: view.h, R: view.R, R0: view.R0, cx: view.cx, cy: view.cy, ringR: view.ringR, maskR: view.maskR,
         actCount: S.actCount, model: !!(window.__model && window.__model.ready), modelError: window.__model ? window.__model.error : 'no module', view3d: window.__model ? window.__model.viewName : '', confettiAlive: cf.life.reduce((n, l) => n + (l > 0 ? 1 : 0), 0) };
     },

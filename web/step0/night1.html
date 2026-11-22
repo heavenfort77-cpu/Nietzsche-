@@ -33,8 +33,17 @@
   /* ===== night 1 layer ===== */
   .card { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; box-sizing: border-box; background: #0c0809ee; z-index: 20; }
   .card.see { background: linear-gradient(#0c080900 40%, #0c0809e6 75%); justify-content: flex-end; padding-bottom: 48px; }
-  .card.shopAt { background: linear-gradient(#0c080900 52%, #0c0809e6 80%); gap: 8px; padding-bottom: 20px; }
+  /* shop at the mirror: the panel sits left of the glass (landscape) or under it (portrait) so the performing reflection stays clear (panel item 5) */
+  .card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }
+  .card.shopAt > * { max-width: 34vw; }
+  .card.shopAt .opts { flex-direction: column; justify-content: flex-start; }
   .card.shopAt .opt { padding: 8px 14px; }
+  @media (orientation: portrait) {
+    .card.shopAt { background: linear-gradient(#0c080900 55%, #0c0809e6 78%); align-items: center; justify-content: flex-end; text-align: center; padding: 0 16px 16px; }
+    .card.shopAt > * { max-width: 100%; }
+    .card.shopAt .opts { flex-direction: row; justify-content: center; }
+    .card.shopAt h2, .card.shopAt > p:first-of-type { display: none; }
+  }
   .card .knows { color: #f0d27a; font: 400 18px/1.5 Georgia, serif; }
   .card h2 { margin: 0; font: 600 22px/1.2 Georgia, serif; color: #f0d27a; }
   .card p { margin: 0; max-width: 560px; }
@@ -610,6 +619,23 @@ const N1 = Object.freeze({
   learnLunge: 1.0, learnLungeTempo: 2.6,
   // end card heading over the list of purchases (owner 22 Nov: "the shame of living", was "The Performer now knows:")
   endKnows: 'The shame of living:',
+  // panel item 3: while it performs the reflection wears this face cell (the clown's grin) at this paint amount, and a laugh comes from the glass at the move
+  learnGrin: 'smile', learnGrinPaint: 1,
+  // a short laugh (glass in the shop, offstage after the wipe): notes, gap s, first and last pitch Hz, note length s, volume
+  laugh: { n: 4, gap: 0.13, f0: 340, f1: 250, dur: 0.1, vol: 0.09 },
+  // panel item 4: small line under the end card list of purchases
+  endLearned: 'The Performer learned each one.',
+  // ----- small win at the end of the Mirror World (owner pitch 22 Nov, panel 11 of 12: design/PANEL-small-win.md) -----
+  // switch: false = straight from the Nietzsche line to the shards card
+  smallWin: true,
+  // win: the prompt, paint layers wiped (Mask never goes below the night's starting Mask), wipe time s
+  winText: 'Wipe away one line of paint', winMask: 1, wipeSecs: 0.7,
+  // loss: the prompt (he stands up from the chair by himself; no laugh, no meter change)
+  loseText: 'Stand up',
+  // end card line for each branch
+  winDone: 'He wiped away one line.', loseDone: 'He got up.',
+  // hold after the action before the shards card, s; the one real laugh after the wipe, delay s
+  smallHoldSecs: 1.4, laughAfter: 0.15,
 });
 
 // ===== STATE =====
@@ -1321,6 +1347,8 @@ const NS = {
   rmood: { tempo: 1, chest: 6, neck: 2, head: 2 }, mw: null, cable: null, tape: null, poll: 0, cue: null, card: null,
   // fix 2: the hurt Laughs of this act (computed once per act result); fix 5: the reflection's purchase performance
   hurt: null, hurtFor: null, learn: null, learnOff: 0, reflUp: 0, reflBase: { x: 0, z: 0, fx: 0, fz: 0 }, learnDone: 0,
+  // small win: Mask at the start of the night (the wipe never goes below it), the wipe in progress, the end-card line, whether the laugh played
+  maskStart: 0, wipe: null, smallDone: '', laughed: false, smallT: 0, smallFor: 0,
 };
 const crew = [];
 const cast = {};
@@ -1414,12 +1442,17 @@ function audio() {
   if (NS.audio && NS.audio.state === 'suspended') NS.audio.resume();
   return NS.audio;
 }
-function tone(f0, f1, dur, type, vol) {
+function tone(f0, f1, dur, type, vol, delay) {
   const a = audio(); if (!a) return;
-  const t = a.currentTime, o = a.createOscillator(), g = a.createGain();
+  const t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+// a short laugh on the audio clock (N1.laugh), starting after delay s
+function laugh(delay) {
+  const L = N1.laugh;
+  for (let i = 0; i < L.n; i++) { const f = L.f0 + (L.f1 - L.f0) * i / Math.max(1, L.n - 1); tone(f, f * 0.85, L.dur, 'triangle', L.vol, (delay || 0) + i * L.gap); }
 }
 function honk() { tone(520, 390, 0.12, 'square', 0.12); setTimeout(() => tone(400, 300, 0.22, 'square', 0.12), 120); }
 
@@ -1427,7 +1460,7 @@ function honk() { tone(520, 390, 0.12, 'square', 0.12); setTimeout(() => tone(40
 function show(id, html) {
   hideCard();
   const d = document.createElement('div');
-  d.className = 'card' + (id === 'dazai' ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
+  d.className = 'card' + (id === 'dazai' || id === 'small' ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
   d.id = 'card_' + id;
   d.innerHTML = html;
   document.body.appendChild(d);
@@ -1495,6 +1528,8 @@ function startAct(id) {
     let g = null;
     try { g = NS.cue.contentWindow.__game; } catch (e) { g = null; }
     if (!g) return;
+    // panel item 1: tell the cue page that a fall gets the big laugh tonight
+    if (!NS.cue.contentWindow.__cueOpts) NS.cue.contentWindow.__cueOpts = { hurt: N1.hurtPays };
     const i = g.info();
     if (i.scene === 'results' && !NS.actInfo) { NS.actInfo = i; clearInterval(NS.poll); setTimeout(crowdCard, 900); }
   }, 250);
@@ -1621,6 +1656,10 @@ function buildReflection() {
   refl.walk = refl.mixer.clipAction(c.walkClip);
   refl.slap = c.slapClip ? refl.mixer.clipAction(c.slapClip) : null;
   if (refl.slap) { refl.slap.setLoop(THREE.LoopOnce, 1); refl.slap.clampWhenFinished = true; }
+  // its own face material (same shader program as his), so it can grin while he does not (panel item 3)
+  const fu = c.face.material.uniforms;
+  refl.root.traverse((o) => { if (o.isSkinnedMesh && o.material === c.face.material) refl.face = o; });
+  refl.face.material = makeToon(fu.uMap.value, fu.uHasPaint.value ? fu.uPaint.value : null);
   findMoodBones(refl);
   for (const b of refl.moodBones) b.saved.copy(b.bone.quaternion);
 }
@@ -1644,7 +1683,7 @@ function mirrorSetup(kind) {
   refl.root.position.set(rb.x, 0, rb.z);
   refl.root.rotation.y = yaw;
   // the reflection starts seated with him and in its place (the shop moves it; reset here for every mirror scene)
-  NS.learn = null; NS.learnOff = 0; NS.reflUp = 0;
+  NS.learn = null; NS.learnOff = 0; NS.reflUp = 0; NS.wipe = null;
   refl.walk.stop(); if (refl.slap) refl.slap.stop(); refl.idle.reset().setEffectiveWeight(1).play();
   const seated = kind === 'entry' ? 0 : 1;
   NS.sit = NS.sitTarget = NS.reflSit = seated;
@@ -1757,6 +1796,19 @@ function updateMirror(dt) {
     c.face.material.uniforms.uPaintAmt.value = N1.paintHalf + (CONFIG.paint - N1.paintHalf) * ease(k);
     if (k >= 1) { NS.painted = true; showDazai(); }
   }
+  // small win: the wipe eases the paint down, then one real laugh answers it
+  if (NS.wipe) {
+    NS.wipe.t += dt;
+    const k = Math.min(1, NS.wipe.t / N1.wipeSecs);
+    c.face.material.uniforms.uPaintAmt.value = NS.wipe.from + (NS.wipe.to - NS.wipe.from) * ease(k);
+    if (k >= 1) { NS.wipe = null; laugh(N1.laughAfter); NS.laughed = true; }
+  }
+  smallUpdate(dt);
+  // the reflection's face follows his, except while it stands and performs (the grin)
+  const rf = refl.face.material.uniforms, cf = c.face.material.uniforms;
+  if (NS.reflUp > 0) { rf.uCell.value.fromArray(CONFIG.faces[N1.learnGrin]); rf.uPaintAmt.value = N1.learnGrinPaint; }
+  else { rf.uCell.value.copy(cf.uCell.value); rf.uPaintAmt.value = cf.uPaintAmt.value; }
+  rf.uFlake.value = cf.uFlake.value;
   if (S.mirror === 'entry') {
     if (Math.abs(NS.sit - NS.reflSit) > N1.crackAt && NS.cracks < N1.cracksMax && NS.mirT - NS.lastCrack > 0.12) addCrack();
     if (NS.sitTarget === 1 && NS.sit >= 1 && NS.reflSit >= 0.999 && !NS.fogging) { NS.fogging = true; setTimeout(nietzscheInCard, 600); }
@@ -1782,6 +1834,7 @@ function n1Key(e) {
   if (NS.scene === 'title') { if (e.code === 'Enter' || e.code === 'Space') el.start.click(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
   if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
+  if (NS.scene === 'small') { if (e.code === 'Enter' || e.code === 'Space') smallPress(); return true; }
   if (S.mirror === 'entry') {
     if (NS.card && NS.card.id === 'card_nietzscheIn') { if (e.code === 'Enter' || e.code === 'Space') NS.card.querySelector('#goIn').click(); return true; }
     if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); }
@@ -1801,6 +1854,7 @@ function n1Pointer(e) {
   if (NS.scene === 'logo') { logoOut(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } return true; }
   if (S.mirror === 'entry') { if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); } return true; }
+  if (NS.scene === 'small') { smallPress(); return true; }
   if (S.mode === 'mw' && e.pointerType === 'mouse') {
     aimMouse(e);
     if (e.button === 0) gag('slap', NS.mouse); else if (e.button === 2) gag('pie', NS.mouse);
@@ -2175,15 +2229,46 @@ function endMW(result) {
 function nietzscheCard() {
   NS.scene = 'out';
   const at = NS.nAt;
-  if (at !== 'out' && at !== 'both') { keptCard(); return; }
+  if (at !== 'out' && at !== 'both') { afterMirror(); return; }
   const q = N1.nietzsche;
   const d = show('nietzsche', `<div class="quote">"${q[0]}"<small>${q[1]}</small></div><button id="toKept" class="held">Leave the mirror</button>`);
   const b = d.querySelector('#toKept');
-  b.addEventListener('click', keptCard);
+  b.addEventListener('click', afterMirror);
   tone(N1.nietzscheToneHz, N1.nietzscheToneHz * 0.9, 1.6, 'sine', 0.1);
   setTimeout(() => { if (NS.card === d) b.classList.remove('held'); }, N1.nietzscheHoldMs);
 }
+// small win (owner pitch, panel 11 of 12): back at the mirror; a win wipes one line of paint and a real laugh answers, a loss stands up by himself
+function afterMirror() { if (N1.smallWin) smallWinCard(); else keptCard(); }
+function smallWinCard() {
+  hideCard();
+  mirrorSetup('after'); S.running = true; startLoop();
+  NS.scene = 'small'; NS.smallDone = ''; NS.laughed = false;
+  const d = show('small', `<button id="smallGo">${NS.result === 'win' ? N1.winText : N1.loseText}</button>`);
+  d.querySelector('#smallGo').addEventListener('click', smallPress);
+}
+function smallPress() {
+  if (NS.scene !== 'small' || NS.smallDone) return;
+  const win = NS.result === 'win', b = NS.card && NS.card.querySelector('#smallGo');
+  if (b) b.disabled = true;
+  if (win) {
+    const from = chars.clown.face.material.uniforms.uPaintAmt.value;
+    NS.mask = Math.max(NS.maskStart, NS.mask - N1.winMask);
+    NS.wipe = { t: 0, from, to: Math.max(0, from - CONFIG.paintPerMask * N1.winMask) };
+    NS.smallDone = N1.winDone;
+  } else { NS.sitTarget = 0; NS.smallDone = N1.loseDone; }
+  // the hold runs on game time in updateMirror (smallUpdate), so the action always finishes before the shards card
+  NS.smallT = 0; NS.smallFor = (win ? N1.wipeSecs : N1.sitSecs) + N1.smallHoldSecs;
+}
+function smallUpdate(dt) {
+  if (NS.scene !== 'small' || !NS.smallDone) return;
+  NS.smallT += dt;
+  if (NS.smallT >= NS.smallFor && !NS.wipe) keptCard();
+}
 function keptCard() {
+  // nothing renders behind the opaque card
+  NS.scene = 'kept';
+  if (S.mirror) leaveMirror();
+  S.running = false;
   const lost = NS.result === 'lose';
   const d = show('kept', `<p>${lost ? 'He wakes at the mirror. He kept half his shards: ' : 'Out of the mirror, with '}${NS.mwKept} shard${NS.mwKept === 1 ? '' : 's'}.</p><button id="toShop">To the mirror</button>`);
   d.querySelector('#toShop').addEventListener('click', shopCard);
@@ -2200,11 +2285,12 @@ function learnUpdate(dt, v) {
     L.t += dt;
     const t1 = N1.learnStandSecs, t2 = t1 + N1.learnStepSecs, t3 = t2 + N1.learnMoveSecs;
     NS.reflUp = Math.min(1, NS.reflUp + dt / N1.learnStandSecs);
-    if (!L.cracked && NS.reflUp >= 0.5) { L.cracked = true; if (NS.cracks < N1.cracksMax) addCrack(); }
+    if (!L.cracked && NS.reflUp >= 0.5) { L.cracked = true; if (NS.cracks < N1.cracksMax) addCrack(); else tone(2400, 1800, 0.06, 'triangle', 0.05); }
     if (L.phase === 0 && L.t >= t1) { L.phase = 1; refl.walk.timeScale = 1; refl.walk.reset().play(); refl.idle.crossFadeTo(refl.walk, 0.15, false); }
     if (L.phase === 1) NS.learnOff = L.from + (L.to - L.from) * ease(Math.min(1, (L.t - t1) / N1.learnStepSecs));
     if (L.phase === 1 && L.t >= t2) {
       L.phase = 2; NS.learnOff = L.to;
+      laugh(0);
       if (L.it.move === 'slap' && refl.slap) { refl.slap.reset().play(); refl.walk.crossFadeTo(refl.slap, 0.1, false); }
       else refl.walk.timeScale = N1.learnLungeTempo;
     }
@@ -2253,19 +2339,19 @@ function endCard() {
   S.running = false;
   const v = NS.verbs, i = NS.actInfo || {};
   const titles = NS.bought.map((id) => (N1.shop.find((x) => x.id === id) || { title: id }).title);
-  const knows = N1.performerLearns ? `<p class="knows">${N1.endKnows}<br>${titles.length ? titles.join('<br>') : 'nothing bought tonight'}</p>` : '';
+  const knows = N1.performerLearns ? `<p class="knows">${N1.endKnows}<br>${titles.length ? titles.join('<br>') + `<br><small>${N1.endLearned}</small>` : 'nothing bought tonight'}</p>` : '';
   const d = show('end', `<h2>End of night 1</h2>${knows}<div class="sum">
     Corridor: jumped the cable ${v.jump ? 'yes' : 'no'}, took the pie ${v.take ? 'yes' : 'no'}, honked the horn ${v.honk ? 'yes' : 'no'}, tripped for the child ${v.trip ? 'yes' : 'no'}<br>
     Act: ${NS.act === 'fall' ? 'The deliberate fall' : 'Spotlight sweep (lent)'}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
     Crowd: ${NS.crowd}<br>
-    Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}; Laughs left ${NS.mwLaughs}<br>
+    Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
     Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>
     <button id="again1">Play night 1 again</button>`);
   d.querySelector('#again1').addEventListener('click', () => location.reload());
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, chars, room, input, mwCam, refl, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

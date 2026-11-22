@@ -27,6 +27,8 @@ const CFG = Object.freeze({
   blobR: 0.45, blobA: 0.45,
   // face paint amount: start, gain per Mask point, max
   paintStart: 0.4, paintPerMask: 0.06, paintMax: 1,
+  // the cue's tilt (gags, misses, the fall that ends the act) becomes a lean backwards about his feet, this share of the 2D tilt (owner 22 Nov: lean backwards, not sideways)
+  leanBack: 0.5,
   // turn fade time between views, ms
   fadeMs: 140,
   // toon light values: the game page's stage world (look unchanged)
@@ -39,7 +41,7 @@ const CFG = Object.freeze({
   order: ['ring', 'dressing', 'mirror', 'exit'],
 });
 
-const M = window.__model = { parts: null, ready: false, looking: false, viewName: 'ring', error: '', showCrowd() { return this.viewName === 'ring'; } };
+const M = window.__model = { camera: null, parts: null, ready: false, looking: false, viewName: 'ring', error: '', showCrowd() { return this.viewName === 'ring'; } };
 const stateEl = document.getElementById('modelState');
 function say(t) { if (stateEl) stateEl.textContent = t; }
 
@@ -160,7 +162,7 @@ async function load() {
   setView('ring');
   renderer.compile(scene, camera);
   for (const t of [face, paint, ...plates]) renderer.initTexture(t);
-  M.parts = parts; M.faces = CFG.faces;
+  M.parts = parts; M.faces = CFG.faces; M.camera = camera;
   M.ready = true;
   say('Clown model and room loaded (2.5D: 3D clown, 2D room).');
 }
@@ -214,8 +216,8 @@ M.frame = function (t, pose, view) {
   shared.uRimDir.value.copy(rimW).transformDirection(camera.matrixWorldInverse);
 
   if (parts.root.visible) {
-    // the 2D clown's moves on the real model: tilt about his feet, face cell, paint, slap on take
-    parts.root.rotation.z = -pose.tilt;
+    // the 2D clown's moves on the real model: lean backwards about his feet, face cell, paint, slap on take
+    parts.root.rotation.x = -pose.tilt * CFG.leanBack;
     const face = pose.snap ? 'startle' : pose.miss ? 'wince' : pose.flip ? 'sad' : 'smile';
     if (face !== faceNow) { faceNow = face; parts.face.material.uniforms.uCell.value.fromArray(CFG.faces[face]); }
     parts.face.material.uniforms.uPaintAmt.value = Math.min(CFG.paintMax, CFG.paintStart + pose.mask * CFG.paintPerMask);
