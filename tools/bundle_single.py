@@ -69,7 +69,9 @@ files['cue_model.html'] = ['text/html', base64.b64encode(cue.encode('utf-8')).de
 # boot: runs first in the page (and, from the parent's pack, in the cue frame): blob URLs, fetch / img / iframe mapping, the import map
 BOOT = r"""<script>
 (function () {
-  var top = window.parent !== window && window.parent.__PACK ? window.parent.__PACK : null, P = top;
+  // the parent is another site when the page is embedded (itch.io): reading it throws, so only a same-site parent (the cue frame's host) is used
+  var top = null; try { top = window.parent !== window && window.parent.__PACK ? window.parent.__PACK : null; } catch (e) { top = null; }
+  var P = top;
   if (!P) {
     var raw = JSON.parse(document.getElementById('pack').textContent), url = {}, text = {};
     var blob = function (mime, b) { var s = atob(b), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new Blob([u], { type: mime }); };
