@@ -1,0 +1,16 @@
+PASS set: one mesh, triangles <= 60k | 16615 triangles from 503 parts
+PASS set UVs: no overlaps | 0 faces
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS bake finite and not black | mean 0.060, light bake 182s at 1024px x 64 samples
+PASS spot pool: ring centre brighter than its edge | centre 0.574, edge 0.159
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+01:09:45 | INFO: Starting glTF 2.0 export
+01:09:45 | INFO: Extracting primitive: Cylinder
+01:09:45 | INFO: Primitives created: 1
+01:09:45 | INFO: Finished glTF 2.0 export in 0.027372360229492188 s
+
+PASS crowd cards: 12 figures, each covers 15-60% of its cell
+PASS layout: seats >= 500 and bulbs >= 250 (desktop density) | 515 seats, 309 bulbs
