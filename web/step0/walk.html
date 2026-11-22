@@ -21,6 +21,14 @@
   #state { font-size: 12px; opacity: .8; }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity var(--fade, 300ms) linear; }
   #roomBar { position: fixed; left: 0; right: 0; bottom: 34px; display: flex; justify-content: center; gap: 10px; }
+  #gains { position: absolute; right: 10px; top: 8px; text-align: right; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; }
+  #carry { font-size: 12px; font-weight: 400; opacity: .85; }
+  #prep { position: fixed; left: 10px; top: 40px; width: min(40%, 340px); display: flex; flex-direction: column; gap: 6px; background: #14181fcc; padding: 10px; border-radius: 8px; }
+  #prep .t { font-weight: 600; font-size: 13px; }
+  #prep button { font: inherit; min-height: 44px; text-align: left; padding: 4px 10px; border-radius: 6px; border: 0; background: #2a2f38; color: #d6dbe4; }
+  #prep button:disabled { opacity: .45; }
+  #prep small { display: block; opacity: .8; }
+  @media (orientation: portrait) { #prep { left: 4%; top: auto; bottom: 90px; width: 92%; } }
   #roomBar button { font: inherit; font-weight: 600; min-width: 48px; min-height: 44px; padding: 0 16px; border-radius: 6px; border: 0; background: #2a2f38; color: #d6dbe4; }
 </style>
 </head>
@@ -30,14 +38,16 @@
   <div class="hud" id="shotName">Loading</div>
   <div class="label hidden" id="label0"></div>
   <div class="label hidden" id="label1"></div>
+  <div id="gains" class="hidden">Laughs <span id="laughsN">0</span> &middot; Mask <span id="maskN">0</span><div id="carry"></div></div>
 </div></div>
+<div id="prep" class="hidden"><div class="t">Dressing table: spend Laughs before the Mirror</div></div>
 <div id="stick" class="hidden"><div id="knob"></div></div>
 <div id="hint">Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.</div>
 <div id="roomBar" class="hidden"><button id="roomL" aria-label="Turn left">&#9664;</button><button id="again">Walk back again</button><button id="roomR" aria-label="Turn right">&#9654;</button></div>
 <div id="panel">
   <div id="panelText">Walk out: cube room to the ring (corridor, wings, ring entrance). Walk back: after the act, ring to the cube room.</div>
   <div id="state">Loading the clown, two performers, three shots and the cube room...</div>
-  <div><button id="go" class="hidden">Walk out</button> <button id="back" class="hidden">Walk back</button></div>
+  <div><button id="go" class="hidden">Walk out</button> <button id="back" class="hidden">Walk back (good act)</button> <button id="backFlop" class="hidden">Walk back (flop)</button></div>
 </div>
 <div id="fade"></div>
 
@@ -334,10 +344,26 @@ const CONFIG = Object.freeze({
   backEndY: 2.5,
   // his face on the way out and on the way back
   faceOut: 'smile', faceBack: 'sad',
+  // ----- what the act paid, shown and spent in the room (owner, 22 Nov: show the gains, and spend Laughs at a wall) -----
+  // stand-in act results (no act is played in this sample): Laughs paid and Mask (paint layers) added
+  actResults: { good: { laughs: 60, mask: 2 }, flop: { laughs: 12, mask: 0 } },
+  // face paint: amount per Mask layer on top of the base paint, and the most it can reach
+  paintPerMask: 0.08, paintMax: 1,
+  // time for the Laughs count-up and the paint to settle after he comes in, s
+  gainSecs: 1.2,
+  // the wall with the dressing table, and what it sells for Laughs (each once per night; proposal, waiting on the owner)
+  prepWall: 'dressing',
+  prep: [
+    { id: 'cream', title: 'Cold cream', note: 'One paint layer off: the Mirror is calmer.', cost: 15, mask: -1 },
+    { id: 'pie', title: 'Pocket a pie', note: 'One free Pie throw in the Mirror.', cost: 10, carry: 'Pie' },
+    { id: 'nose', title: 'Spare nose', note: 'Takes the first hit in the Mirror.', cost: 12, carry: 'Spare nose' },
+  ],
   // posture and tempo on top of the walk and idle clips (the approved clips are unchanged).
   // tempo scales clip speed and ground speed together (no foot slide); chest, neck, head: forward tilt in degrees, negative lifts him upright
   moodOut: { tempo: 1.18, chest: -9, neck: -5, head: -8 },
   moodBack: { tempo: 0.78, chest: 11, neck: 7, head: 14 },
+  // in the room his face must read (paint shows the Mask), so the slump is lighter there
+  moodRoom: { tempo: 1, chest: 6, neck: 2, head: 2 },
   // cube room plates (box-and-shape, from cube25d/build_cube.py) and the view he comes in by
   room: './cube25d/views.json', roomPlates: './cube25d/', roomStart: 'exit',
   // room views in turning order (yaw grows to the left)
@@ -380,7 +406,8 @@ const S = {
   shot: '', x: 0, y: 0, yaw: 0, speed: CONFIG.speedFallback, moving: false, still: 0, lastMag: 1, dirX: 0, dirZ: -1,
   hold: false, holdAng: 0, basisX: 0, basisZ: -1,
   dprI: 0, slowT: 0, lastT: 0, raf: 0, w: 0, h: 0, cuts: 0, walkStarts: 0,
-  back: false, room: false, roomView: '', roomT: 0, turning: false, gloom: -1, mood: CONFIG.moodOut,
+  back: false, room: false, roomView: '', roomT: 0, turning: false, gloom: -1, mood: CONFIG.moodOut, prepOn: false, countFrom: 0, countNow: 0,
+  result: 'good', laughs: 0, mask: 0, shownLaughs: -1, shownMask: -1, gainT: 0, paintFrom: 0, paintNow: 0, bought: {}, carry: [],
 };
 // test hook: read by the headless checks
 window.__walk = S;
@@ -391,7 +418,9 @@ const el = {
   labels: [document.getElementById('label0'), document.getElementById('label1')],
   back: document.getElementById('back'), fade: document.getElementById('fade'), roomBar: document.getElementById('roomBar'),
   roomL: document.getElementById('roomL'), roomR: document.getElementById('roomR'), again: document.getElementById('again'),
-  hint: document.getElementById('hint'),
+  hint: document.getElementById('hint'), backFlop: document.getElementById('backFlop'), gains: document.getElementById('gains'),
+  laughsN: document.getElementById('laughsN'), maskN: document.getElementById('maskN'), carry: document.getElementById('carry'),
+  prep: document.getElementById('prep'), prepBtns: [],
 };
 const renderer = new THREE.WebGLRenderer({ canvas: el.canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
 renderer.autoClear = false;
@@ -663,6 +692,7 @@ function setRoomView(name) {
   shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(roomCam.matrixWorldInverse);
   shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(roomCam.matrixWorldInverse);
   el.shotName.textContent = 'Cube room: ' + room.data.views[name].title;
+  showPrep(name === CONFIG.prepWall);
 }
 function fadeThen(ms, fn) {
   el.fade.style.setProperty('--fade', ms + 'ms');
@@ -679,10 +709,51 @@ function turnRoom(step) {
     setTimeout(() => { S.turning = false; }, CONFIG.turnFadeMs);
   });
 }
+// ----- gains and the dressing table -----
+function paintFor(mask) { return Math.min(CONFIG.paintMax, CONFIG.paint + CONFIG.paintPerMask * Math.max(0, mask)); }
+function buildPrep() {
+  for (const it of CONFIG.prep) {
+    const b = document.createElement('button');
+    b.innerHTML = `${it.title} &middot; ${it.cost} Laughs<small>${it.note}</small>`;
+    b.addEventListener('click', () => buy(it));
+    el.prep.appendChild(b);
+    el.prepBtns.push({ it, b, off: null });
+  }
+}
+function showCarry() {
+  el.carry.textContent = 'Into the Mirror: ' + S.laughs + ' Laughs' + (S.carry.length ? ' + ' + S.carry.join(', ') : '');
+}
+function buy(it) {
+  if (!S.room || S.bought[it.id] || S.laughs < it.cost) return;
+  S.bought[it.id] = true;
+  S.laughs -= it.cost;
+  if (it.mask) S.mask = Math.max(0, S.mask + it.mask);
+  if (it.carry) S.carry.push(it.carry);
+  // paint eases to the new Mask
+  S.paintFrom = S.paintNow; S.gainT = 0;
+  S.countFrom = S.countNow;
+  showCarry();
+}
+function updateGains(dt) {
+  if (S.gainT >= CONFIG.gainSecs) return;
+  S.gainT = Math.min(CONFIG.gainSecs, S.gainT + dt);
+  const k = S.gainT / CONFIG.gainSecs, e = k * k * (3 - 2 * k);
+  S.paintNow = S.paintFrom + (paintFor(S.mask) - S.paintFrom) * e;
+  chars.clown.face.material.uniforms.uPaintAmt.value = S.paintNow;
+  S.countNow = S.countFrom + (S.laughs - S.countFrom) * e;
+  const l = Math.round(S.countNow);
+  if (l !== S.shownLaughs) { S.shownLaughs = l; el.laughsN.textContent = l; }
+  if (S.mask !== S.shownMask) { S.shownMask = S.mask; el.maskN.textContent = S.mask; }
+  for (const p of el.prepBtns) {
+    const off = !!S.bought[p.it.id] || S.laughs < p.it.cost;
+    if (off !== p.off) { p.off = off; p.b.disabled = off; }
+  }
+}
+function showPrep(on) { if (on !== S.prepOn) { S.prepOn = on; el.prep.classList.toggle('hidden', !on); } }
 // the clown moves between the walk scene and the room scene; walk state he carried is reset here
 function enterRoom() {
   const c = chars.clown;
-  S.room = true; S.moving = false; S.hold = false; S.roomT = 0;
+  S.room = true; S.moving = false; S.hold = false; S.roomT = 0; S.mood = CONFIG.moodRoom;
   c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
   roomScene.add(c.root, c.blob);
   setFace(c, CONFIG.faceBack);
@@ -692,12 +763,23 @@ function enterRoom() {
   for (const p of performers) p.shown = false;
   el.roomBar.classList.remove('hidden');
   el.hint.textContent = 'Look around: A / D or arrow keys, or the buttons.';
+  // the act pays out: Laughs count up from 0 and the paint thickens by the Mask it added
+  const r = CONFIG.actResults[S.result];
+  S.laughs = r.laughs; S.mask = r.mask; S.bought = {}; S.carry = [];
+  S.paintFrom = CONFIG.paint; S.paintNow = CONFIG.paint; S.countFrom = 0; S.countNow = 0; S.gainT = 0;
+  S.shownLaughs = -1; S.shownMask = -1;
+  for (const p of el.prepBtns) p.off = null;
+  showCarry();
+  el.gains.classList.remove('hidden');
 }
 function leaveRoom() {
   const c = chars.clown;
   S.room = false;
   scene.add(c.root, c.blob);
   el.roomBar.classList.add('hidden');
+  el.gains.classList.add('hidden');
+  showPrep(false);
+  chars.clown.face.material.uniforms.uPaintAmt.value = CONFIG.paint;
   el.hint.textContent = 'Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.';
 }
 
@@ -829,6 +911,7 @@ function updateRoom(dt) {
   moodRestore(chars.clown);
   chars.clown.mixer.update(dt);
   moodApply(chars.clown, S.mood);
+  updateGains(dt);
 }
 function updatePerformers(dt) {
   for (let i = 0; i < performers.length; i++) {
@@ -928,14 +1011,16 @@ function endWalk() {
   el.go.textContent = 'Walk out again';
   el.panel.classList.remove('hidden');
 }
-function begin(back) {
+function begin(back, result) {
+  if (result) S.result = result;
   placeStart(back);
   el.panel.classList.add('hidden');
   S.running = true;
   startLoop();
 }
 el.go.addEventListener('click', () => begin(false));
-el.back.addEventListener('click', () => begin(true));
+el.back.addEventListener('click', () => begin(true, 'good'));
+el.backFlop.addEventListener('click', () => begin(true, 'flop'));
 el.again.addEventListener('click', () => { if (!S.turning) begin(true); });
 el.roomL.addEventListener('click', () => turnRoom(1));
 el.roomR.addEventListener('click', () => turnRoom(-1));
@@ -945,6 +1030,7 @@ async function boot() {
   S.shotList = Object.keys(S.data.shots).map((name) => ({ name, zone: S.data.shots[name].zone }));
   makePlate(S.data);
   makeVignette();
+  buildPrep();
   await Promise.all([loadPlates(tl, S.data), loadRoom(tl)]);
   const [clown, whiteface, performer] = await Promise.all(['clown', 'whiteface', 'performer'].map((n) => loadChar(n, tl)));
   Object.assign(chars, { clown, whiteface, performer });
@@ -978,6 +1064,7 @@ async function boot() {
   el.state.textContent = 'Ready.';
   el.go.classList.remove('hidden');
   el.back.classList.remove('hidden');
+  el.backFlop.classList.remove('hidden');
 }
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
