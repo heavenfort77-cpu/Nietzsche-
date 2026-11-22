@@ -187,3 +187,5 @@ Cautions on the owner's fight, each with an add-on:
 The panel's order: add A1, A4, A3; add A5 only with the 6-Laugh cap and the still beam; drop A2 (failed the count, the shrinking is invisible, A3 covers the same dissent).
 
 Producer check (lead): the "at most 3 attack types" caution cuts against the GDD's "the Performer opens by performing every act you own"; the owner's line gives the Performer tells but does not say which attacks it keeps. The slap's present cost was not looked up this round.
+
+Owner decision 22 Nov 23:59: "a4". A4 is in: the monster Light is put out, never beaten (after 3 gags the dark lamp stays overhead, still turning to follow him, with a click and a rim glint; it returns the next night with a beam 15% wider). Read as also accepting the round 2 P5 answer A4 is built on (face the lamp, 3 gags, dark for that night only). A1, A2, A3, A5 not picked. Not built.
