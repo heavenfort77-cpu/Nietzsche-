@@ -20,5 +20,8 @@ for c in whiteface performer; do
   mkdir -p $S/assets/$c
   for f in clown_v2.glb face_atlas.png face_paint.png; do git show "FETCH_HEAD:cast_$c/$c/$f" > $S/assets/$c/$f; done
 done
+# night1.html: the night-1 crew and the Mirror constructs (art/cast2, committed web GLBs)
+mkdir -p $S/assets/cast2
+cp art/cast2/renders/*.glb $S/assets/cast2/
 rm -rf "$T"
-echo "ready: serve web/step0/ and open cue_model.html or walk.html"
+echo "ready: serve web/step0/ and open night1.html, cue_model.html or walk.html"
