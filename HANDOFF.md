@@ -5,6 +5,15 @@ Session: 16
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`; where they differ, `OWNER-REQUIREMENTS.md` section 6 (checks only every 5th session) and section 7 (zoom in / zoom out framings and the 2.5D methods: cube room, fixed-camera rooms, Mirror World turning camera) win (owner, 22 Nov: START-HERE.md cannot be edited from his side). This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
+## Owner requests not built (read first every session; producer finding 22 Nov: these were overtaken without telling the owner)
+
+- 22 Nov 13:45: the act after the cue as a real routine (`design/PANEL-act-price.md`, batch 3 brief in Next step 0). Owner asked 15:52 "where the performance after the cue game?"
+- 22 Nov 15:52 (panel `design/PANEL-owner-play-22nov.md`, owner to agree): B Light he can outrun at a price, C brisk walk out and one bubble at a time, D cable becomes the pratfall, E shorter walk back.
+- 22 Nov 11:22 item 5: cube room Ring wall -> backstage act board (panel F).
+- 22 Nov 11:22 items 2 and 4: Mirror World route (mirror corridor, then ring) and an unworldly backdrop scaled by Mask (panel G).
+- 22 Nov 15:13 item 7: spotlight sweep hold beats.
+- 22 Nov 11:22 item 1: the other 8 cast figures through the clowns' pipeline; item 6: panel on the changed night 1.
+
 ## Restart rule
 
 New session after 3 batch commits, after any context summary, or when the owner says "handoff", whichever comes first. `tools/handoff.sh` prints NEW SESSION NOW at the limit; `tools/handoff.sh close` must print PASS before handing over.
@@ -62,6 +71,8 @@ New session after 3 batch commits, after any context summary, or when the owner 
 - Not in step 0, on purpose: encore dial, whiteface's late spoken call (nights 3+), soldier-drill calls, Mirror World, shop. Step 0 is the cue alone (GDD build plan).
 
 ## Next step
+
+Session 17 order (panel `design/PANEL-owner-play-22nov.md`, owner 15:52 "i want answers"; owner to agree B-G): A the act routine (item 0 brief below), then B+C+D+E in one batch, then F, then G, then the hold beats.
 
 Owner order 22 Nov 15:13: the 7 worst findings of the harsh panel, then the act routine (batch 3 brief below, item 0). The 7: (1), (2), (3), (6) DONE batch 2; (4), (5) DONE batch 3; next session starts with (7) spotlight sweep hold beats (H12) in `cue_model.html` (GDD Tempo, Holds: the next ring appears after release and its fit snaps to the grid; night1 passes the act so the sweep uses holds; cue page checks are `smoke_night1.cjs` only, `test_cue.cjs` covers cue.html), then item 0 (act routine). Stranger findings 3-5, 7, 8, 11 go to the owner as the next list.
 
