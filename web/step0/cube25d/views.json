@@ -223,6 +223,55 @@
      "post_ball_-1"
     ]
    }
+  },
+  "board": {
+   "title": "Act board",
+   "yaw": 0.0,
+   "files": {
+    "back": "board_back.png",
+    "mid": "board_mid.png",
+    "front": "board_front.png"
+   },
+   "layers": {
+    "back": [
+     "board_broom",
+     "board_card_fall",
+     "board_card_fall_band",
+     "board_card_sweep",
+     "board_card_sweep_spot",
+     "board_face",
+     "board_frame",
+     "board_hatstand",
+     "board_hatstand_hat",
+     "board_header",
+     "board_lamp",
+     "board_pin_0",
+     "board_pin_1",
+     "wall_ring"
+    ],
+    "mid": [
+     "board_bucket",
+     "board_crate_0",
+     "board_crate_1",
+     "floor",
+     "poster",
+     "rug",
+     "trunk",
+     "trunk_band"
+    ],
+    "front": [
+     "bulb_0",
+     "bulb_1",
+     "bulb_2",
+     "bulb_8",
+     "bulb_9",
+     "chair_leg_-0.2_0.2",
+     "chair_leg_0.2_0.2",
+     "flap_1",
+     "lantern",
+     "poster_band"
+    ]
+   }
   }
  }
 }

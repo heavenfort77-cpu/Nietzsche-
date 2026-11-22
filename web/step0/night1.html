@@ -78,6 +78,12 @@
   #prompt { position: fixed; left: 0; right: 0; bottom: 64px; text-align: center; font-weight: 600; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
   #verb { position: fixed; right: 16px; bottom: 96px; min-width: 120px; min-height: 64px; border-radius: 32px; border: 0; background: #cfaa4e; color: #1e1714; font: 600 15px system-ui, sans-serif; padding: 0 18px; z-index: 6; }
   #sit { display: inline-block; }
+  /* panel F: the act board on the room wall; each act is a 44 px button over its card */
+  #boardActs { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+  #boardActs .act { position: absolute; left: calc(var(--x, 0) * 1px); top: calc(var(--y, 0) * 1px); transform: translate(-50%, -50%); pointer-events: auto; min-height: 44px; min-width: 44px; max-width: 30vw; padding: 8px 12px; border-radius: 6px; border: 1px solid #cfaa4e; background: #1e1714e6; color: #f0d27a; font: 600 15px/1.25 system-ui, sans-serif; cursor: pointer; }
+  #boardActs .act small { display: block; font-weight: 400; color: #eadfcf; }
+  /* phone portrait: the picture is about 220 px tall, so each act is one line on its card */
+  @media (orientation: portrait) { #boardActs .act { max-width: 40vw; padding: 6px 10px; font-size: 14px; white-space: nowrap; } #boardActs .act small { display: none; } }
   #cracks { position: absolute; left: 0; top: 0; pointer-events: none; }
   #fog { position: fixed; inset: 0; background: radial-gradient(circle at 50% 60%, #c9d5d7, #9db5bb 45%, #44666e); opacity: 0; pointer-events: none; transition: opacity 1.4s linear; z-index: 15; display: flex; align-items: center; justify-content: center; color: #11272b; font: 600 26px Georgia, serif; }
   #mwHud { position: absolute; right: 10px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
@@ -115,6 +121,7 @@
 </div>
 <div id="fade"></div>
 <div id="prompt"></div>
+<div id="boardActs" class="hidden"><button class="act" data-act="fall" data-card="-0.95">The deliberate fall<small>Yours. It always pays a little.</small></button><button class="act" data-act="sweep" data-card="0.95">Spotlight sweep<small>Lent tonight, free.</small></button></div>
 <button id="verb" class="hidden"></button>
 <div id="mwTip"></div>
 <div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">FALL</button></div>
@@ -357,6 +364,48 @@ void main() {
   gl_FragColor = vec4(c, 1.0);
 }
 </script>
+<!-- Mirror World, unworldly backdrop (panel G): a sky dome that swirls and floating glass that drifts, both brighter with Mask -->
+<script type="x-shader/x-vertex" id="skyVert">
+varying vec3 vDir;
+void main() {
+  vDir = normalize(position);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="skyFrag">
+uniform float uTime;
+uniform float uWarp;
+uniform float uAmt;
+varying vec3 vDir;
+void main() {
+  float sp = 0.4 + 6.0 * uWarp;
+  float n = sin(vDir.x * 6.0 + uTime * 0.11 * sp + sin(vDir.y * 9.0 - uTime * 0.07 * sp) * 1.7) * sin(vDir.z * 5.0 - uTime * 0.09 * sp + vDir.y * 3.0);
+  vec3 base = vec3(0.0056, 0.020, 0.024);
+  vec3 hi = vec3(0.10, 0.17, 0.18);
+  vec3 c = mix(base, hi, smoothstep(0.45, 1.0, abs(n)) * uAmt * smoothstep(-0.2, 0.4, vDir.y));
+  gl_FragColor = vec4(c, 1.0);
+  #include <colorspace_fragment>
+}
+</script>
+<script type="x-shader/x-vertex" id="glassVert">
+uniform float uTime;
+uniform float uWarp;
+varying float vK;
+void main() {
+  vec3 base = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  float id = float(gl_InstanceID);
+  float a = uTime * (0.3 + 0.4 * fract(id * 0.37)) * (0.4 + uWarp * 3.0) + id;
+  vec3 p = vec3(position.x * cos(a), position.y, position.x * sin(a));
+  p.y += sin(uTime * 0.5 + id) * 0.6 * (0.5 + uWarp * 2.0);
+  vK = 0.5 + 0.5 * cos(a);
+  gl_Position = projectionMatrix * viewMatrix * vec4(base + p, 1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="glassFrag">
+uniform float uGlass;
+varying float vK;
+void main() { gl_FragColor = vec4(vec3(0.55, 0.68, 0.70) * uGlass * (0.4 + vK), 1.0); }
+</script>
 <!-- the act's crowd: head-and-shoulders cards, one instanced draw; they face the camera about the vertical and bob from one excitement value -->
 <script type="x-shader/x-vertex" id="crowdVert">
 attribute float aSeed;
@@ -518,7 +567,8 @@ const CONFIG = Object.freeze({
   // walk back starts here, Blender floor (x, y), metres: the ring edge end of the entrance passage
   backStart: [-1.25, 18.0],
   // walk back ends when he gets this close to the cube room's exit flap (Blender y), metres
-  backEndY: 2.5,
+  // owner 22 Nov 15:58 (panel E, his version): keep the slow walk back, cut the corridor shot: it ends as he leaves the wings (was 2.5, the room's flap)
+  backEndY: 8.4,
   // his face on the way out and on the way back
   faceOut: 'smile', faceBack: 'sad',
   // ----- what the act paid, shown and spent in the room (owner, 22 Nov: show the gains, and spend Laughs at a wall) -----
@@ -539,14 +589,16 @@ const CONFIG = Object.freeze({
   ],
   // posture and tempo on top of the walk and idle clips (the approved clips are unchanged).
   // tempo scales clip speed and ground speed together (no foot slide); chest, neck, head: forward tilt in degrees, negative lifts him upright
-  moodOut: { tempo: 1.18, chest: -9, neck: -5, head: -8 },
+  // walk out tempo 1.6 (owner 22 Nov 15:52 "should walk faster", panel C: 1.22 m/s, about 13 s; clip sped the same, no foot slide); was 1.18
+  moodOut: { tempo: 1.6, chest: -9, neck: -5, head: -8 },
   moodBack: { tempo: 0.78, chest: 11, neck: 7, head: 14 },
   // in the room his face must read (paint shows the Mask), so the slump is lighter there
   moodRoom: { tempo: 1, chest: 6, neck: 2, head: 2 },
   // cube room plates (box-and-shape, from cube25d/build_cube.py) and the view he comes in by
   room: './cube25d/views.json', roomPlates: './cube25d/', roomStart: 'exit',
   // room views in turning order (yaw grows to the left)
-  roomOrder: ['ring', 'exit', 'mirror', 'dressing'],
+  // panel F (owner agreed 22 Nov 15:58): the Ring wall is now the backstage act board (Blender view 'board'; 'ring' stays for the cue page)
+  roomOrder: ['board', 'exit', 'mirror', 'dressing'],
   // room camera vertical field of view, degrees (plates are rendered at 46, the margin is for parallax later)
   roomFov: 42,
   // where he stands in the room: this far in front of the camera, metres
@@ -603,15 +655,18 @@ const N1 = Object.freeze({
   // corridor crew (GDD night loop step 2, panel round 1 D): Blender floor (x, y) metres, rest yaw degrees, the night-1 line (warm), verb
   crew: [
     { id: 'stagehand', title: 'Stagehand', at: [0.62, 4.9], yaw: -90, line: 'Evening. Full house tonight.' },
-    { id: 'rigger', title: 'Rigger', at: [-0.6, 7.6], yaw: 90, line: 'Cable going down. Hop it!', verb: 'jump', verbText: 'Jump the cable', anchor: [0.15, 7.95], done: 'Neat.' },
+    { id: 'rigger', title: 'Rigger', at: [2.5, 10.9], yaw: -90, line: 'Cable going down. Fall over it, they love that.', verb: 'fall', verbText: 'Pratfall over the cable', across: true, done: 'Neat.' },
     { id: 'props_girl', title: 'Props', at: [1.5, 9.3], yaw: -120, line: "Your pie. Don't eat it this time.", verb: 'take', verbText: 'Take the pie', done: 'Break a leg.' },
     { id: 'strongman', title: 'Strongman', at: [1.3, 12.7], yaw: -150, line: 'For luck! Give it a honk.', verb: 'honk', verbText: 'Honk the horn', done: 'HA! Now go get them.' },
     { id: 'child', title: '', at: [-2.25, 17.0], yaw: 90, line: '', verb: 'trip', verbText: 'Trip', done: '...on purpose.' },
   ],
   // crew collision radius, metres; verb reach from the member (or its anchor), metres; how long the child's words stay, s
   crewR: 0.35, verbDist: 1.5, saidSecs: 3,
-  // the rigger's floor cable across the corridor (Blender y, metres), its half thickness for the block, and the hop
-  cableY: 7.95, cableGap: 0.34, hopSecs: 0.55, hopH: 0.35, hopLand: 0.6,
+  // the rigger's floor cable across the wings (Blender y, metres; owner 22 Nov 15:58: in the corridor shot "the player sees nothing", the wings camera films it side-on),
+  // its x span over the walk area, its half thickness for the block; the verb shows within cableReach in front of it, anywhere along it
+  cableY: 11.3, cableX: [-2.2, 3.0], cableGap: 0.34, cableReach: 1.4,
+  // pratfall over the cable (panel D: the Mirror pratfall, same key Space or the gold button): he lands this far past the cable, m (time and pitch from N1.fall)
+  pratLand: 0.7,
   // deliberate trip for the child: time, forward pitch radians
   tripSecs: 0.8, tripPitch: 0.5,
   // pies from the props girl (Mirror World throws)
@@ -643,7 +698,8 @@ const N1 = Object.freeze({
   // ----- Mirror World (night 1): ring relit cold, fixed-spot turning camera, Laughs are health and ammo -----
   mwRadius: 6.8, mwCamPos: [0, 5.6, 12.6], mwLookH: 0.9, mwFovMin: 24, mwFovMax: 50, mwFrame: 2.4, mwCamLerp: 4,
   // clown speed as a share of the measured walk speed (clip sped up the same, no foot slide)
-  mwTempo: 1.6,
+  // owner 22 Nov 15:58 (panel B): faster than the Light, 0.764 x 2.3 = 1.76 m/s against its follow 1.2 m/s (was 1.6, 1.22 m/s: no escape)
+  mwTempo: 2.3,
   // gags: Laughs cost, reach or speed, damage, cooldown s
   slap: { cost: 2, reach: 1.6, dot: 0.3, dmg: 1, cd: 0.45 },
   pie: { cost: 3, speed: 9, range: 8, hitR: 0.7, dmg: 2, cd: 0.5 },
@@ -651,7 +707,9 @@ const N1 = Object.freeze({
   // still = no input for this long, s
   stillAfter: 0.25,
   // the insecurities (constructs): height m, hit points, shards dropped, start (x, z)
-  light: { h: 2.9, at: [0, -7.6], spotR: 1.25, follow: 1.4, drain: 6, beatSecs: 3, shards: 3 },
+  light: { h: 2.9, at: [0, -7.6], spotR: 1.25, follow: 1.2, drain: 6, beatSecs: 3, shards: 3 },
+  // panel B: each time he leaves the spot it grows (m, up to cap) and drains this much more on re-entry (share per escape); it flares tell s before it chases
+  lightGrow: 0.25, lightCap: 2.5, lightDrainGrow: 0.5, lightTell: 0.4,
   whisper: { h: 2.6, hp: 4, shards: 4, at: [-4, 2], speed: 0.8, keep: 2.5, tell: 0.4, strikeR: 1.0, strike: 8, near: 1.6, nearDrain: 1 },
   stare: { h: 1.1, hp: 4, shards: 4, at: [4, 1], turn: 35, cone: 22, tell: 0.4, judge: 4, every: 1.0 },
   shame: { h: 1.85, hp: 3, shards: 3, at: [0, 4], speed: 0.9, grab: 0.8, tell: 0.4, slow: 0.5, drain: 3, push: 2, stun: 1.0 },
@@ -718,6 +776,21 @@ const N1 = Object.freeze({
   corridorJokes: true, echoSecs: 0.65, echoVol: 0.45,
   // he sniffs the pie he was told not to eat: time s, head dips degrees
   sniffSecs: 0.9, sniffHead: 16,
+  // ----- owner's play 22 Nov 15:52 (panel C): one bubble at a time -----
+  // switch: only the crew member whose verb is next speaks; done lines go (the child's "...on purpose." stays); no name tags in the wings
+  oneBubble: true,
+  // ----- panel F (owner agreed 22 Nov 15:58): the act board is the room's +Y wall; no board card at the ring edge -----
+  // switch; the cards' height and wall depth (Blender z and y, m) where the two act buttons sit (card x is in each button's data-card)
+  boardWall: true, boardCardZ: 1.85, boardCardY: 4.77,
+  // ----- panel G (owner 22 Nov 11:22 items 2 and 4, agreed 15:58): Mirror World night 1 = the mirror corridor, then the ring; unworldly by Mask -----
+  // switch (false = straight into the ring); corridor half width m, z from its start to its door end, fixed camera spot, his start (x, z)
+  mwRoute: true, mwCorX: 1.2, mwCorZ: [36.5, 22.4], mwCorCam: [0, 2.8, 40.5], mwCorStart: [0, 35.6],
+  // corridor framing: fixed vertical field of view (degrees), aimed halfway between him and the door at this height (m), so the door stays in view
+  mwCorFov: 50, mwCorLookH: 0.9,
+  // the one cut: when he reaches this z at the door, fade this long, then the ring (constructs appear there)
+  mwCorDoor: 22.9, mwCutMs: 450,
+  // unworldly backdrop: tiers and reflections warp by warp0 + warpMask x (Mask / maskFull, at most 1); sky swirl and floating glass brighten the same way
+  unworld: { warp0: 0.06, warpMask: 0.32, maskFull: 6, amt0: 0.25, amtMask: 0.75, glass0: 0.06, glassMask: 0.22, glassN: 140 },
   // ----- the act after the cue (owner 22 Nov 13:45, design/PANEL-act-price.md 11 of 12; session 17 order A) -----
   // switch: walk-on, cue, the act's routine at the zoom-out, the beat after, the bow, one-line caption (false = the crowd text card)
   actShow: true,
@@ -779,6 +852,7 @@ const el = {
   sit: document.getElementById('sit'), prompt: document.getElementById('prompt'), verb: document.getElementById('verb'), cracks: document.getElementById('cracks'),
   mwHud: document.getElementById('mwHud'), mwTip: document.getElementById('mwTip'), pads: document.getElementById('pads'), fog: document.getElementById('fog'),
   curtain: document.getElementById('curtain'), start: document.getElementById('start'), loadState: document.getElementById('loadState'), logo: document.getElementById('logo'),
+  boardActs: document.getElementById('boardActs'), boardActBtns: Array.from(document.querySelectorAll('#boardActs .act')),
   padSlap: document.getElementById('padSlap'), padPie: document.getElementById('padPie'), padFall: document.getElementById('padFall'),
 };
 const renderer = new THREE.WebGLRenderer({ canvas: el.canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
@@ -1205,8 +1279,8 @@ function free(x, y) {
   for (let i = 0; i < obs.length; i++) if (inRect(obs[i], x, y, -CONFIG.clownR)) return false;
   for (let i = 0; i < performers.length; i++) if (Math.hypot(x - performers[i].x, y - performers[i].y) < CONFIG.clownR + CONFIG.performerR) return false;
   for (let i = 0; i < crew.length; i++) if (Math.hypot(x - crew[i].x, y - crew[i].y) < CONFIG.clownR + N1.crewR) return false;
-  // the cable blocks the corridor on the walk out until he jumps it
-  if (!S.back && !NS.verbs.jump && S.y < N1.cableY && y > N1.cableY - N1.cableGap) return false;
+  // the cable blocks the wings on the walk out until his pratfall over it
+  if (!S.back && !NS.verbs.fall && S.y < N1.cableY && y > N1.cableY - N1.cableGap) return false;
   return true;
 }
 // camera-relative input; the basis stays with the old camera across a cut until the input is let go or turns past holdAngle
@@ -1303,7 +1377,7 @@ function updatePerformers(dt) {
     c.root.rotation.y = turnToward(c.root.rotation.y, want, CONFIG.performerTurn, dt);
     setFace(c, near ? 'smile' : 'sad');
     c.mixer.update(dt);
-    placeLabel(i, p, near);
+    placeLabel(i, p, near && !(n1 && N1.oneBubble));
   }
 }
 // name tag over a performer: DOM written only when it changes (shown, hidden or moved a whole pixel)
@@ -1367,7 +1441,7 @@ function startLoop() {
   S.raf = requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) keys.clear(); else startLoop(); });
-window.addEventListener('resize', () => { fit(); if (S.running && !S.raf) renderFrame(); });
+window.addEventListener('resize', () => { fit(); if (S.running && !S.raf) renderFrame(); if (n1) placeBoardActs(); });
 el.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); S.lost = true; el.state.textContent = 'Graphics paused (context lost).'; });
 el.canvas.addEventListener('webglcontextrestored', () => { S.lost = false; startLoop(); });
 
@@ -1461,7 +1535,7 @@ async function boot() {
 // board, act (the cue page in an overlay), crowd, walk back, room, mirror entry, Mirror World, Nietzsche line, shop, end card.
 const n1 = true;
 const NS = {
-  scene: 'logo', verbs: { jump: false, take: false, honk: false, trip: false }, pies: 0, act: '', actInfo: null, crowd: '',
+  scene: 'logo', verbs: { fall: false, take: false, honk: false, trip: false }, pies: 0, act: '', actInfo: null, crowd: '',
   laughs: 0, mask: 0, shards: 0, bought: [], anim: null, audio: null, verbM: null, unit: 0.03, touch: false, mouse: new THREE.Vector2(),
   // where the Nietzsche line shows this run (from N1.nietzscheAt; checks may set it)
   nAt: N1.nietzscheAt,
@@ -1548,8 +1622,8 @@ async function n1Load() {
     scene.add(root);
     crew.push(m);
   }
-  NS.cable = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.07, 0.1), rampMat('BLACK'));
-  NS.cable.position.set(0, 0.035, -N1.cableY);
+  NS.cable = new THREE.Mesh(new THREE.BoxGeometry(N1.cableX[1] - N1.cableX[0], 0.07, 0.1), rampMat('BLACK'));
+  NS.cable.position.set((N1.cableX[0] + N1.cableX[1]) / 2, 0.035, -N1.cableY);
   NS.tape = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.075, 0.105), rampMat('WARM_WHITE'));
   NS.tape.position.copy(NS.cable.position);
   scene.add(NS.cable, NS.tape);
@@ -1641,21 +1715,57 @@ el.start.addEventListener('click', () => {
 });
 function showDazai() {
   const q = N1.dazai;
-  const d = show('dazai', `<div class="quote">"${q[0]}"<small>${q[1]}</small><small>${q[2]}</small></div><button id="goOut">Go out to the ring</button>`);
+  const d = show('dazai', `<div class="quote">"${q[0]}"<small>${q[1]}</small><small>${q[2]}</small></div><button id="goOut">${N1.boardWall ? 'To the act board' : 'Go out to the ring'}</button>`);
   d.querySelector('#goOut').addEventListener('click', goOut);
 }
 function goOut() {
   if (NS.scene !== 'paint') return;
+  if (N1.boardWall) { toBoard(); return; }
+  walkOut();
+}
+// panel F: he turns from the mirror to the act board on the room wall; the two acts are buttons over their cards
+function toBoard() {
+  NS.scene = 'boardwall';
+  hideCard();
+  fadeThen(CONFIG.turnFadeMs, () => {
+    leaveMirror();
+    room.flakes.visible = false; setGloom(0); S.gainT = CONFIG.gainSecs; S.mood = CONFIG.moodRoom;
+    setRoomView('board');
+    setFace(chars.clown, 'smile');
+    el.boardActs.classList.remove('hidden');
+    placeBoardActs();
+    el.hint.textContent = NS.touch ? 'Tap tonight\'s act on the board.' : 'Click tonight\'s act on the board (or press 1 or 2).';
+  });
+}
+// buttons over the cards: placed when shown and on resize (not per frame)
+function placeBoardActs() {
+  if (el.boardActs.classList.contains('hidden')) return;
+  const r = el.canvas.getBoundingClientRect();
+  for (const b of el.boardActBtns) {
+    const v = tmp.set(Number(b.dataset.card), N1.boardCardZ, -N1.boardCardY).project(roomCam);
+    b.style.setProperty('--x', Math.round(r.left + (v.x + 1) / 2 * r.width));
+    b.style.setProperty('--y', Math.round(r.top + (1 - v.y) / 2 * r.height));
+  }
+}
+function pickAct(id) {
+  if (NS.scene !== 'boardwall') return;
+  NS.act = id;
+  el.boardActs.classList.add('hidden');
+  walkOut();
+}
+function walkOut() {
   NS.scene = 'walk';
   hideCard();
   fadeThen(CONFIG.fadeMs, () => {
-    leaveMirror();
+    if (S.mirror) leaveMirror();
     begin(false);
     NS.cable.visible = NS.tape.visible = true;
     el.hint.textContent = NS.touch ? 'Drag to walk. Tap the gold button when it shows.' : 'Walk: WASD or arrows. E or Space: the gold prompt.';
   });
 }
 function n1Board() {
+  // panel F: the act was chosen on the room's board; the act starts at the ring edge with no card
+  if (N1.boardWall && NS.act) { startAct(NS.act); return; }
   NS.scene = 'board';
   S.running = false;
   crewQuiet();
@@ -2174,8 +2284,15 @@ function crewLabel(m, text) {
   const x = Math.round((tmp.x + 1) / 2 * S.w), y = Math.round((1 - tmp.y) / 2 * S.h);
   if (x !== m.lx || y !== m.ly) { m.lx = x; m.ly = y; m.lab.style.setProperty('--x', x); m.lab.style.setProperty('--y', y); }
 }
+// panel C: the crew member whose verb comes next on his way (not done, not behind him); null = nobody's turn
+function nextVerb() {
+  let n = null;
+  for (let i = 0; i < crew.length; i++) { const m = crew[i]; if (m.cd.verb && !m.done && m.y > S.y - CONFIG.meetDist && (!n || m.y < n.y)) n = m; }
+  return n;
+}
 function updateCrew(dt) {
   let best = null, bestD = 1e9;
+  const next = N1.oneBubble ? nextVerb() : null;
   for (let i = 0; i < crew.length; i++) {
     const m = crew[i];
     const d = Math.hypot(S.x - m.x, S.y - m.y);
@@ -2184,7 +2301,7 @@ function updateCrew(dt) {
     const want = near ? Math.atan2(S.x - m.x, -(S.y - m.y)) : m.restYaw + (S.back ? Math.PI : 0);
     m.root.rotation.y = turnToward(m.root.rotation.y, want, CONFIG.performerTurn, dt);
     if (m.saidT > 0) m.saidT -= dt;
-    const text = m.saidT > 0 ? m.doneText : (near ? (m.done ? m.afterText : m.lineText) : '');
+    const text = N1.oneBubble ? (m.saidT > 0 ? m.doneText : (near && m === next ? m.lineText : '')) : m.saidT > 0 ? m.doneText : (near ? (m.done ? m.afterText : m.lineText) : '');
     crewLabel(m, text);
     if (m.cd.id === 'rigger' && NS.riggerT >= 0) {
       NS.riggerT += dt;
@@ -2193,7 +2310,7 @@ function updateCrew(dt) {
       if (k >= 1) { NS.riggerT = -1; m.root.rotation.x = 0; NS.jokes.rigger = true; }
     }
     if (!S.back && !S.ended && m.cd.verb && !m.done && !NS.anim) {
-      const a = m.cd.anchor || m.cd.at, dv = Math.hypot(S.x - a[0], S.y - a[1]);
+      const a = m.cd.anchor || m.cd.at, dv = m.cd.across ? (S.y < N1.cableY && S.x > N1.cableX[0] && S.x < N1.cableX[1] ? (N1.cableY - S.y) * N1.verbDist / N1.cableReach : 1e9) : Math.hypot(S.x - a[0], S.y - a[1]);
       if (dv < N1.verbDist && dv < bestD) { best = m; bestD = dv; }
     }
   }
@@ -2204,34 +2321,38 @@ function crewQuiet() { for (let i = 0; i < crew.length; i++) { crew[i].saidT = 0
 function setVerb(m) {
   if (NS.verbM === m) return;
   NS.verbM = m;
-  if (m) el.verb.textContent = m.cd.verbText + (NS.touch ? '' : '  (E)');
+  if (m) el.verb.textContent = m.cd.verbText + (NS.touch ? '' : m.cd.verb === 'fall' ? '  (Space)' : '  (E)');
   el.verb.classList.toggle('hidden', !m);
 }
 function doVerb() {
   const m = NS.verbM;
   if (!m || NS.anim || S.ended || S.back) return;
   const v = m.cd.verb;
-  if (v === 'jump') {
+  if (v === 'fall') {
     if (S.y > N1.cableY) return;
-    NS.anim = { kind: 'hop', t: 0, y0: S.y, y1: N1.cableY + N1.hopLand };
+    NS.anim = { kind: 'prat', t: 0, y0: S.y, y1: N1.cableY + N1.pratLand, peak: 0 };
   } else if (v === 'take') { NS.pies = N1.pies; if (N1.corridorJokes) NS.anim = { kind: 'sniff', t: 0 }; }
   else if (v === 'honk') { honk(1, 0); if (N1.corridorJokes) { honk(N1.echoVol, N1.echoSecs); NS.jokes.echo = true; } }
   else if (v === 'trip') NS.anim = { kind: 'trip', t: 0, who: m };
   m.done = true; NS.verbs[v] = true;
-  if (v !== 'trip') m.saidT = N1.saidSecs;
+  if (v !== 'trip' && !N1.oneBubble) m.saidT = N1.saidSecs;
   setVerb(null);
 }
 el.verb.addEventListener('click', doVerb);
+for (const b of el.boardActBtns) b.addEventListener('click', () => pickAct(b.dataset.act));
 function n1Anim(c, dt) {
   const a = NS.anim;
   if (!a) return false;
   a.t += dt;
-  if (a.kind === 'hop') {
-    const k = Math.min(1, a.t / N1.hopSecs);
+  if (a.kind === 'prat') {
+    // the Mirror World pratfall (mwFall): forward over the cable, flat out and up, landing past it
+    const k = Math.min(1, a.t / N1.fall.secs);
     S.y = a.y0 + (a.y1 - a.y0) * k;
     S.yaw = turnToward(S.yaw, Math.PI, CONFIG.turnRate, dt);
-    c.root.position.set(S.x, Math.sin(Math.PI * k) * N1.hopH, -S.y);
-    if (k >= 1) { NS.anim = null; c.root.position.y = 0; if (N1.corridorJokes) NS.riggerT = 0; }
+    c.root.position.set(S.x, 0, -S.y);
+    c.root.rotation.x = 0.9 * Math.sin(Math.PI * k);
+    a.peak = Math.max(a.peak, c.root.rotation.x);
+    if (k >= 1) { NS.anim = null; NS.pratPeak = a.peak; c.root.rotation.x = 0; if (N1.corridorJokes) NS.riggerT = 0; }
   } else if (a.kind === 'sniff') {
     const k = Math.min(1, a.t / N1.sniffSecs), m = NS.sniffMood;
     m.tempo = S.mood.tempo; m.chest = S.mood.chest; m.neck = S.mood.neck;
@@ -2441,6 +2562,7 @@ function n1Key(e) {
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
   if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (e.code === 'Enter' || e.code === 'Space') smallPress(); return true; }
+  if (NS.scene === 'boardwall') { if (e.code === 'Digit1') pickAct('fall'); else if (e.code === 'Digit2') pickAct('sweep'); return true; }
   if (S.mode === 'act') { actSkip(); return true; }
   if (S.mirror === 'entry') {
     if (NS.card && NS.card.id === 'card_nietzscheIn') { if (e.code === 'Enter' || e.code === 'Space') NS.card.querySelector('#goIn').click(); return true; }
@@ -2502,9 +2624,9 @@ function buildMW() {
     if ((i + Math.round(r)) % 3 !== 0) ghosts.push([Math.sin(a) * (r - 0.1), h, Math.cos(a) * (r - 0.1), a]);
   }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), ps = new THREE.Vector3(), ax = new THREE.Vector3(0, 1, 0);
-  const seatMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1.1), new THREE.MeshBasicMaterial({ color: '#234249' }), seats.length);
+  const seatMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1.1), unworldMat('#234249', 0.6), seats.length);
   seats.forEach(([x, h, z, a, w], i) => { q.setFromAxisAngle(ax, a); sc.set(w, h, 1.1); ps.set(x, h / 2, z); seatMesh.setMatrixAt(i, m4.compose(ps, q, sc)); });
-  const ghostMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.78, 0.06), new THREE.MeshBasicMaterial({ color: '#6E8D94' }), ghosts.length);
+  const ghostMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.78, 0.06), unworldMat('#6E8D94', 1.6), ghosts.length);
   ghosts.forEach(([x, h, z, a], i) => { q.setFromAxisAngle(ax, a); sc.set(1, 1, 1); ps.set(x, h + 0.39, z); ghostMesh.setMatrixAt(i, m4.compose(ps, q, sc)); });
   seatMesh.computeBoundingSphere(); ghostMesh.computeBoundingSphere();
   mwScene.add(seatMesh, ghostMesh);
@@ -2522,10 +2644,58 @@ function buildMW() {
   const shardGeo = new THREE.OctahedronGeometry(0.13), shardMat = new THREE.MeshBasicMaterial({ color: '#C9D5D7' });
   for (let i = 0; i < 16; i++) { const m = new THREE.Mesh(shardGeo, shardMat); m.scale.set(0.7, 1.4, 0.7); pool.shards.push({ m, on: false, x: 0, z: 0 }); }
   mwCam.position.fromArray(N1.mwCamPos);
+  buildUnworld();
+}
+// panel G: shared uniforms for the unworldly backdrop (set from Mask on entering, time each frame)
+const mwU = { uTime: { value: 0 }, uWarp: { value: 0 }, uAmt: { value: 0 }, uGlass: { value: 0 } };
+// a basic material whose instances sway and drift by uWarp (the tiers, the reflections where the audience sat, the corridor's mirrors)
+function unworldMat(color, amp) {
+  const m = new THREE.MeshBasicMaterial({ color });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uWarp = mwU.uWarp; sh.uniforms.uTime = mwU.uTime;
+    sh.vertexShader = 'uniform float uWarp;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float iid = float(gl_InstanceID);
+      transformed.y += sin(uTime * 0.9 + iid * 0.61) * uWarp * ${(0.6 * amp).toFixed(2)};
+      transformed.x += sin(uTime * 0.6 + iid * 1.3 + position.y * 3.0) * uWarp * ${(0.5 * amp).toFixed(2)};`);
+  };
+  m.customProgramCacheKey = () => 'unworld' + amp;
+  return m;
+}
+// Mask -> the backdrop's strength (more paint, less of a world)
+function mwUnworld(mask) {
+  const u = N1.unworld, k = THREE.MathUtils.clamp(mask / u.maskFull, 0, 1);
+  return { warp: u.warp0 + u.warpMask * k, amt: u.amt0 + u.amtMask * k, glass: u.glass0 + u.glassMask * k };
+}
+function buildUnworld() {
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(45, 32, 16), new THREE.ShaderMaterial({ uniforms: mwU, vertexShader: shaderText('skyVert'), fragmentShader: shaderText('skyFrag'), side: THREE.BackSide, depthWrite: false }));
+  sky.renderOrder = -1;
+  // floating glass: one instanced draw around the ring and along the corridor
+  const rnd = actRand(2207), u = N1.unworld, R = N1.mwRadius;
+  const glass = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.22, 0.48), new THREE.ShaderMaterial({ uniforms: mwU, vertexShader: shaderText('glassVert'), fragmentShader: shaderText('glassFrag'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }), u.glassN);
+  const m4 = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1), cz = N1.mwCorZ;
+  for (let i = 0; i < u.glassN; i++) {
+    if (i % 3 === 2) { const side = rnd() < 0.5 ? -1 : 1; p.set(side * (N1.mwCorX + 0.8 + rnd() * 2.5), 0.8 + rnd() * 3.5, cz[1] + rnd() * (cz[0] - cz[1])); }
+    else { const a = rnd() * Math.PI * 2, r = R + 1 + rnd() * 7; p.set(Math.sin(a) * r, 1 + rnd() * 5, Math.cos(a) * r); }
+    glass.setMatrixAt(i, m4.compose(p, q, s));
+  }
+  glass.computeBoundingSphere(); glass.boundingSphere.radius += 2;
+  // the mirror corridor: floor, mirror panels both sides (one instanced draw), an end wall and the pale door to the ring
+  const X = N1.mwCorX, len = cz[0] - cz[1], mid = (cz[0] + cz[1]) / 2;
+  const cfloor = new THREE.Mesh(new THREE.PlaneGeometry(2 * X + 0.6, len + 1.5), new THREE.MeshBasicMaterial({ color: '#1C353B' }));
+  cfloor.rotation.x = -Math.PI / 2; cfloor.position.set(0, 0.002, mid);
+  const nP = 6, panels = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 2.6, 1.5), unworldMat('#6E8D94', 1.2), nP * 2);
+  for (let i = 0; i < nP * 2; i++) { const side = i < nP ? -1 : 1, k = i % nP; p.set(side * (X + 0.3), 1.3, cz[0] - 1 - k * (len - 1.5) / (nP - 1)); panels.setMatrixAt(i, m4.compose(p, q, s)); }
+  panels.computeBoundingSphere(); panels.boundingSphere.radius += 1;
+  const endWall = new THREE.Mesh(new THREE.BoxGeometry(2 * X + 2, 4.5, 0.2), new THREE.MeshBasicMaterial({ color: '#11272B' }));
+  endWall.position.set(0, 2.25, cz[1] - 0.6);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 2.4), new THREE.MeshBasicMaterial({ color: '#C9D5D7', fog: false }));
+  door.position.set(0, 1.2, cz[1] - 0.48);
+  mwScene.add(sky, glass, cfloor, panels, endWall, door);
+  for (const o of [sky, glass, cfloor, panels, endWall, door]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
 }
 function addFoe(kind) {
   const cfg = N1[kind], root = cast[kind];
-  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, still: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false };
+  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, still: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: cfg.spotR || 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1 };
   root.position.set(f.x, 0, f.z); root.rotation.set(0, 0, 0); root.scale.setScalar(1); root.visible = true;
   if (kind === 'light') { f.spotX = 0; f.spotZ = -3; mwScene.add(pool.beam, pool.spot); pool.beam.material.opacity = 0.14; pool.spot.material.opacity = 0.32; }
   mwScene.add(root);
@@ -2543,21 +2713,46 @@ function enterMW() {
   shared.uGradeTint.value.setRGB(0.62, 0.78, 0.84); shared.uGradeAmt.value = 0.45;
   c.face.material.uniforms.uPaintAmt.value = paintFor(NS.mask);
   setFace(c, 'sad');
-  // night 1: the Light always; the act's own monster; results add the Stare (a Perfect) and Shame (a miss)
-  addFoe('light');
+  const un = mwUnworld(NS.mask);
+  mwU.uWarp.value = un.warp; mwU.uAmt.value = un.amt; mwU.uGlass.value = un.glass;
+  if (!N1.mwRoute) mwRingFoes();
   // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger
   const falls = NS.hurt ? NS.hurt.falls : 0;
-  if (NS.act === 'fall' || falls > 0) { addFoe('whisper'); const w = foes[foes.length - 1]; w.hp += falls * N1.whisperFeed.hp; w.speedMul = 1 + falls * N1.whisperFeed.speed; }
-  if (NS.actInfo && NS.actInfo.perfects > 0) addFoe('stare');
-  if (NS.actInfo && NS.actInfo.misses > 0) addFoe('shame');
   NS.mw = { x: 0, z: 4.2, yaw: Math.PI, laughs: NS.laughs, shown: '', t: 0, still: 0, moving: false, fall: null, slapT: -1, cd: 0, pieOn: false, pieX: 0, pieZ: 0, pieDX: 0, pieDZ: 0, pieD: 0,
-    splashT: -1, hurtT: 0, shards: 0, over: '', winT: 0, tip: '', tipT: 0, tips: [], fovNow: 40, lookX: 0, lookZ: 4, hudL: -1, hudP: -1, hudS: -1 };
+    splashT: -1, hurtT: 0, shards: 0, over: '', winT: 0, tip: '', tipT: 0, tips: [], fovNow: 40, lookX: 0, lookZ: 4, hudL: -1, hudP: -1, hudS: -1,
+    space: 'ring', cuts: 0, cutting: false };
+  // panel G: night 1 starts in the mirror corridor; the ring (and its constructs) comes after one cut at the door
+  if (N1.mwRoute) {
+    const M = NS.mw;
+    M.space = 'corridor'; M.x = N1.mwCorStart[0]; M.z = N1.mwCorStart[1]; M.lookX = M.x * 0.5; M.lookZ = (M.z + N1.mwCorDoor) / 2;
+    mwCam.position.fromArray(N1.mwCorCam);
+    tip('The mirror corridor. The way to the ring is the pale door.');
+  } else mwCam.position.fromArray(N1.mwCamPos);
   for (const s of pool.shards) { s.on = false; mwScene.remove(s.m); }
   el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch);
   el.shotName.textContent = '';
   el.hint.textContent = NS.touch ? 'Stick: move. SLAP, PIE, FALL. Lift your thumbs to stand still.' : 'WASD: move. Click or J: slap. Right click or K: pie. Space: pratfall. Let go of everything: stand still.';
   setPrompt('');
   S.running = true; startLoop();
+}
+// night 1: the Light always; the act's own monster; results add the Stare (a Perfect) and Shame (a miss)
+function mwRingFoes() {
+  addFoe('light');
+  // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger
+  const falls = NS.hurt ? NS.hurt.falls : 0;
+  if (NS.act === 'fall' || falls > 0) { addFoe('whisper'); const w = foes[foes.length - 1]; w.hp += falls * N1.whisperFeed.hp; w.speedMul = 1 + falls * N1.whisperFeed.speed; }
+  if (NS.actInfo && NS.actInfo.perfects > 0) addFoe('stare');
+  if (NS.actInfo && NS.actInfo.misses > 0) addFoe('shame');
+}
+// the one cut of the route: corridor door -> the ring's fixed spot
+function mwCut() {
+  const M = NS.mw;
+  M.cutting = true;
+  fadeThen(N1.mwCutMs, () => {
+    M.space = 'ring'; M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4; M.cuts++; M.cutting = false; M.fall = null;
+    mwCam.position.fromArray(N1.mwCamPos);
+    mwRingFoes();
+  });
 }
 function mwDrain(n) { const M = NS.mw; if (M.over) return; M.laughs -= n; if (M.laughs <= 0) { M.laughs = 0; endMW('lose'); } }
 function mwHurt(n) {
@@ -2647,10 +2842,10 @@ const TIPS = {
 function updateMW(dt) {
   const M = NS.mw;
   M.t += dt; if (M.cd > 0) M.cd -= dt;
+  mwU.uTime.value += dt;
   mwClown(M, dt);
   mwPie(M, dt);
-  const alive = mwFoes(M, dt);
-  mwShards(M, dt, alive);
+  if (M.space === 'ring') { const alive = mwFoes(M, dt); mwShards(M, dt, alive); }
   mwCamera(M, dt);
   mwHud(M, dt);
 }
@@ -2682,8 +2877,10 @@ function mwClown(M, dt) {
     M.x += ix / n * sp * dt; M.z -= iy / n * sp * dt;
     M.yaw = turnToward(M.yaw, Math.atan2(ix / n, -iy / n), CONFIG.turnRate, dt);
   }
-  const rr = Math.hypot(M.x, M.z);
-  if (rr > N1.mwRadius) { M.x *= N1.mwRadius / rr; M.z *= N1.mwRadius / rr; }
+  if (M.space === 'corridor') {
+    M.x = THREE.MathUtils.clamp(M.x, -N1.mwCorX, N1.mwCorX); M.z = THREE.MathUtils.clamp(M.z, N1.mwCorZ[1], N1.mwCorZ[0]);
+    if (M.z <= N1.mwCorDoor && !M.cutting) mwCut();
+  } else { const rr = Math.hypot(M.x, M.z); if (rr > N1.mwRadius) { M.x *= N1.mwRadius / rr; M.z *= N1.mwRadius / rr; } }
   M.still = moving || M.fall || M.slapT > 0 ? 0 : M.still + dt;
   M.isStill = M.still > N1.stillAfter; M.isMoving = moving;
   if (moving !== M.moving && M.slapT <= 0) {
@@ -2719,18 +2916,25 @@ function mwSink(f, dt) {
 }
 function mwLight(M, f, dt) {
   const sx = M.x - f.spotX, sz = M.z - f.spotZ, sd = Math.hypot(sx, sz);
-  if (sd > 0.05) { const st = Math.min(sd, f.cfg.follow * dt); f.spotX += sx / sd * st; f.spotZ += sz / sd * st; }
-  const inSpot = Math.hypot(M.x - f.spotX, M.z - f.spotZ) < f.cfg.spotR;
+  // panel B: out of the spot it flares for the tell, then chases at follow speed (he is faster); each escape grows it and its drain
+  const out = sd >= f.r;
+  if (out && f.inPrev) { f.leaves++; f.r = Math.min(N1.lightCap, f.r + N1.lightGrow); f.tellT = N1.lightTell; f.leftT = M.t; f.moveT = -1; }
+  f.inPrev = !out;
+  if (f.tellT > 0) f.tellT -= dt;
+  else if (sd > 0.05) { const st = Math.min(sd, f.cfg.follow * dt); f.spotX += sx / sd * st; f.spotZ += sz / sd * st; if (f.moveT < 0) f.moveT = M.t; }
+  const inSpot = Math.hypot(M.x - f.spotX, M.z - f.spotZ) < f.r;
   if (inSpot && M.isStill) { f.still += dt; if (f.still >= f.cfg.beatSecs) killFoe(f); }
-  else { f.still = Math.max(0, f.still - dt * 0.5); if (inSpot && M.isMoving) mwDrain(f.cfg.drain * dt); }
+  else { f.still = Math.max(0, f.still - dt * 0.5); if (inSpot && M.isMoving) mwDrain(f.cfg.drain * (1 + N1.lightDrainGrow * f.leaves) * dt); }
   // beam from the lens to the spot; it dims as he holds still
   f.root.getWorldPosition(mwTmp.v); mwTmp.v.y += 56 * NS.unit; mwTmp.v.z += 12.6 * NS.unit;
   mwTmp.v2.set(f.spotX, 0, f.spotZ).sub(mwTmp.v);
   const len = mwTmp.v2.length();
   pool.beam.position.copy(mwTmp.v); pool.beam.quaternion.setFromUnitVectors(mwTmp.up, mwTmp.v2.divideScalar(len));
-  pool.beam.scale.set(f.cfg.spotR, len, f.cfg.spotR);
+  pool.beam.scale.set(f.r, len, f.r);
   pool.spot.position.set(f.spotX, 0.025, f.spotZ);
-  const dim = 1 - 0.75 * f.still / f.cfg.beatSecs;
+  const sk = f.r / f.cfg.spotR;
+  pool.spot.scale.set(sk, sk, 1);
+  const dim = (1 - 0.75 * f.still / f.cfg.beatSecs) * (f.tellT > 0 ? 2 : 1);
   pool.beam.material.opacity = 0.14 * dim; pool.spot.material.opacity = 0.32 * dim;
 }
 function mwWhisper(M, f, dt, dx, dz, d) {
@@ -2793,11 +2997,12 @@ function mwShards(M, dt, alive) {
 }
 // one fixed spot; the camera turns and zooms to keep him whole (owner requirement 7)
 function mwCamera(M, dt) {
-  const k = 1 - Math.exp(-N1.mwCamLerp * dt);
-  M.lookX += (M.x - M.lookX) * k; M.lookZ += (M.z - M.lookZ) * k;
-  mwTmp.look.set(M.lookX, N1.mwLookH, M.lookZ);
+  const k = 1 - Math.exp(-N1.mwCamLerp * dt), cor = M.space === 'corridor';
+  const tx = cor ? M.x * 0.5 : M.x, tz = cor ? (M.z + N1.mwCorDoor) / 2 : M.z;
+  M.lookX += (tx - M.lookX) * k; M.lookZ += (tz - M.lookZ) * k;
+  mwTmp.look.set(M.lookX, cor ? N1.mwCorLookH : N1.mwLookH, M.lookZ);
   const cd = mwCam.position.distanceTo(mwTmp.look);
-  const fov = THREE.MathUtils.clamp(2 * THREE.MathUtils.radToDeg(Math.atan(N1.mwFrame / cd)), N1.mwFovMin, N1.mwFovMax);
+  const fov = cor ? N1.mwCorFov : THREE.MathUtils.clamp(2 * THREE.MathUtils.radToDeg(Math.atan(N1.mwFrame / cd)), N1.mwFovMin, N1.mwFovMax);
   M.fovNow += (fov - M.fovNow) * k;
   if (Math.abs(mwCam.fov - M.fovNow) > 0.01) { mwCam.fov = M.fovNow; mwCam.updateProjectionMatrix(); }
   mwCam.lookAt(mwTmp.look); mwCam.updateMatrixWorld();
@@ -2971,7 +3176,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

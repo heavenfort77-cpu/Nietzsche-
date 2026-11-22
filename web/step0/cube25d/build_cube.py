@@ -3,7 +3,9 @@ each wall is one Myst-style scene. Renders every view as 3 depth layers (back op
 mid and front with alpha) plus views.json so three.js can rebuild the same camera and
 stand the 3D clown in it. Box-and-shape only (prototype, no final art).
 
-Run: python3 build_cube.py -- OUT_DIR [samples]
+Run: python3 build_cube.py -- OUT_DIR [samples] [percent] [views, comma list; default all]
+Session 17 (owner 22 Nov, panel F): the 'board' view is the same +Y wall with the backstage act board
+in place of the ring; the 'ring' view stays for the cue page. Render one view alone with the 4th argument.
 """
 import bpy, json, math, os, sys
 from mathutils import Vector
@@ -13,6 +15,8 @@ OUT = os.path.abspath(ARGS[0] if ARGS else 'cube_out')
 SAMPLES = int(ARGS[1]) if len(ARGS) > 1 else 32
 # render size percent (25 for a quick framing preview)
 PCT = int(ARGS[2]) if len(ARGS) > 2 else 100
+# views to render (others skipped, so their approved plates are not re-rendered)
+ONLY = ARGS[3].split(',') if len(ARGS) > 3 else None
 
 # ===== CONFIG =====
 CONFIG = dict(
@@ -40,6 +44,7 @@ CONFIG = dict(
 # view name -> (scene title, camera yaw in degrees; 0 looks +Y)
 VIEWS = dict(
     ring=('Ring', 0.0),
+    board=('Act board', 0.0),
     dressing=('Dressing room', -90.0),
     mirror=('Mirror', 180.0),
     exit=('Tent exit', 90.0),
@@ -139,6 +144,27 @@ def build_room():
         sphere(f'post_ball_{sx}', (sx * 1.25, 1.75, 1.14), 0.09, mat('gold', P['gold'], 0.3, 0.8))
     box('rope', (0, 1.75, 1.0), (2.5, 0.03, 0.03), mat('ring', P['ring'], 0.6))
 
+    # ---- act board view (+Y, panel F): the night's acts pinned on a backstage board, props either side
+    box('board_frame', (0, 4.86, 1.95), (3.4, 0.08, 2.05), mat('wood', P['wood'], 0.6))
+    box('board_face', (0, 4.81, 1.95), (3.1, 0.04, 1.8), mat('black', P['black'], 0.9))
+    box('board_header', (0, 4.78, 3.02), (3.3, 0.07, 0.34), mat('gold', P['gold'], 0.35, 0.7))
+    # card 1, the deliberate fall (white with a red band); card 2, the spotlight sweep (ochre with a pale spot)
+    box('board_card_fall', (-0.95, 4.77, 1.85), (0.86, 0.02, 1.12), mat('paint', P['paint'], 0.8))
+    box('board_card_fall_band', (-0.95, 4.758, 2.2), (0.86, 0.02, 0.22), mat('ring', P['ring'], 0.6))
+    box('board_card_sweep', (0.95, 4.77, 1.85), (0.86, 0.02, 1.12), mat('ochre', P['ochre'], 0.8))
+    d = cyl('board_card_sweep_spot', (0.95, 4.755, 1.75), 0.28, 0.02, mat('paint', P['paint'], 0.7))
+    d.rotation_euler = (math.radians(90), 0, 0)
+    for i, x in enumerate((-0.95, 0.95)):
+        sphere(f'board_pin_{i}', (x, 4.74, 2.36), 0.035, mat('ring', P['ring'], 0.4))
+    for i, z in enumerate((0.35, 1.0)):
+        box(f'board_crate_{i}', (-2.6, 4.2, z), (0.7 - 0.1 * i, 0.7 - 0.1 * i, 0.65 - 0.05 * i), mat('wood', P['wood'], 0.7))
+    cyl('board_hatstand', (2.6, 4.3, 0.9), 0.04, 1.8, mat('woodDk', P['woodDk'], 0.6))
+    sphere('board_hatstand_hat', (2.6, 4.3, 1.86), 0.17, mat('hat', P['hat'], 0.6))
+    cyl('board_bucket', (2.0, 3.95, 0.2), 0.22, 0.4, mat('silver', P['silver'], 0.3, 1.0))
+    b = cyl('board_broom', (1.65, 4.6, 0.8), 0.025, 1.6, mat('wood', P['wood'], 0.6))
+    b.rotation_euler = (math.radians(-14), 0, 0)
+    sphere('board_lamp', (0, 4.55, 3.4), 0.07, mat('bulb', P['ochre'], 0.4, 0.0, 8.0))
+
     # ---- dressing room view (+X): vanity with bulb frame, chair, rack, trunk
     box('vanity', (4.45, 0, 0.4), (0.8, 2.0, 0.8), mat('wood', P['wood'], 0.6))
     box('vanity_mirror', (4.85, 0, 1.55), (0.04, 1.3, 1.1), mat('mirror', P['mirror'], 0.05, 1.0))
@@ -214,12 +240,26 @@ def is_flat(o):
     return max(zs) < 0.06
 
 
+# ring-view props that the act board view leaves out (same +Y wall)
+RING_ONLY = ('curtain_', 'valance', 'backcloth', 'sawdust', 'ring_curb', 'stool', 'post_', 'rope')
+# the wall each view looks at (the board hangs on the ring wall)
+WALL_OF = dict(board='ring')
+
+
+def excluded(o, view):
+    if view == 'board':
+        return o.name.startswith(RING_ONLY)
+    return o.name.startswith('board_')
+
+
 def layer_of(o, view, cam_loc, fwd):
     n = o.name
+    if excluded(o, view):
+        return None
     if n == 'floor' or is_flat(o):
         return 'mid'
     if n.startswith('wall_'):
-        return 'back' if n == 'wall_' + view else None
+        return 'back' if n == 'wall_' + WALL_OF.get(view, view) else None
     if n == 'ceiling':
         return None
     d = depth_along(o, cam_loc, fwd)
@@ -261,6 +301,11 @@ def main():
     out = dict(config={k: CONFIG[k] for k in ('half', 'camZ', 'pitch', 'renderFov', 'playFov', 'res', 'planeDepth', 'clownAt')},
                coords='Blender Z-up; three.js (x, y, z) = Blender (x, z, -y); yaw 0 looks Blender +Y (three -Z)', views={})
     for view, (title, yaw) in VIEWS.items():
+        if ONLY and view not in ONLY:
+            continue
+        # props that belong to another view on the same wall are left out of the render (no shadow, no bounce)
+        for o in meshes:
+            o.hide_render = excluded(o, view)
         cam.rotation_euler = (math.radians(90 + CONFIG['pitch']), 0, math.radians(yaw))
         fwd = Vector((-math.sin(math.radians(yaw)), math.cos(math.radians(yaw)), 0))
         cam_loc = Vector(cam.location)

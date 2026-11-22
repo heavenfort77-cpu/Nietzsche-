@@ -36,6 +36,17 @@ const MUTS = {
   acthold: ['night1.html', "  A.face = 'sad'; A.excite = 0; A.clip = 'idle';", "  A.excite = 0; A.clip = 'idle';"],
   actskip: ['night1.html', '  if (!NS.actSeen || !A ||', '  if (true || !A ||'],
   actslump: ['night1.html', 'slumpMax: { tempo: 0.78, chest: 15,', 'slumpMax: { tempo: 0.78, chest: 6,'],
+  // owner's answers 22 Nov 15:58 (panel B, C, D, E; session 17 batch 2)
+  mwtempo: ['night1.html', 'mwTempo: 2.3,', 'mwTempo: 1.6,'],
+  lightgrow: ['night1.html', 'lightGrow: 0.25,', 'lightGrow: 0,'],
+  lighttell: ['night1.html', 'lightTell: 0.4,', 'lightTell: 0,'],
+  oneb: ['night1.html', 'oneBubble: true,', 'oneBubble: false,'],
+  walkout: ['night1.html', 'moodOut: { tempo: 1.6,', 'moodOut: { tempo: 1.18,'],
+  cablewings: ['night1.html', 'cableY: 11.3,', 'cableY: 7.95,'],
+  backend: ['night1.html', 'backEndY: 8.4,', 'backEndY: 2.5,'],
+  boardwall: ['night1.html', 'boardWall: true,', 'boardWall: false,'],
+  mwroute: ['night1.html', 'mwRoute: true,', 'mwRoute: false,'],
+  unworld: ['night1.html', 'warpMask: 0.32,', 'warpMask: 0,'],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
@@ -76,28 +87,72 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('logo then title', async () => { await sleep(3400); await pg.waitForSelector('#logo.hidden', { state: 'attached', timeout: 2000 }); });
     await step('start: at the mirror', async () => { await pg.click('#start'); await sleep(1500); });
     await step('first input finishes the paint', async () => { await pg.mouse.click(sc.w / 2, sc.h / 3); await pg.waitForSelector('#card_dazai', { timeout: 30000 }); await shot('paint'); });
-    await step('go out: corridor', async () => { await pg.click('#goOut'); await sleep(900); await pg.waitForFunction(() => window.__night.S.shot === 'corridor'); });
+    const boardWall = await pg.evaluate(() => window.__night.N1.boardWall);
+    // panel F (owner 22 Nov 15:58): the act board is the room's wall; its two acts are 44 px buttons over their cards (land picks the sweep)
+    const actPick = sc.n === 'land' ? 'sweep' : 'fall';
+    await step('act board on the room wall, no board card (F)', async () => {
+      if (!boardWall) throw new Error('N1.boardWall is off: the act is chosen on a card at the ring edge');
+      await pg.click('#goOut');
+      await pg.waitForFunction(() => window.__night.S.roomView === 'board' && !document.getElementById('boardActs').classList.contains('hidden'), null, { timeout: 10000 });
+      await sleep(400); await shot('board');
+      const r = await pg.evaluate(() => { const c = document.getElementById('gl').getBoundingClientRect(); return Array.from(document.querySelectorAll('#boardActs .act')).map((b) => { const q = b.getBoundingClientRect(); return { h: q.height, w: q.width, inside: q.left >= c.left - 1 && q.right <= c.right + 1 && q.top >= c.top - 1 && q.bottom <= c.bottom + 1 }; }); });
+      if (r.length !== 2 || r.some((b) => b.h < 44 || b.w < 44 || !b.inside)) throw new Error('board buttons ' + JSON.stringify(r));
+      await pg.click(`#boardActs [data-act="${actPick}"]`);
+      const act = await pg.evaluate(() => window.__night.NS.act);
+      if (act !== actPick) throw new Error('act ' + act);
+    });
+    await step('go out: corridor', async () => { if (!boardWall) await pg.click('#goOut'); await sleep(900); await pg.waitForFunction(() => window.__night.S.shot === 'corridor', null, { timeout: 15000 }); });
+    // panel C: count the text bubbles on screen through the walk out (test-only sampler in the page)
+    await pg.evaluate(() => { window.__bubbles = 0; window.__bubbleT = setInterval(() => { const n = document.querySelectorAll('.label:not(.hidden)').length; if (n > window.__bubbles) window.__bubbles = n; }, 50); });
     const tp = (x, y) => pg.evaluate(([x, y]) => { const S = window.__night.S; S.x = x; S.y = y; }, [x, y]);
     const verb = async (x, y, v) => { await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 }); await tp(x, y); await sleep(500); const vis = await pg.isVisible('#verb'); if (!vis) throw new Error('no verb button for ' + v); await pg.click('#verb'); await sleep(1100); const done = await pg.evaluate((v) => window.__night.NS.verbs[v], v); if (!done) throw new Error(v + ' not done'); };
-    await step('cable blocks before the jump', async () => { await tp(0.15, 7.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await sleep(1500); await pg.evaluate(() => { window.__night.input.ty = 0; }); const y = await pg.evaluate(() => window.__night.S.y); if (y > 7.95) throw new Error('walked through the cable, y ' + y); await shot('cable'); });
-    await step('jump the cable', () => verb(0.15, 7.4, 'jump'));
     await step('take the pie', () => verb(1.0, 9.0, 'take'));
+    // panel D (owner 22 Nov 15:58: in the corridor shot "the player sees nothing"): the cable lies across the wings, filmed side-on
+    await step('cable: blocks before the pratfall (D)', async () => {
+      await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 }); await tp(0.4, 10.6);
+      await pg.waitForFunction(() => window.__night.S.shot === 'wings', null, { timeout: 10000 });
+      // the walk check itself: across the cable line is closed before the pratfall, the floor before it is open
+      const r = await pg.evaluate(() => { const N = window.__night, W = window.__walkTest, c = N.N1.cableY; return { across: W.free(0.4, c + 0.05), before: W.free(0.4, c - N.N1.cableGap - 0.2), fall: N.NS.verbs.fall }; });
+      if (r.across || !r.before || r.fall) throw new Error('cable block ' + JSON.stringify(r));
+      await shot('cable');
+    });
+    await step('cable: Space pratfall over it, seen side-on in the wings (D)', async () => {
+      await tp(0.4, 10.6); await sleep(500);
+      const t0 = await pg.textContent('#verb');
+      if (!(await pg.isVisible('#verb')) || !/^Pratfall over the cable/.test(t0)) throw new Error('verb "' + t0 + '"');
+      const at = () => pg.evaluate(() => { const N = window.__night, W = window.__walkTest, v = new W.camera.position.constructor(N.S.x, 0.9, -N.S.y).project(W.camera); return { x: (v.x + 1) / 2 * N.S.w, y: (1 - v.y) / 2 * N.S.h, h: N.S.h, shot: N.S.shot, sy: N.S.y }; });
+      const a = await at();
+      await pg.keyboard.press('Space');
+      await pg.waitForFunction(() => window.__night.NS.verbs.fall && !window.__night.NS.anim, null, { timeout: 15000 });
+      const b = await at(), r = await pg.evaluate(() => ({ peak: window.__night.NS.pratPeak, c: window.__night.N1.cableY }));
+      const travel = Math.hypot(b.x - a.x, b.y - a.y);
+      console.log('    pratfall: shot', a.shot, '| screen travel', travel.toFixed(0), 'px of', a.h, '| landed y', b.sy.toFixed(2), '| pitch', r.peak.toFixed(2));
+      if (a.shot !== 'wings' || b.sy <= r.c || !(r.peak > 0.5) || travel < 0.08 * a.h) throw new Error('pratfall ' + JSON.stringify({ shot: a.shot, landed: b.sy, peak: r.peak, travel }));
+    });
     await step('honk the horn', () => verb(0.5, 12.2, 'honk'));
     // harsh panel H2: the button must not tell the player it is on purpose before the child does
     // owner's item 5 (H7): one physical joke per verb: the horn honks back late, the rigger trips on the cable, he sniffs the pie
     await step('corridor: one physical joke per verb (item 5)', async () => { await pg.waitForFunction(() => { const j = window.__night.NS.jokes; return j.echo && j.rigger && j.sniff; }, null, { timeout: 20000 }).catch(async () => { throw new Error('jokes ' + JSON.stringify(await pg.evaluate(() => window.__night.NS.jokes))); }); });
     await step('trip button does not say "on purpose" (H2)', async () => { await tp(-1.3, 17.0); await sleep(500); const t = await pg.textContent('#verb'); if (!/^Trip\b/.test(t) || /purpose/i.test(t)) throw new Error('verb reads "' + t + '"'); });
     await step('trip for the child', async () => { await verb(-1.3, 17.0, 'trip'); await pg.waitForFunction(() => /on purpose/.test(window.__night.crew[4].lab.textContent), null, { timeout: 8000 }); await shot('child'); });
-    await step('ring edge: board', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForSelector('#card_board', { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); });
+    await step('walk out: brisk, one bubble at a time (C)', async () => {
+      // panel C promised about 13 s of walking (start to the ring edge, shots.json), from the clip's measured speed x moodOut tempo
+      const r = await pg.evaluate(() => { clearInterval(window.__bubbleT); const N = window.__night, d = N.S.data; return { max: window.__bubbles, v: N.S.speed * window.__walkTest.CONFIG.moodOut.tempo, m: d.endY - d.start.at[1] }; });
+      r.secs = r.m / r.v;
+      console.log('    walk out', r.v.toFixed(2), 'm/s,', r.m.toFixed(1), 'm in', r.secs.toFixed(1), 's (computed); most bubbles at once', r.max);
+      if (r.max > 1 || !(r.secs <= 14)) throw new Error('walk out ' + JSON.stringify(r));
+    });
+    if (boardWall) await step('ring edge: the act starts with no board card (F)', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForFunction(() => window.__night.NS.scene === 'act', null, { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); if (await pg.$('#card_board')) throw new Error('board card shown'); });
+    else await step('ring edge: board', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForSelector('#card_board', { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); });
     const actShow = await pg.evaluate(() => window.__night.N1.actShow);
     // the act at the zoom-out: he walks on into the spot, the house quiets, then the cue page (FAIL here when N1.actShow is off)
     // the land screen plays the spotlight sweep, the others the deliberate fall (both routines run every pass)
-    await step('act: walk-on into the spot (scene reached)', async () => { if (!actShow) throw new Error('N1.actShow is off: the act is a text card'); await pg.click(sc.n === 'land' ? '[data-act="sweep"]' : '[data-act="fall"]'); await pg.waitForFunction(() => { const A = window.__night.NS.A; return A && (A.phase === 'walkon' || A.phase === 'cue'); }, null, { timeout: 8000 }); await sleep(600); await shot('walkon'); });
+    await step('act: walk-on into the spot (scene reached)', async () => { if (!actShow) throw new Error('N1.actShow is off: the act is a text card'); if (!boardWall) await pg.click(`.card [data-act="${actPick}"]`); await pg.waitForFunction(() => { const A = window.__night.NS.A; return A && (A.phase === 'walkon' || A.phase === 'cue'); }, null, { timeout: 8000 }); await sleep(600); await shot('walkon'); });
     if (actShow) {
       await step('act: clown 60-64 px at the spot', async () => { const r = await pg.evaluate(() => { const N = window.__night, s = N.N1.actSpotAt; return { px: N.actPxAt(s[0], s[1]), want: N.N1.actPx }; }); if (!(r.px >= 60 && r.px <= 64)) throw new Error('clown ' + r.px.toFixed(1) + ' px tall'); console.log('    clown', r.px.toFixed(1), 'px'); });
       await step('act: draw calls under 150', async () => { const n = await pg.evaluate(() => window.__walkTest.renderer.info.render.calls); if (!(n > 0 && n < 150)) throw new Error('draw calls ' + n); console.log('    draw calls', n); });
       await step('act: loop stopped behind the cue page', async () => { await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(1500); const r = await pg.evaluate(() => ({ run: window.__night.S.running, raf: window.__night.S.raf, phase: window.__night.NS.A.phase })); if (r.run || r.raf || r.phase !== 'cue') throw new Error('behind the cue ' + JSON.stringify(r)); await shot('act'); });
-    } else await step('board: act page opens', async () => { await pg.click('[data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
+    } else await step('board: act page opens', async () => { if (!boardWall) await pg.click('.card [data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
     // owner's item 4 (stranger cold read): hosted, the act screen shows one line and its start button, none of the cue page's own notes or settings
     await step('act screen: one line, no developer notes (item 4)', async () => {
       const fr = pg.frames().find((f) => /cue_model/.test(f.url()));
@@ -195,14 +250,59 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const r = await pg.evaluate(() => { const N = window.__night, lo = N.slumpFor(30), hi = N.slumpFor(140), m = N.S.mood, w = N.slumpFor(N.NS.laughs); return { lo: lo.chest, hi: hi.chest, tempo: [lo.tempo, hi.tempo], same: m.chest === w.chest && m.head === w.head && m.tempo === w.tempo, dent: N.actObj.dent.visible, mode: N.S.mode || '' }; });
       if (!(r.hi > r.lo) || !r.same || r.tempo[0] !== r.tempo[1] || !r.dent || r.mode) throw new Error('walk back ' + JSON.stringify(r));
     });
-    await step('walk back to the room', async () => { if (await pg.$('#walkBack')) await pg.click('#walkBack'); await sleep(800); await tp(0, 2.8); await pg.evaluate(() => { window.__night.input.ty = -1; }); await pg.waitForFunction(() => window.__night.S.room, null, { timeout: 10000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); await sleep(800); });
+    // panel E, owner's version (22 Nov 15:58): slow tempo kept, the corridor shot cut: the walk back ends as he leaves the wings
+    await step('walk back: wings, then the room, no corridor shot (E)', async () => {
+      if (await pg.$('#walkBack')) await pg.click('#walkBack');
+      await sleep(800);
+      await pg.evaluate(() => { window.__shots = {}; window.__shotT = setInterval(() => { const s = window.__night.S; if (!s.room) window.__shots[s.shot] = 1; }, 40); });
+      await tp(0, 8.7); await pg.evaluate(() => { window.__night.input.ty = -1; });
+      await pg.waitForFunction(() => window.__night.S.room, null, { timeout: 15000 }).catch(() => {});
+      await pg.evaluate(() => { window.__night.input.ty = 0; });
+      const r = await pg.evaluate(() => { clearInterval(window.__shotT); const N = window.__night, C = window.__walkTest.CONFIG; return { room: N.S.room, shots: Object.keys(window.__shots).join(','), secs: (C.backStart[1] - C.backEndY) / (N.S.speed * C.moodBack.tempo), tempo: (N.NS.slump || C.moodBack).tempo }; });
+      console.log('    walk back shots', r.shots, '| computed walk', r.secs.toFixed(1), 's at tempo', r.tempo);
+      if (!r.room || /corridor/.test(r.shots) || r.tempo !== 0.78 || r.secs > 18) throw new Error('walk back ' + JSON.stringify(r));
+      await sleep(800);
+    });
     await step('turn to the mirror wall, sit button', async () => { for (let i = 0; i < 4; i++) { const v = await pg.evaluate(() => window.__night.S.roomView); if (v === 'mirror') break; await pg.click('#roomR'); await sleep(500); } await pg.waitForSelector('#sit:not(.hidden)', { timeout: 3000 }); });
     await step('mirror entry: sit, reflection late, cracks', async () => { await pg.click('#sit'); await sleep(700); await pg.mouse.click(sc.w / 2, sc.h / 2); await sleep(420); await shot('entry'); await sleep(900); const n = await pg.evaluate(() => window.__night.NS.cracks); if (n < 1) throw new Error('no crack'); });
     if (nAt === 'in' || nAt === 'both') await step('Nietzsche line at the mirror before he goes in', async () => { await pg.waitForSelector('#card_nietzscheIn', { timeout: 10000 }); const t = await pg.textContent('#card_nietzscheIn .quote'); console.log('   in:', t.slice(0, 60)); await shot('nietzsche_in'); await pg.click('#goIn'); });
-    await step('fog into the Mirror World', async () => { await pg.waitForFunction(() => window.__night.S.mode === 'mw', null, { timeout: 8000 }); await sleep(1500); await shot('mw'); const k = await pg.evaluate(() => window.__night.foes.map((f) => f.kind).join(',')); console.log('   foes', k); });
+    await step('fog into the Mirror World', async () => { await pg.waitForFunction(() => window.__night.S.mode === 'mw', null, { timeout: 8000 }); await sleep(1500); });
+    // panel G (owner 22 Nov 11:22 items 2 and 4): night 1 starts in the mirror corridor, one cut at the door, then the ring with its constructs
+    await step('Mirror World: the mirror corridor, then one cut to the ring (G)', async () => {
+      const a = await pg.evaluate(() => {
+        const N = window.__night, M = N.M, cam = N.mwCam, V = cam.position.constructor, inF = (x, y, z) => { const v = new V(x, y, z).project(cam); return Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1 && v.z < 1; };
+        return { space: M.space, foes: N.foes.length, calls: window.__walkTest.renderer.info.render.calls, him: inF(M.x, 0, M.z) && inF(M.x, 1.8, M.z), door: inF(0, 1.2, N.N1.mwCorZ[1] - 0.48) };
+      });
+      await shot('mw_corridor');
+      if (a.space !== 'corridor' || a.foes !== 0 || !a.him || !a.door) throw new Error('start ' + JSON.stringify(a));
+      await pg.evaluate(() => { const N = window.__night; N.M.z = N.N1.mwCorDoor + 0.6; N.input.ty = 1; });
+      await pg.waitForFunction(() => window.__night.M.space === 'ring', null, { timeout: 15000 });
+      await pg.evaluate(() => { window.__night.input.ty = 0; });
+      await sleep(1500); await shot('mw');
+      const b = await pg.evaluate(() => { const N = window.__night; return { cuts: N.M.cuts, foes: N.foes.map((f) => f.kind).join(','), calls: window.__walkTest.renderer.info.render.calls }; });
+      console.log('    corridor draw calls', a.calls, '| ring draw calls', b.calls, '| foes', b.foes);
+      if (b.cuts !== 1 || !b.foes || a.calls >= 150 || b.calls >= 150) throw new Error('route ' + JSON.stringify(b));
+    });
+    await step('Mirror World: unworldly backdrop scaled by Mask (G)', async () => {
+      const r = await pg.evaluate(() => { const N = window.__night, lo = N.mwUnworld(0), hi = N.mwUnworld(6), now = N.mwUnworld(N.NS.mask); return { lo, hi, now, u: { warp: N.mwU.uWarp.value, amt: N.mwU.uAmt.value, glass: N.mwU.uGlass.value } }; });
+      if (!(r.hi.warp > r.lo.warp && r.hi.amt > r.lo.amt && r.hi.glass > r.lo.glass)) throw new Error('not scaled by Mask ' + JSON.stringify(r));
+      if (Math.abs(r.u.warp - r.now.warp) > 1e-6 || Math.abs(r.u.amt - r.now.amt) > 1e-6) throw new Error('uniforms not from this Mask ' + JSON.stringify(r));
+    });
     // H1: each fall in the act feeds the Whisper (stand-in act: 1 miss)
     await step('the Whisper is fed by each fall (H1)', async () => { const r = await pg.evaluate(() => { const N = window.__night, w = N.foes.find((f) => f.kind === 'whisper'); return w ? { hp: w.hp, base: N.N1.whisper.hp, per: N.N1.whisperFeed.hp, falls: N.NS.hurt.falls, mul: w.speedMul } : null; }); if (!r) throw new Error('no Whisper after a fall'); if (r.hp !== r.base + r.falls * r.per || !(r.mul > 1)) throw new Error('Whisper not fed ' + JSON.stringify(r)); });
     await step('gags: slap, pie, pratfall', async () => { await pg.keyboard.press('KeyJ'); await sleep(600); await pg.keyboard.press('KeyK'); await sleep(700); await pg.keyboard.press('Space'); await sleep(900); const M = await pg.evaluate(() => { const M = window.__night.M; return { l: M.laughs, p: window.__night.NS.pies }; }); console.log('   laughs', M.l.toFixed(1), 'pies', M.p); });
+    // panel B (owner 22 Nov 15:58): he is faster than the Light; leaving it flares it (tell, game time) and grows it
+    await step('Light: he outruns it, each escape grows it after a 0.4 s flare (B)', async () => {
+      const r0 = await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.x = L.spotX; N.M.z = L.spotZ; return { r: L.r, n: L.leaves }; });
+      await pg.waitForFunction(() => window.__night.foes.find((f) => f.kind === 'light').inPrev, null, { timeout: 10000 });
+      await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.x = L.spotX + L.r + 2.5; });
+      await pg.waitForFunction((n) => { const L = window.__night.foes.find((f) => f.kind === 'light'); return L.leaves > n && L.moveT >= 0; }, r0.n, { timeout: 20000 });
+      const r = await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); return { r: L.r, tell: L.moveT - L.leftT, v: N.S.speed * N.N1.mwTempo, follow: L.cfg.follow, cap: N.N1.lightCap, grow: N.N1.lightGrow }; });
+      console.log('    Light: he', r.v.toFixed(2), 'm/s vs', r.follow, '| tell', r.tell.toFixed(2), 's | spot', r0.r, '->', r.r);
+      if (!(r.v >= 1.4 * r.follow)) throw new Error('not faster than the Light ' + JSON.stringify(r));
+      if (!(r.tell >= 0.38)) throw new Error('chased after ' + r.tell.toFixed(2) + ' s, tell 0.4');
+      if (!(Math.abs(r.r - Math.min(r.cap, r0.r + r.grow)) < 1e-6 && r.r > r0.r)) throw new Error('spot did not grow ' + r0.r + ' -> ' + r.r);
+    });
     await step('stand still in the beam beats the Light', async () => { await pg.evaluate(() => { const N = window.__night, L = N.foes[0]; N.M.x = L.spotX; N.M.z = L.spotZ; }); await pg.waitForFunction(() => !window.__night.foes[0].alive, null, { timeout: 20000 }); });
     const lose = sc.n === 'land';
     await step(lose ? 'lost in the Mirror (land screen: loss branch), out' : 'others beaten, shards, out', async () => { await pg.evaluate((lose) => { const N = window.__night; if (lose) { N.endMW('lose'); return; } for (const f of N.foes) if (f.alive) { f.hp = 0; f.alive = false; f.sink = 0.6; } }, lose); await pg.waitForSelector(nAt === 'in' ? '#card_small' : '#card_nietzsche', { timeout: 12000 }); });
