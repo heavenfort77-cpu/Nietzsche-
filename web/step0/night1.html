@@ -37,6 +37,7 @@
   .card p { margin: 0; max-width: 560px; }
   .card button, .btn { font: inherit; font-weight: 600; min-height: 44px; padding: 10px 22px; border-radius: 6px; border: 0; background: #cfaa4e; color: #1e1714; cursor: pointer; }
   .card button:disabled { opacity: .45; }
+  .card button.held { visibility: hidden; }
   .card .opts { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
   .card .opt { max-width: 260px; text-align: left; background: #2a2226; color: #eadfcf; border: 1px solid #cfaa4e66; }
   .card .opt b { display: block; color: #f0d27a; margin-bottom: 4px; }
@@ -556,9 +557,16 @@ const N1 = Object.freeze({
   cracksMax: 3, crackAt: 0.25,
   // fog card into the Mirror World, ms
   fogMs: 1400,
-  // night 1 quotes (GDD Quotes table)
-  dazai: ['I have lived a life full of shame.', '恥の多い生涯を送って来ました', 'Dazai, No Longer Human (our translation)'],
-  nietzsche: ['Everything that is profound loves the mask.', 'Nietzsche, Beyond Good and Evil 40 (Zimmern)'],
+  // night 1 Dazai line, before he goes out: why he clowns (owner 22 Nov; was the night-2 row, "a life full of shame" moves to night 2)
+  dazai: ['My clowning was my last courtship of humanity.', 'そこで考え出したのは、道化でした。それは、自分の、人間に対する最後の求愛でした。', 'Dazai, No Longer Human (our translation)'],
+  // night 1 Nietzsche line: how fruitless it is (owner 22 Nov); Common's translation, public domain
+  nietzsche: ['In vain was all our labour.', 'Nietzsche, Thus Spake Zarathustra II, "The Soothsayer" (Common)'],
+  // where the Nietzsche line shows: 'out' = leaving the Mirror World (theme panel 22 Nov: 9 of 12), 'in' = at the big mirror before he goes in, 'both'
+  nietzscheAt: 'out',
+  // line shown at the mirror before he goes in when nietzscheAt is 'both' (panel: kept in reserve); same chapter, Common
+  nietzscheIn: ['All is empty, all is alike, all hath been!', 'Nietzsche, Thus Spake Zarathustra II, "The Soothsayer" (Common)'],
+  // the Nietzsche line is held alone this long before its button shows (panel fix 1), ms; low tone under it, Hz
+  nietzscheHoldMs: 2500, nietzscheToneHz: 98,
   // ----- Mirror World (night 1): ring relit cold, fixed-spot turning camera, Laughs are health and ammo -----
   mwRadius: 6.8, mwCamPos: [0, 5.6, 12.6], mwLookH: 0.9, mwFovMin: 24, mwFovMax: 50, mwFrame: 2.4, mwCamLerp: 4,
   // clown speed as a share of the measured walk speed (clip sped up the same, no foot slide)
@@ -1285,6 +1293,8 @@ const n1 = true;
 const NS = {
   scene: 'logo', verbs: { jump: false, take: false, honk: false, trip: false }, pies: 0, act: '', actInfo: null, crowd: '',
   laughs: 0, mask: 0, shards: 0, bought: [], anim: null, audio: null, verbM: null, unit: 0.03, touch: false, mouse: new THREE.Vector2(),
+  // where the Nietzsche line shows this run (from N1.nietzscheAt; checks may set it)
+  nAt: N1.nietzscheAt,
   paintT: -1, painted: false, sitTarget: 0, sit: 0, reflSit: 0, mirT: 0, lastCrack: -9, cracks: 0, crackList: [], fogging: false,
   hist: new Float32Array(256), histT: new Float32Array(256), histI: 0, mrect: [0, 0, 1, 1], mood: { tempo: 1, chest: 6, neck: 2, head: 2 },
   rmood: { tempo: 1, chest: 6, neck: 2, head: 2 }, mw: null, cable: null, tape: null, poll: 0, cue: null, card: null,
@@ -1700,8 +1710,16 @@ function updateMirror(dt) {
   }
   if (S.mirror === 'entry') {
     if (Math.abs(NS.sit - NS.reflSit) > N1.crackAt && NS.cracks < N1.cracksMax && NS.mirT - NS.lastCrack > 0.12) addCrack();
-    if (NS.sitTarget === 1 && NS.sit >= 1 && NS.reflSit >= 0.999 && !NS.fogging) { NS.fogging = true; setTimeout(fogIn, 600); }
+    if (NS.sitTarget === 1 && NS.sit >= 1 && NS.reflSit >= 0.999 && !NS.fogging) { NS.fogging = true; setTimeout(nietzscheInCard, 600); }
   }
+}
+// Nietzsche line at the big mirror before he goes in (nietzscheAt 'in' or 'both'); otherwise straight into the fog
+function nietzscheInCard() {
+  const at = NS.nAt;
+  if (at !== 'in' && at !== 'both') { fogIn(); return; }
+  const q = at === 'both' ? N1.nietzscheIn : N1.nietzsche;
+  const d = show('nietzscheIn', `<div class="quote">"${q[0]}"<small>${q[1]}</small></div><button id="goIn">Into the mirror</button>`);
+  d.querySelector('#goIn').addEventListener('click', () => { hideCard(); fogIn(); });
 }
 function fogIn() {
   el.fog.style.opacity = 1;
@@ -1715,7 +1733,11 @@ function n1Key(e) {
   if (NS.scene === 'title') { if (e.code === 'Enter' || e.code === 'Space') el.start.click(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
   if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
-  if (S.mirror === 'entry') { if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); } return true; }
+  if (S.mirror === 'entry') {
+    if (NS.card && NS.card.id === 'card_nietzscheIn') { if (e.code === 'Enter' || e.code === 'Space') NS.card.querySelector('#goIn').click(); return true; }
+    if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); }
+    return true;
+  }
   if (S.mode === 'mw') {
     if (e.code === 'KeyJ') { gag('slap', null); return true; }
     if (e.code === 'KeyK') { gag('pie', null); return true; }
@@ -2100,11 +2122,21 @@ function endMW(result) {
     }, N1.fogMs);
   }, 700);
 }
+// leaving the Mirror World: the Nietzsche line on its own card (nietzscheAt 'out' or 'both'), then the shards he kept
 function nietzscheCard() {
   NS.scene = 'out';
-  const q = N1.nietzsche, lost = NS.result === 'lose';
-  const d = show('nietzsche', `<div class="quote">"${q[0]}"<small>${q[1]}</small></div>
-    <p>${lost ? 'He wakes at the mirror. He kept half his shards: ' : 'Out of the mirror, with '}${NS.mwKept} shard${NS.mwKept === 1 ? '' : 's'}.</p><button id="toShop">To the mirror</button>`);
+  const at = NS.nAt;
+  if (at !== 'out' && at !== 'both') { keptCard(); return; }
+  const q = N1.nietzsche;
+  const d = show('nietzsche', `<div class="quote">"${q[0]}"<small>${q[1]}</small></div><button id="toKept" class="held">Leave the mirror</button>`);
+  const b = d.querySelector('#toKept');
+  b.addEventListener('click', keptCard);
+  tone(N1.nietzscheToneHz, N1.nietzscheToneHz * 0.9, 1.6, 'sine', 0.1);
+  setTimeout(() => { if (NS.card === d) b.classList.remove('held'); }, N1.nietzscheHoldMs);
+}
+function keptCard() {
+  const lost = NS.result === 'lose';
+  const d = show('kept', `<p>${lost ? 'He wakes at the mirror. He kept half his shards: ' : 'Out of the mirror, with '}${NS.mwKept} shard${NS.mwKept === 1 ? '' : 's'}.</p><button id="toShop">To the mirror</button>`);
   d.querySelector('#toShop').addEventListener('click', shopCard);
 }
 function shardRow(n, cls) { let h = ''; for (let i = 0; i < n; i++) h += `<span class="shard ${cls || ''}"></span>`; return h; }
