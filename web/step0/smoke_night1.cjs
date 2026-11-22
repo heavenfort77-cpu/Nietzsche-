@@ -76,6 +76,7 @@ const MUTS = {
   // owner 22 Nov (session 19): his three tracks follow the scenes; each mutation must FAIL a music step
   musicmap: ['night1.html', "walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight'", "walk: 'cold', board: 'cold', act: 'cold', back: 'weight'"],
   musicpause: ['night1.html', '  musicHold(true);\n  const sc = bindScene()', '  const sc = bindScene()'],
+  musicsoft: ['night1.html', 'N1.musicVol * musicSoft() * M.duck', 'N1.musicVol * M.duck'],
   musicduck: ['night1.html', 'function openCue() {\n  musicDuck(true);', 'function openCue() {'],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
@@ -579,7 +580,8 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     });
     await step('music: backstage, ring and after each get their track, one sounds at a time (owner 22 Nov)', async () => {
       await sleep(2500);
-      const m = await pg.evaluate(musicState), vol = await pg.evaluate(() => window.__night.N1.musicVol);
+      const m = await pg.evaluate(musicState), vol = await pg.evaluate(() => { const N = window.__night, s = N.N1.musicSoft[N.NS.scene]; return N.N1.musicVol * (s === undefined ? 1 : s); }), full = await pg.evaluate(() => window.__night.N1.musicVol);
+      if (!(vol < full - 0.05)) throw new Error('the end card is a room scene: its music must be softer than the walk, got ' + vol + ' of ' + full);
       console.log('    music trail', m && m.trail, '| playing', m && m.playing.join(','), '| gains', m && JSON.stringify(m.gain));
       if (!m || m.trail !== 'cold waltz weight' || m.playing.join() !== m.want || m.key !== m.want) throw new Error('music ' + JSON.stringify(m));
       for (const k in m.gain) if (Math.abs(m.gain[k] - (k === m.key ? vol : 0)) > 0.02) throw new Error('gain ' + k + ' ' + m.gain[k]);

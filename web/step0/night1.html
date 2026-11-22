@@ -855,6 +855,8 @@ const N1 = Object.freeze({
   musicScene: { paint: 'cold', bravado: 'cold', boardwall: 'cold', note: 'cold', walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight', mw: 'weight', out: 'weight', small: 'weight', kept: 'weight', shop: 'weight', end: 'weight' },
   // music volume, 0-1 (laughs, horn and the cue sit on top)
   musicVol: 0.55,
+  // share of musicVol per scene, a scene not listed plays at 1 (owner 22 Nov 23:08: softer in the room and the Mirror World; read as the music level)
+  musicSoft: { paint: 0.6, bravado: 0.6, boardwall: 0.6, note: 0.6, mw: 0.6, out: 0.6, small: 0.6, kept: 0.6, shop: 0.6, end: 0.6 },
   // share of that volume while the timing cue runs, so its drum leads
   musicCueDuck: 0.3,
   // crossfade between tracks, s
@@ -1998,7 +2000,8 @@ function musicSetup() {
     if (k !== first) { const pr = e.play(); if (pr) pr.then(() => { if (M.key !== k) e.pause(); }).catch(() => {}); }
   }
 }
-function musicLevel(k) { const M = NS.music; return k === M.key ? N1.musicVol * M.duck : 0; }
+function musicSoft() { const s = N1.musicSoft[NS.scene]; return s === undefined ? 1 : s; }
+function musicLevel(k) { const M = NS.music; return k === M.key ? N1.musicVol * musicSoft() * M.duck : 0; }
 function musicApply(fade) {
   const M = NS.music, a = NS.audio; if (!M || !a) return;
   for (const k in M.el) {
@@ -2010,7 +2013,7 @@ function musicApply(fade) {
 // the scene's track (CONFIG musicScene); the old one fades out and stops where it was
 function musicFor(sc) {
   const M = NS.music; if (!M || !(sc in N1.musicScene)) return;
-  const k = N1.musicScene[sc]; if (k === M.key) return;
+  const k = N1.musicScene[sc]; if (k === M.key) { musicApply(N1.musicFade); return; }
   M.key = k; M.trail.push(k);
   musicApply(N1.musicFade);
   setTimeout(() => { for (const j in M.el) if (j !== M.key) M.el[j].pause(); }, N1.musicFade * 1000 + 200);
