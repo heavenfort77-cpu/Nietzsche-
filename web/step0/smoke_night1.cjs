@@ -58,6 +58,14 @@ const MUTS = {
   vanity: ['night1.html', "  const vanity = kind === 'paint';", '  const vanity = false;'],
   pale: ['night1.html', 'reflPale: 0.85, night: 1,', 'reflPale: 0, night: 1,'],
   press: ['night1.html', '  if (press) handsMeet(dt);', ''],
+  // owner's phone play 22 Nov 19:38 (panel 22 Nov c, session 18)
+  vanitylow: ['night1.html', 'vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9],', 'vanityGlass: [4.83, 0, 1.55], vanitySize: [1.3, 1.1],'],
+  bravado: ['night1.html', '  bravado: true,', '  bravado: false,'],
+  bravrefl: ['night1.html', 'bravReflLag: 0.5, bravReflAmt: 0.4,', 'bravReflLag: 0, bravReflAmt: 1,'],
+  gprestore: ['night1.html', 'function moodRestore(c) { gpRestore(c);', 'function moodRestore(c) {'],
+  fallfloor: ['night1.html', '  fallFloor: true,', '  fallFloor: false,'],
+  tripacross: ['night1.html', 'tripAngles: [90, 75, 60, 45],', 'tripAngles: [],'],
+  missyaw: ['night1.html', 'missYaw: 1.5708, bowYaw: 0.9,', 'missYaw: 0, bowYaw: 0,'],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
@@ -95,11 +103,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('loads', async () => { await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 120000 }); });
     const nAt = process.env.N_AT || await pg.evaluate(() => window.__night.N1.nietzscheAt);
     await pg.evaluate((a) => { window.__night.NS.nAt = a; }, nAt);
+    // fault F27 (owner 22 Nov 19:38 "what that fall he squashed"): every page pose gives the same result twice and never sinks under the floor
+    await step('falls: same pose every time, nothing under the floor (F27, 22c-3)', async () => {
+      const r = await pg.evaluate(() => { const N = window.__night, o = [];
+        for (const k of ['prat', 'trip', 'dive', 'kneel']) for (const m of ['', 'moodOut', 'moodBack']) { const a = N.gpProbe(k, m), b = N.gpProbe(k, m); o.push({ k, m, low: Math.min(...a.map((x) => x[1])), same: JSON.stringify(a) === JSON.stringify(b), h0: a[0][2] }); }
+        return o; });
+      const bad = r.filter((x) => !x.same || x.low < -0.03 || x.h0 < 1.65);
+      console.log('    lowest point per pose', r.map((x) => x.k + (x.m ? '/' + x.m : '') + ' ' + x.low.toFixed(3)).join(', '));
+      if (bad.length) throw new Error('poses ' + JSON.stringify(bad));
+    });
     await step('logo then title', async () => { await sleep(3400); await pg.waitForSelector('#logo.hidden', { state: 'attached', timeout: 2000 }); });
     await step('start: at the mirror', async () => { await pg.click('#start'); await sleep(1500); });
     await step('opening at the dressing table, his reflection facing him (22b-6)', async () => {
       const r = await pg.evaluate(() => { const N = window.__night, W = window.__walkTest, m = N.NS.mrect, P = (o, y) => { const v = o.getWorldPosition(new W.camera.position.constructor()); v.y += y; v.project(W.roomCam); return [(v.x + 1) / 2 * N.S.w, (1 - v.y) / 2 * N.S.h]; };
-        const rh = P(N.refl.root, 1.3), ch = P(N.chars.clown.root, 1.3), inGlass = rh[0] >= m[0] && rh[0] <= m[0] + m[2] && N.S.h - rh[1] >= m[1] && N.S.h - rh[1] <= m[1] + m[3];
+        // session 18 (owner 22 Nov 19:38): the reflection's face, head bone to 0.3 m above it, must be inside the glass; batch 3 measured a fixed 1.3 m and passed a cut-off face
+        const H = (c, up) => { const v = new W.camera.position.constructor(); c.pb.head.getWorldPosition(v); v.y += up; v.project(W.roomCam); return [(v.x + 1) / 2 * N.S.w, (1 - v.y) / 2 * N.S.h]; };
+        const IN = (q) => q[0] >= m[0] && q[0] <= m[0] + m[2] && N.S.h - q[1] >= m[1] && N.S.h - q[1] <= m[1] + m[3];
+        const rh = H(N.refl, 0.15), ch = H(N.chars.clown, 0.15), inGlass = IN(H(N.refl, 0)) && IN(H(N.refl, 0.3)) && IN(rh);
         return { view: N.S.roomView, mirror: N.S.mirror, sit: N.NS.sit, inGlass, apart: Math.abs(rh[0] - ch[0]) / N.S.h, faces: Math.cos(N.chars.clown.root.rotation.y - N.refl.root.rotation.y) }; });
       console.log('    vanity: reflection in the glass', r.inGlass, '| heads apart', (r.apart * 100).toFixed(0) + '% of the height');
       if (r.view !== 'dressing' || r.mirror !== 'paint' || r.sit !== 1 || !r.inGlass || r.apart < 0.04 || r.faces > -0.99) throw new Error('vanity ' + JSON.stringify(r));
@@ -108,10 +128,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const boardWall = await pg.evaluate(() => window.__night.N1.boardWall);
     // panel F (owner 22 Nov 15:58): the act board is the room's wall; its two acts are 44 px buttons over their cards (land picks the sweep)
     const actPick = sc.n === 'land' ? 'sweep' : 'fall';
+    // panel 22 Nov c fix 2: after the Dazai line he stands and straightens (false bravado); the vanity reflection is late, partial and sad
+    await step('false bravado after the Dazai line (22c-2)', async () => {
+      await pg.click('#goOut');
+      await pg.waitForFunction(() => window.__night.NS.brav && window.__night.NS.brav.t > 1.0, null, { timeout: 20000 });
+      const mid = await pg.evaluate(() => { const N = window.__night, rf = N.refl.face.material.uniforms.uCell.value; return { sit: N.NS.sit, face: N.chars.clown.faceNow, reflSad: rf.x === 0 && rf.y === 0 }; });
+      await shot('bravado');
+      await pg.waitForFunction(() => window.__night.NS.bravLast, null, { timeout: 20000 });
+      const r = Object.assign(mid, await pg.evaluate(() => window.__night.NS.bravLast));
+      console.log('    bravado', JSON.stringify(r));
+      if (!(r.peak >= 0.99 && r.reflPeak > 0.1 && r.reflPeak <= 0.5 && r.sit < 0.05 && r.face === 'smile' && r.reflSad && !r.skipped)) throw new Error('bravado ' + JSON.stringify(r));
+    });
     await step('act board on the room wall, no board card (F)', async () => {
       if (!boardWall) throw new Error('N1.boardWall is off: the act is chosen on a card at the ring edge');
-      await pg.click('#goOut');
-      await pg.waitForFunction(() => window.__night.S.roomView === 'board' && !document.getElementById('boardActs').classList.contains('hidden'), null, { timeout: 10000 });
+      if (await pg.isVisible('#goOut')) await pg.click('#goOut');
+      await pg.waitForFunction(() => window.__night.S.roomView === 'board' && !document.getElementById('boardActs').classList.contains('hidden'), null, { timeout: 20000 });
       await sleep(400); await shot('board');
       // 22 Nov b item 1: one note per act, at least 44 px, inside the picture, never overlapping; a tap opens a readable parchment; Back returns
       const r = await pg.evaluate(() => { const c = document.getElementById('gl').getBoundingClientRect(); return Array.from(document.querySelectorAll('#boardActs .note')).map((b) => { const q = b.getBoundingClientRect(); return { l: q.left, r: q.right, t: q.top, b: q.bottom, h: q.height, w: q.width, inside: q.left >= c.left - 1 && q.right <= c.right + 1 && q.top >= c.top - 1 && q.bottom <= c.bottom + 1 }; }); });
@@ -161,6 +192,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('corridor: one physical joke per verb (item 5)', async () => { await pg.waitForFunction(() => { const j = window.__night.NS.jokes; return j.echo && j.rigger && j.sniff; }, null, { timeout: 20000 }).catch(async () => { throw new Error('jokes ' + JSON.stringify(await pg.evaluate(() => window.__night.NS.jokes))); }); });
     await step('trip button does not say "on purpose" (H2)', async () => { await tp(-1.3, 17.0); await sleep(500); const t = await pg.textContent('#verb'); if (!/^Trip\b/.test(t) || /purpose/i.test(t)) throw new Error('verb reads "' + t + '"'); });
     await step('trip for the child', async () => { await verb(-1.3, 17.0, 'trip'); await pg.waitForFunction(() => /on purpose/.test(window.__night.crew[4].lab.textContent), null, { timeout: 8000 }); await shot('child'); });
+    // panel 22 Nov c 3d: the trip is played across the camera, at least 45 degrees off its line
+    await step('trip for the child is seen across the camera (22c-3)', async () => {
+      const a = await pg.evaluate(() => window.__night.NS.fallAxes.filter((f) => f.scene === 'walk'));
+      console.log('    walk falls off the camera line (deg)', a.map((f) => f.off).join(' '));
+      const last = a[a.length - 1];
+      if (!last || last.off < 45) throw new Error('trip axis ' + JSON.stringify(a));
+    });
     await step('walk out: brisk, one bubble at a time (C)', async () => {
       // panel C promised about 13 s of walking (start to the ring edge, shots.json), from the clip's measured speed x moodOut tempo
       const r = await pg.evaluate(() => { clearInterval(window.__bubbleT); const N = window.__night, d = N.S.data; return { max: window.__bubbles, v: N.S.speed * window.__walkTest.CONFIG.moodOut.tempo, m: d.endY - d.start.at[1] }; });
@@ -233,6 +271,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         const r = await pg.evaluate(() => { const N = window.__night, c = N.chars.clown; N.gpStart(c, 'prat'); c.gp.t = 0.45; N.gpEval(c, 0); const v = Array.from(c.gp.now); N.gpStop(c); return { hy: v[0], hr: v[1], thigh: v[4], armOut: v[9], root: c.root.rotation.x }; });
         if (!(r.hy < -0.5 && r.hr < -30 && r.thigh < -30 && r.armOut > 45 && Math.abs(r.root) < 1e-6)) throw new Error('pratfall at impact ' + JSON.stringify(r));
         console.log('    falls', used.falls, 'pratfall poses', used.prat);
+      });
+      // panel 22 Nov c 3d: every act fall is played at least 45 degrees off the low-seat camera's line
+      await step('act: falls seen across the camera (22c-3)', async () => {
+        const a = await pg.evaluate(() => window.__night.NS.fallAxes.filter((f) => f.scene === 'act'));
+        console.log('    act falls off the camera line (deg)', a.map((f) => f.off).join(' '));
+        if (!a.length || a.some((f) => f.off < 45)) throw new Error('act fall axes ' + JSON.stringify(a));
       });
       await step('act: the crowd rocks hardest at the miss, then a Perfect, then a Good', async () => { const p = await pg.evaluate(() => window.__night.NS.A.peaks); console.log('    crowd peaks', p.map((x) => x.toFixed(2)).join(' ')); if (!(p[1] > p[0] && p[0] > p[2])) throw new Error('peaks ' + p.map((x) => x.toFixed(2))); });
       await step('act: intensity: drum roll per gag, crash and shake on falls, flash and popcorn on peaks (22b-5)', async () => {

@@ -695,6 +695,22 @@ const N1 = Object.freeze({
   tripSecs: 0.8, tripPitch: 0.5,
   // the deliberate trip for the child carries him this far forward, m (panel 22 Nov b item 4: the clown trip pose)
   tripStep: 0.6,
+  // session 18 (panel 22 Nov c, fix 3): the trip for the child turns him across the camera (radians per second) so the fall is seen in profile
+  tripTurn: 14,
+  // his lying length past the step, m, and the angles off the camera's line tried for the trip, widest first (degrees)
+  tripLen: 1.5, tripAngles: [90, 75, 60, 45],
+  // the floor contact for every fall pose (switch), and how long the posture lean takes to fade when a fall starts, s
+  fallFloor: true, fallMoodFade: 0.15,
+  // the act's missed-chain fall turns him side-on first (radians, 0 faces the house), and the bow that tips him over is played three-quarter on
+  missYaw: 1.5708, bowYaw: 0.9,
+  // session 18 (owner 22 Nov 19:38, panel 22 Nov c fix 2): after the Dazai line he stands and straightens up, false bravado (switch)
+  bravado: true,
+  // times, s: standing from the chair, the chest out and chin up, the hold, the shoulders dropping a hair; a tap skips after bravSkipAfter
+  bravRise: 0.6, bravPuff: 0.35, bravHold: 0.9, bravDrop: 0.45, bravSkipAfter: 0.2,
+  // the straightened posture, degrees (negative = upright, chin up), and how far the chest drops back at the end
+  bravChest: -16, bravNeck: -6, bravHead: -12, bravDropChest: 4,
+  // the vanity reflection copies it late (s) and only partly (0..1), keeping its sad face
+  bravReflLag: 0.5, bravReflAmt: 0.4,
   // pies from the props girl (Mirror World throws)
   pies: 3,
   // opening at the mirror: paint before the first input (half painted) and after, and the time it takes
@@ -706,7 +722,7 @@ const N1 = Object.freeze({
   // mirror glass in the mirror wall plate, fractions of the plate (x0, y0 from top, x1, y1); plate fov and play fov from views.json and CONFIG
   mirrorRect: [0.40, 0.0, 0.605, 0.675],
   // 22 Nov b item 6: the opening at the dressing table: chair (Blender x, y), vanity glass centre (x, y, z) and size (width, height) m, his reflection's side offset (Blender y) and depth past the glass
-  vanityChair: [3.5, 0.2], vanityGlass: [4.83, 0, 1.55], vanitySize: [1.3, 1.1], vanityReflY: -0.35, vanityReflPast: 1.35,
+  vanityChair: [3.5, 0.2], vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9], vanityReflY: -0.35, vanityReflPast: 1.35,
   // 22 Nov b item 7: the big mirror shows a pale form of him, darker every night (tint per night 1-7, times his shading's grey); grade amount
   reflShade: [1.45, 1.25, 1.05, 0.85, 0.65, 0.5, 0.35], reflPale: 0.85, night: 1,
   // he presses his right hand to the glass instead of sitting; the reflection presses back (its left), late; hands must meet within this share of the picture height
@@ -863,7 +879,9 @@ const N1 = Object.freeze({
   // panel 22 Nov b item 5 (intensity): 2.0 -> 1.6 s
   segSecs: 1.6, goodAmt: 0.55,
   // intensity: drum roll length s and bus volume; camera shake m on a fall; popcorn pieces per burst
-  rollSecs: 1.0, drumVol: 0.5, shakeM: 0.09, actPopN: 120,
+  rollSecs: 1.0, drumVol: 0.5,
+  // the bravado breath: length s, level (0..1)
+  breathSecs: 0.32, breathVol: 0.6, shakeM: 0.09, actPopN: 120,
   // the fall backwards about his feet, radians (a miss, the bar miss, the bow that tips him over); the knees in the sweep sink him this far, m
   fallBack: 1.25, kneelDrop: 0.38,
   // the beat after: laughter stops, he is alone in the spot with the sad face, s; then the smile and the bow with the hat back on, dented, s
@@ -977,7 +995,8 @@ function findMoodBones(c) {
     return { key, bone, saved: new THREE.Quaternion() };
   });
 }
-function moodRestore(c) { for (const b of c.moodBones) b.bone.quaternion.copy(b.saved); }
+// F27: the fall poses go back first (they were applied after the mood), then the mood; three.js rewrites a bone only when its clip value changes
+function moodRestore(c) { gpRestore(c); for (const b of c.moodBones) b.bone.quaternion.copy(b.saved); }
 function moodApply(c, mood) {
   moodQ.ax.set(1, 0, 0).applyQuaternion(c.root.quaternion);
   for (const b of c.moodBones) {
@@ -1600,7 +1619,7 @@ const NS = {
   // item 4: continue-only cards seen this night; item 5: the corridor jokes played, the rigger's trip clock (-1 = off), the sniff posture
   contCount: 0, jokes: { echo: false, rigger: false, sniff: false }, riggerT: -1, sniffMood: { tempo: 1, chest: 0, neck: 0, head: 0 }, keptLine: '',
   // the act at the zoom-out: routine state, game-time rate (checks may raise it), seen once (tap skips after), slump for the walk back, dented hat carried, clown height m
-  A: null, gpUsed: {}, actRate: 1, actSeen: false, slump: null, hatDent: false, clownH: 1.79,
+  A: null, gpUsed: {}, fallAxes: [], brav: null, actRate: 1, actSeen: false, slump: null, hatDent: false, clownH: 1.79,
 };
 try { NS.actSeen = localStorage.getItem('n1ActSeen') === '1'; } catch (e) { NS.actSeen = false; }
 const crew = [];
@@ -1622,6 +1641,8 @@ const ease = (k) => k * k * (3 - 2 * k);
 const GPC = ['hy', 'hr', 'sp', 'hd', 'tL', 'tR', 'sL', 'sR', 'aLx', 'aLz', 'aRx', 'aRz', 'fL', 'fR'];
 // sit = hips on the floor, flop = lying face down (metres for a 0.85 m hip height)
 const SIT = -0.71, FLOP = -0.64;
+// bones the fall poses write (saved and put back each frame, F27)
+const GP_BONES = ['hips', 'spine', 'head', 'thigh_L', 'thigh_R', 'shin_L', 'shin_R', 'upper_arm_L', 'upper_arm_R', 'forearm_L', 'forearm_R'];
 const GPCLIP = {
   // the pratfall (Muybridge 56, Chaplin): feet fly forward, airborne flat, lands on his backside, legs up, a bounce, sitting
   prat: { secs: 0.8, keys: [[0.10, { hy: 0.04, hr: -15, tL: -40, tR: -40, aLx: -60, aLz: 70, aRx: -60, aRz: -70 }],
@@ -1661,9 +1682,29 @@ function gpRig(c) {
   // hip height scales the drop channel (a 0.85 m hip height is 1)
   c.hipsK = Math.max(0.4, GP.w.y - GP.v.y) / 0.85;
   c.gp = { kind: '', t: 0, from: new Float32Array(GPC.length), now: new Float32Array(GPC.length) };
+  // F27: what each fall pose bone held before gpApply, put back by gpRestore before the next mixer update
+  c.gpSave = GP_BONES.map((n) => ({ b: c.pb[n], q: new THREE.Quaternion() }));
+  c.gpHipsP = new THREE.Vector3(); c.gpDirty = false;
+  c.gpMoodNow = { tempo: 1, chest: 0, neck: 0, head: 0 }; c.gpLow = 0;
+  // floor contact samples (load time): per bone, the skin vertices furthest along +-x, +-y, +-z in the bind pose
+  const pa = c.body.geometry.attributes.position, si = c.body.geometry.attributes.skinIndex, sw = c.body.geometry.attributes.skinWeight;
+  const best = new Map();
+  for (let i = 0; i < pa.count; i++) {
+    let j = si.getX(i), w = sw.getX(i);
+    if (sw.getY(i) > w) { j = si.getY(i); w = sw.getY(i); } if (sw.getZ(i) > w) { j = si.getZ(i); w = sw.getZ(i); } if (sw.getW(i) > w) j = si.getW(i);
+    const p = [pa.getX(i), pa.getY(i), pa.getZ(i)];
+    for (let d = 0; d < 6; d++) { const key = j * 6 + d, v = (d & 1 ? -1 : 1) * p[d >> 1], o = best.get(key); if (!o || v > o[0]) best.set(key, [v, i]); }
+  }
+  c.gpSamples = Int32Array.from(new Set(Array.from(best.values(), (o) => o[1])));
+}
+function gpRestore(c) {
+  if (!c.gpDirty) return;
+  for (const s of c.gpSave) s.b.quaternion.copy(s.q);
+  c.pb.hips.position.copy(c.gpHipsP);
+  c.gpDirty = false;
 }
 // start a clip from his current pose (so every change of pose is continuous)
-function gpStart(c, kind) { c.gp.from.set(c.gp.now); c.gp.kind = kind; c.gp.t = 0; if (c === chars.clown) NS.gpUsed[kind] = (NS.gpUsed[kind] || 0) + 1; }
+function gpStart(c, kind) { c.gp.from.set(c.gp.now); c.gp.prev = c.gp.kind; c.gp.kind = kind; c.gp.t = 0; c.gp.noted = false; if (c === chars.clown) NS.gpUsed[kind] = (NS.gpUsed[kind] || 0) + 1; }
 function gpStop(c) { c.gp.kind = ''; c.gp.now.fill(0); }
 // value at clip time t: from the pose he was in, through the keys, holding the last
 function gpEval(c, dt) {
@@ -1676,6 +1717,43 @@ function gpEval(c, dt) {
   const k = ease(THREE.MathUtils.clamp((g.t - t0) / Math.max(1e-4, t1 - t0), 0, 1));
   for (let i = 0; i < GPC.length; i++) g.now[i] = a[i] + (b[i] - a[i]) * k;
   return true;
+}
+// falls own the body (panel 22 Nov c 3b): the posture lean fades out as a fall starts and back in as he gets up from one
+const FALL_KINDS = { prat: 1, trip: 1, dive: 1 };
+// poses that reach the floor get the floor contact (the kneel too: its knees went 0.16 m under, found by the same probe)
+const FLOOR_KINDS = { prat: 1, trip: 1, dive: 1, kneel: 1 };
+function gpMood(c, mood) {
+  const g = c.gp;
+  if (!g || !g.kind) return mood;
+  let w = 0;
+  if (FALL_KINDS[g.kind]) w = Math.min(1, g.t / N1.fallMoodFade);
+  else if ((g.kind === 'up' || g.kind === 'pop') && FALL_KINDS[g.prev]) w = 1 - Math.min(1, g.t / GPCLIP[g.kind].secs);
+  if (w <= 0) return mood;
+  const m = c.gpMoodNow;
+  m.tempo = mood.tempo; m.chest = (mood.chest || 0) * (1 - w); m.neck = (mood.neck || 0) * (1 - w); m.head = (mood.head || 0) * (1 - w);
+  return m;
+}
+// floor contact (panel 22 Nov c 3c): the lowest of the sampled skin points; if under the floor (world y 0) the hips lift by that much
+function gpFloor(c) {
+  const g = c.gp;
+  if (!N1.fallFloor || !(FLOOR_KINDS[g.kind] || ((g.kind === 'up' || g.kind === 'pop') && FLOOR_KINDS[g.prev]))) return;
+  const b = c.body, s = c.gpSamples;
+  c.pb.hips.updateWorldMatrix(true, true); b.updateWorldMatrix(false, false);
+  let lo = 9;
+  for (let i = 0; i < s.length; i++) { b.getVertexPosition(s[i], GP.w); GP.w.applyMatrix4(b.matrixWorld); if (GP.w.y < lo) lo = GP.w.y; }
+  c.gpLow = lo;
+  if (lo >= 0) return;
+  c.pb.hips.getWorldPosition(GP.w); GP.w.y -= lo;
+  c.pb.hips.position.copy(c.pb.hips.parent.worldToLocal(GP.w));
+}
+// how far off the camera's line each fall is played, noted once per fall past 60% of it (degrees; 90 = full profile), for the checks
+function noteFall(c, cam) {
+  const g = c.gp;
+  if (c !== chars.clown || !FALL_KINDS[g.kind] || g.noted || g.t < GPCLIP[g.kind].secs * 0.6) return;
+  g.noted = true;
+  cam.getWorldDirection(GP.v);
+  const y = c.root.rotation.y, h = Math.hypot(GP.v.x, GP.v.z) || 1;
+  NS.fallAxes.push({ kind: g.kind, scene: NS.scene, off: Math.round(THREE.MathUtils.radToDeg(Math.acos(Math.min(1, Math.abs(Math.sin(y) * GP.v.x + Math.cos(y) * GP.v.z) / h)))) });
 }
 function gpDone(c) { return !!c.gp.kind && c.gp.t >= GPCLIP[c.gp.kind].secs; }
 // rotate a bone by body-frame euler degrees: world R = Q R_body Q^-1, then into the bone's parent space (P^-1 R P)
@@ -1691,6 +1769,7 @@ function gpRot(c, bone, x, y, z) {
 // apply after the mixer (and the posture layer); s scales the whole pose (0..1)
 function gpApply(c, s) {
   const v = c.gp.now, b = c.pb, k = s === undefined ? 1 : s;
+  if (!c.gpDirty) { for (const q of c.gpSave) q.q.copy(q.b.quaternion); c.gpHipsP.copy(b.hips.position); c.gpDirty = true; }
   if (v[0]) {
     GP.v.set(0, v[0] * c.hipsK * k, 0);
     b.hips.getWorldPosition(GP.w).add(GP.v);
@@ -1700,6 +1779,27 @@ function gpApply(c, s) {
   gpRot(c, b.thigh_L, v[4] * k, 0, 0); gpRot(c, b.thigh_R, v[5] * k, 0, 0); gpRot(c, b.shin_L, v[6] * k, 0, 0); gpRot(c, b.shin_R, v[7] * k, 0, 0);
   gpRot(c, b.upper_arm_L, v[8] * k, 0, v[9] * k); gpRot(c, b.upper_arm_R, v[10] * k, 0, v[11] * k);
   gpRot(c, b.forearm_L, v[12] * k, 0, 0); gpRot(c, b.forearm_R, v[13] * k, 0, 0);
+  gpFloor(c);
+}
+
+// test hook (session 18): plays one fall clip on the reflection's rig at 60 fps inside one call, with a mood (CONFIG key or none),
+// and returns per frame [t, lowest body point m, highest m, head bone m]; used by smoke_night1.cjs. Leaves the reflection reset.
+function gpProbe(kind, moodKey) {
+  const c = refl, b = c.body, n = b.geometry.attributes.position.count, v = new THREE.Vector3(), out = [];
+  const keepP = c.root.position.clone(), keepR = c.root.rotation.y, mood = moodKey ? CONFIG[moodKey] || N1[moodKey] : {};
+  c.root.position.set(0, 0, 0); c.root.rotation.set(0, 0, 0);
+  c.walk.stop(); if (c.slap) c.slap.stop(); c.idle.reset().setEffectiveWeight(1).play(); c.mixer.update(0);
+  gpStop(c); gpStart(c, kind);
+  for (let f = 0; f <= Math.ceil(GPCLIP[kind].secs * 60) + 6; f++) {
+    moodRestore(c); c.mixer.update(1 / 60); moodApply(c, gpMood(c, mood)); gpEval(c, 1 / 60); gpApply(c);
+    c.root.updateMatrixWorld(true);
+    let lo = 9, hi = -9;
+    for (let k = 0; k < n; k += 2) { b.getVertexPosition(k, v); v.applyMatrix4(b.matrixWorld); if (v.y < lo) lo = v.y; if (v.y > hi) hi = v.y; }
+    c.pb.head.getWorldPosition(v);
+    out.push([+(f / 60).toFixed(3), +lo.toFixed(3), +hi.toFixed(3), +v.y.toFixed(3)]);
+  }
+  moodRestore(c); gpStop(c); c.root.position.copy(keepP); c.root.rotation.set(0, keepR, 0);
+  return out;
 }
 
 // ----- cast: ramp shading by material name -----
@@ -1857,8 +1957,44 @@ function showDazai() {
 }
 function goOut() {
   if (NS.scene !== 'paint') return;
+  if (N1.boardWall && N1.bravado) { startBravado(); return; }
   if (N1.boardWall) { toBoard(); return; }
   walkOut();
+}
+// panel 22 Nov c fix 2: false bravado at the vanity before the board. He stands, chest out, chin up, the smile; held; the shoulders drop a hair.
+// The reflection is late, only half follows and stays sad. Played by updateMirror (bravPose); a tap or key after bravSkipAfter skips it.
+function startBravado() {
+  NS.scene = 'bravado';
+  hideCard();
+  NS.brav = { t: 0, peak: 0, reflPeak: 0, smile: false };
+  NS.sitTarget = 0;
+}
+function bravPose(dt) {
+  const B = NS.brav, n = N1, c = chars.clown;
+  B.t += dt;
+  const puff = (tt) => ease(THREE.MathUtils.clamp((tt - n.bravRise * 0.6) / n.bravPuff, 0, 1));
+  const t2 = n.bravRise * 0.6 + n.bravPuff + n.bravHold, drop = ease(THREE.MathUtils.clamp((B.t - t2) / n.bravDrop, 0, 1));
+  const p = puff(B.t), m = NS.mood;
+  m.chest = m.chest + (n.bravChest - m.chest) * p + n.bravDropChest * drop;
+  m.neck = CONFIG.moodRoom.neck + (n.bravNeck - CONFIG.moodRoom.neck) * p;
+  m.head = CONFIG.moodRoom.head + (n.bravHead - CONFIG.moodRoom.head) * p;
+  if (B.t >= n.bravRise * 0.6 && !B.breath) { B.breath = true; if (actObj.breath) drum(actObj.breath); }
+  if (p > 0.5 && !B.smile) { B.smile = true; setFace(c, 'smile'); }
+  const r = puff(B.t - n.bravReflLag) * n.bravReflAmt, rm = NS.rmood;
+  rm.chest = rm.chest + (n.bravChest - rm.chest) * r;
+  rm.neck = CONFIG.moodRoom.neck + (n.bravNeck - CONFIG.moodRoom.neck) * r;
+  rm.head = CONFIG.moodRoom.head + (n.bravHead - CONFIG.moodRoom.head) * r;
+  B.peak = Math.max(B.peak, p); B.reflPeak = Math.max(B.reflPeak, r);
+  B.chest = m.chest; B.reflChest = rm.chest;
+  if (B.t >= t2 + n.bravDrop) endBravado();
+}
+function endBravado() {
+  if (NS.scene !== 'bravado') return;
+  NS.bravLast = { peak: NS.brav.peak, reflPeak: NS.brav.reflPeak, t: NS.brav.t, skipped: NS.brav.t < N1.bravRise * 0.6 + N1.bravPuff + N1.bravHold + N1.bravDrop };
+  NS.brav = null;
+  for (const m of [NS.mood, NS.rmood]) { m.neck = CONFIG.moodRoom.neck; m.head = CONFIG.moodRoom.head; }
+  NS.scene = 'paint';
+  toBoard();
 }
 // panel F: he turns from the mirror to the act board on the room wall; the two acts are buttons over their cards
 function toBoard() {
@@ -2095,7 +2231,7 @@ function buildActFx() {
   pop.frustumCulled = true; pop.computeBoundingSphere(); pop.boundingSphere.radius += 6; pop.visible = false;
   actObj.pop = pop; actScene.add(pop);
   // drum roll and cymbal crash, rendered once in code (noise shaped; no filters or graphs per hit)
-  actObj.roll = drumBuffer('roll'); actObj.crash = drumBuffer('crash');
+  actObj.roll = drumBuffer('roll'); actObj.crash = drumBuffer('crash'); actObj.breath = breathBuffer();
 }
 // a 44.1 kHz buffer: 'roll' = snare strokes speeding up and growing louder over N1.rollSecs; 'crash' = a bright decaying wash
 function drumBuffer(kind) {
@@ -2110,6 +2246,14 @@ function drumBuffer(kind) {
       tHit += gap; gap = Math.max(0.035, gap * 0.9);
     }
   } else for (let i = 0; i < n; i++) { const x = rnd(); d[i] = (x - prev * 0.6) * 0.42 * Math.exp(-i / (0.35 * sr)) * (1 + 0.3 * Math.sin(i * 0.37)); prev = x; }
+  return buf;
+}
+// the bravado's sharp breath in (panel 22 Nov c fix 2): noise, high-passed into the 1-4 kHz band, swelling over breathSecs; rendered once at load
+function breathBuffer() {
+  const sr = 44100, n = Math.floor(sr * N1.breathSecs), buf = new AudioBuffer({ length: n, sampleRate: sr, numberOfChannels: 1 }), d = buf.getChannelData(0);
+  let seed = 41, prev = 0, lp = 0;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 * 2 - 1; };
+  for (let i = 0; i < n; i++) { const x = rnd(), hp = x - prev; prev = x; lp += (hp - lp) * 0.35; const k = i / n; d[i] = lp * N1.breathVol * Math.sin(Math.PI * Math.min(1, k * 1.25)) * (0.4 + 0.6 * k); }
   return buf;
 }
 function drum(buf) {
@@ -2292,6 +2436,7 @@ function segPeak(grade) { return grade === 'miss' ? N1.exciteMiss : grade === 'p
 function segMiss(A, k, last) {
   const c = chars.clown;
   A.clip = 'idle'; A.mood.chest = 0;
+  if (!FALL_KINDS[c.gp.kind]) A.yaw = turnToward(A.yaw, N1.missYaw, 14, A.dt);
   if (k < 0.12) A.mood.chest = -10 * Math.sin(Math.PI * k / 0.12);
   else if (once(A, 'fall')) { A.falls++; gpStart(c, 'prat'); A.face = 'startle'; if (A.hat === 'real' || A.hat === 'dent' || A.hat === 'lift') hatKnock(A, 1, 2.4); actLaugh('crowd'); A.excite = N1.exciteMiss; actFx(A, 'crash'); }
   if (k > 0.45 && k < 0.8) A.face = 'wince';
@@ -2334,7 +2479,7 @@ function segFall(A, i, k, a, peak) {
       }
     } else if (k < 0.75) {
       if (once(A, 'pick')) { A.clip = 'idle'; hatTo('dent'); }
-      A.yaw = turnToward(A.yaw, 0, 8, A.dt);
+      A.yaw = turnToward(A.yaw, N1.bowYaw, 8, A.dt);
       A.mood.chest = N1.bowChest * a * ease((k - 0.5) / 0.25);
     } else {
       A.mood.chest = N1.bowChest * a * (1 - ease((k - 0.75) / 0.25));
@@ -2428,8 +2573,8 @@ function updateAct(dt) {
   setFace(c, A.face);
   c.root.position.set(A.x, A.y, A.z); c.root.rotation.set(A.rx, A.yaw, 0);
   c.blob.position.set(A.x, 0.02, A.z);
-  moodRestore(c); c.mixer.update(dt); moodApply(c, A.mood);
-  if (gpEval(c, dt)) { gpApply(c); if ((c.gp.kind === 'up' || c.gp.kind === 'pop') && gpDone(c)) gpStop(c); }
+  moodRestore(c); c.mixer.update(dt); moodApply(c, gpMood(c, A.mood));
+  if (gpEval(c, dt)) { gpApply(c); noteFall(c, actCam); if ((c.gp.kind === 'up' || c.gp.kind === 'pop') && gpDone(c)) gpStop(c); }
   actFxUpdate(A, dt);
   if (A.fitH !== S.h) actFit();
 }
@@ -2544,7 +2689,7 @@ function doVerb() {
     gpStart(chars.clown, 'trip');
   } else if (v === 'take') { NS.pies = N1.pies; if (N1.corridorJokes) NS.anim = { kind: 'sniff', t: 0 }; }
   else if (v === 'honk') { honk(1, 0); if (N1.corridorJokes) { honk(N1.echoVol, N1.echoSecs); NS.jokes.echo = true; } }
-  else if (v === 'trip') { NS.anim = { kind: 'trip', t: 0, who: m, y0: S.y }; gpStart(chars.clown, 'trip'); }
+  else if (v === 'trip') { NS.anim = tripAcross(m); gpStart(chars.clown, 'trip'); }
   m.done = true; NS.verbs[v] = true;
   if (v !== 'trip' && !N1.oneBubble) m.saidT = N1.saidSecs;
   setVerb(null);
@@ -2557,6 +2702,20 @@ for (const a of N1.acts) {
   b.addEventListener('click', () => pickAct(a.id));
   el.boardActs.appendChild(b); el.boardActBtns.push(b);
 }
+// panel 22 Nov c 3d: the trip for the child is played across the camera, as near profile as the floor allows, on the side away from the child
+// (so he does not land on her): the widest angle off the camera's line in tripAngles whose whole fall line (step plus lying length) is walkable
+function tripAcross(m) {
+  camera.getWorldDirection(GP.v);
+  const h = Math.hypot(GP.v.x, GP.v.z) || 1, fx = GP.v.x / h, fy = -GP.v.z / h, rx = fy, ry = -fx, at = m.cd.at;
+  const away = rx * (at[0] - S.x) + ry * (at[1] - S.y) > 0 ? -1 : 1, L = N1.tripStep + N1.tripLen;
+  const fits = (dx, dy) => { for (let d = 0.3; d <= L + 0.01; d += 0.3) if (!free(S.x + dx * d, S.y + dy * d)) return false; return free(S.x + dx * L, S.y + dy * L); };
+  let dx = fx, dy = fy;
+  search: for (const a of N1.tripAngles) for (const sd of [away, -away]) {
+    const s = Math.sin(THREE.MathUtils.degToRad(a)) * sd, c = Math.cos(THREE.MathUtils.degToRad(a));
+    if (fits(fx * c + rx * s, fy * c + ry * s)) { dx = fx * c + rx * s; dy = fy * c + ry * s; break search; }
+  }
+  return { kind: 'trip', t: 0, who: m, x0: S.x, y0: S.y, dx, dy, yaw: Math.atan2(dx, -dy) };
+}
 function n1Anim(c, dt) {
   const a = NS.anim;
   if (!a) return false;
@@ -2564,9 +2723,8 @@ function n1Anim(c, dt) {
   if (a.kind === 'prat' || a.kind === 'trip') {
     // panel 22 Nov b item 4: the clown trip (stagger, dive, belly flop) carries him over the cable (or toward the child), then he gets up
     const g = c.gp, land = GPCLIP.trip.keys[4][0], k = Math.min(1, a.t / land);
-    if (a.kind === 'prat') S.y = a.y0 + (a.y1 - a.y0) * ease(k);
-    else S.y = a.y0 + N1.tripStep * ease(k);
-    S.yaw = turnToward(S.yaw, Math.PI, CONFIG.turnRate, dt);
+    if (a.kind === 'prat') { S.y = a.y0 + (a.y1 - a.y0) * ease(k); S.yaw = turnToward(S.yaw, Math.PI, CONFIG.turnRate, dt); }
+    else { S.x = a.x0 + a.dx * N1.tripStep * ease(k); S.y = a.y0 + a.dy * N1.tripStep * ease(k); S.yaw = turnToward(S.yaw, a.yaw, N1.tripTurn, dt); }
     c.root.position.set(S.x, 0, -S.y);
     if (g.kind === 'trip' && gpDone(c)) gpStart(c, 'up');
     a.peak = Math.max(a.peak, g.now[1] / 90);
@@ -2583,8 +2741,8 @@ function n1Anim(c, dt) {
   }
   c.root.rotation.y = S.yaw;
   c.blob.position.set(S.x, 0.02, -S.y);
-  moodRestore(c); c.mixer.update(dt); moodApply(c, a.kind === 'sniff' ? NS.sniffMood : S.mood);
-  if (gpEval(c, dt)) gpApply(c);
+  moodRestore(c); c.mixer.update(dt); moodApply(c, gpMood(c, a.kind === 'sniff' ? NS.sniffMood : S.mood));
+  if (gpEval(c, dt)) { gpApply(c); noteFall(c, camera); }
   pickShot();
   return true;
 }
@@ -2748,7 +2906,7 @@ function updateMirror(dt) {
   NS.sit += Math.sign(NS.sitTarget - NS.sit) * Math.min(Math.abs(NS.sitTarget - NS.sit), dt / N1.sitSecs);
   // history of his pose; the reflection reads it reflLag late (the way in: the reflection is a beat behind)
   NS.histI = (NS.histI + 1) % 256; NS.hist[NS.histI] = NS.sit; NS.histT[NS.histI] = NS.mirT;
-  const lag = S.mirror === 'entry' ? N1.reflLag : 0, want = NS.mirT - lag;
+  const lag = S.mirror === 'entry' ? N1.reflLag : NS.brav ? N1.bravReflLag : 0, want = NS.mirT - lag;
   let v = NS.sit;
   if (lag > 0) {
     v = NS.hist[(NS.histI + 1) % 256];
@@ -2758,9 +2916,10 @@ function updateMirror(dt) {
   NS.reflSit = v;
   const press = S.mirror === 'entry' && N1.pressHand;
   sitPose(c, NS.mood, press ? 0 : NS.sit);
+  sitPose(refl, NS.rmood, press ? 0 : NS.reflSit);
+  if (NS.brav) bravPose(dt);
   moodRestore(c); c.mixer.update(dt); moodApply(c, NS.mood);
   if (press && NS.sit > 0) gpApply(c, ease(NS.sit));
-  sitPose(refl, NS.rmood, press ? 0 : NS.reflSit);
   moodRestore(refl); refl.mixer.update(dt); moodApply(refl, NS.rmood);
   if (press && NS.reflSit > 0) gpApply(refl, ease(NS.reflSit));
   if (press) handsMeet(dt);
@@ -2781,6 +2940,7 @@ function updateMirror(dt) {
   // the reflection's face follows his, except while it stands and performs (the grin)
   const rf = refl.face.material.uniforms, cf = c.face.material.uniforms;
   if (NS.reflUp > 0) { rf.uCell.value.fromArray(CONFIG.faces[N1.learnGrin]); rf.uPaintAmt.value = N1.learnGrinPaint; }
+  else if (NS.brav) { rf.uCell.value.fromArray(CONFIG.faces.sad); rf.uPaintAmt.value = cf.uPaintAmt.value; }
   else { rf.uCell.value.copy(cf.uCell.value); rf.uPaintAmt.value = cf.uPaintAmt.value; }
   rf.uFlake.value = cf.uFlake.value;
   if (S.mirror === 'entry') {
@@ -2821,6 +2981,7 @@ function n1Key(e) {
   if (NS.scene === 'logo') { logoOut(); return true; }
   if (NS.scene === 'title') { if (e.code === 'Enter' || e.code === 'Space') el.start.click(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
+  if (NS.scene === 'bravado') { if (NS.brav && NS.brav.t > N1.bravSkipAfter) endBravado(); return true; }
   if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (e.code === 'Enter' || e.code === 'Space') smallPress(); return true; }
   if (NS.scene === 'boardwall') { const i = Number(e.code.replace('Digit', '')) - 1; if (N1.acts[i]) pickAct(N1.acts[i].id); return true; }
@@ -2844,6 +3005,7 @@ function n1Pointer(e) {
   if (e.target.closest && e.target.closest('button, .card, iframe')) return true;
   if (NS.scene === 'logo') { logoOut(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } return true; }
+  if (NS.scene === 'bravado') { if (NS.brav && NS.brav.t > N1.bravSkipAfter) endBravado(); return true; }
   if (S.mirror === 'entry') { if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); } return true; }
   if (NS.scene === 'small') { smallPress(); return true; }
   if (S.mode === 'act') { actSkip(); return true; }
@@ -3218,8 +3380,8 @@ function mwClown(M, dt) {
   if (M.hurtT > 0) { M.hurtT -= dt; if (M.hurtT <= 0) setFace(c, 'sad'); }
   c.root.position.set(M.x, 0, M.z); c.root.rotation.y = M.yaw; c.blob.position.set(M.x, 0.02, M.z);
   S.mood = CONFIG.moodRoom;
-  moodRestore(c); c.mixer.update(dt); moodApply(c, S.mood);
-  if (gpEval(c, dt)) { gpApply(c); if (c.gp.kind === 'pop' && gpDone(c)) gpStop(c); }
+  moodRestore(c); c.mixer.update(dt); moodApply(c, gpMood(c, S.mood));
+  if (gpEval(c, dt)) { gpApply(c); noteFall(c, mwCam); if (c.gp.kind === 'pop' && gpDone(c)) gpStop(c); }
 }
 function mwPie(M, dt) {
   if (M.pieOn) {
@@ -3514,7 +3676,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

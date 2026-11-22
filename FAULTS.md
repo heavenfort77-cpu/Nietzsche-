@@ -245,3 +245,21 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Where: `web/step0/night1.html` CSS `#hint`, `enterMW()`, `endMW()`.
 - Fix: `#hint.padded` keeps 100 px clear on the right while the pads show.
 - Proof: phone screens in the batch 3 full pass.
+
+## F27: falls squash him into the floor ("what that fall he squashed")
+- Found: owner's phone play, 22 Nov 19:38 (ring entrance screenshot: a folded lump at the child's trip), session 18.
+- Probe: new read-only hook `__night.gpProbe(kind, mood)` (plays a page pose at 60 fps in one call on the reflection's rig): the same input three times gave first-frame heights 1.785 / 0.793 / 1.102 m and lowest body points -0.96 to -1.18 m for prat, trip, dive and kneel; ring-entrance screenshot `desk_PROBE_flop.png` (session box, not committed). After the restore step alone: three identical runs, lowest points still -0.07 to -0.30 m.
+- Cause: (1) the page poses (`gpApply`, batch 3) rotate bones after the mixer. three.js `PropertyMixer` writes a bone only when the clip's value changes; the idle clip holds most bones still, so the pose was added again every frame. (2) No floor contact: the hips drop is fixed, so the belly flop put his face 0.17 m under the floor and the slumped walk-back lean added 0.13 m. (3) Staging: the child's trip ran straight away from the ring-entrance camera, the act's missed-chain fall and the bow-over straight back from the low-seat camera, so each read as a squat.
+- Class: any layer that changes bones after the mixer without putting them back (the mood layer already did; the page poses did not); any pose that reaches the floor; falls played along the camera's line.
+- Where: `web/step0/night1.html` (`gpApply`, `gpRestore` in `moodRestore`, `gpMood`, `gpFloor`, `noteFall`, `tripAcross`, `segMiss`, the bow in `segFall`).
+- Fix: `gpApply` saves the 11 bones and the hips position it writes, `moodRestore` puts them back before every mixer update; the posture lean fades out over `fallMoodFade` 0.15 s while a fall plays and back in as he gets up; floor contact (`fallFloor`) lifts the hips by the lowest of the sampled skin points (per bone, the extremes along 6 axes, chosen at load) for prat, trip, dive and kneel; the child's trip turns across the camera, widest of `tripAngles` 90/75/60/45 degrees whose whole fall line is walkable, away from the child; the missed-chain fall turns side-on (`missYaw`), the bow-over is played three-quarter on (`bowYaw` 0.9 rad).
+- Proof: `smoke_night1.cjs` steps "falls: same pose every time, nothing under the floor" (every pose x 3 moods twice, lowest -0.010 to -0.022 m), "trip for the child is seen across the camera" (45 deg at the smoke's spot; the passage is 2.9 m wide there), "act: falls seen across the camera" (90 and 48 deg); mutations `gprestore`, `fallfloor`, `tripacross`, `missyaw`.
+
+## F28: the vanity glass hides his reflection's face; the check measured a fixed height
+- Found: owner's phone play, 22 Nov 19:38 ("the vanity table too high, does not show his face").
+- Probe: desk, the reflection's head bone projects to y 360 px; the glass spans y 140-357 px, so the face is below the glass.
+- Cause: the dressing plate's glass (centre 1.55 m, 1.1 m tall) was placed for a standing man; he sits with his head bone at 0.85 m. Batch 3's check projected a point 1.3 m above the reflection's feet, not its head, and passed.
+- Class: checks that measure a fixed offset instead of the body part they mean.
+- Where: `web/step0/cube25d/build_cube.py` (vanity CONFIG), the dressing plates, `night1.html` `vanityGlass`/`vanitySize`, `smoke_night1.cjs` vanity step.
+- Fix: table top 0.80 -> 0.72 m, glass centre 1.55 -> 1.20 m, 0.9 m tall, bulbs follow; only the dressing view re-rendered (32 samples; front layer byte-identical, back and mid changed; old plates in `art/backups/dressing_before_s18b1/`). The check now projects the reflection's head bone and 0.15 m and 0.3 m above it, all inside the glass.
+- Proof: desk glass y 230-405 px, head bone y 360 px; mutation `vanitylow`.

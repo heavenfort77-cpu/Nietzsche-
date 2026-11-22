@@ -39,6 +39,13 @@ CONFIG = dict(
     planeDepth=dict(back=5.0, mid=3.6, front=1.8),
     # where the clown stands in the ring view (Blender x, y), metres from the camera
     clownAt=(0.0, 3.0),
+    # dressing table top height, metres (owner 22 Nov 19:38: "too high, does not show his face"; was 0.80)
+    vanityTop=0.72,
+    # vanity glass centre height and height, metres (was 1.55 and 1.1): his seated reflection's face sits inside it
+    vanityGlassZ=1.20,
+    vanityGlassH=0.90,
+    # bulb ring around the glass: horizontal and vertical radius, metres (was 0.78 and 0.66)
+    vanityBulbR=(0.78, 0.55),
 )
 
 # view name -> (scene title, camera yaw in degrees; 0 looks +Y)
@@ -166,11 +173,12 @@ def build_room():
     sphere('board_lamp', (0, 4.55, 3.4), 0.07, mat('bulb', P['ochre'], 0.4, 0.0, 8.0))
 
     # ---- dressing room view (+X): vanity with bulb frame, chair, rack, trunk
-    box('vanity', (4.45, 0, 0.4), (0.8, 2.0, 0.8), mat('wood', P['wood'], 0.6))
-    box('vanity_mirror', (4.85, 0, 1.55), (0.04, 1.3, 1.1), mat('mirror', P['mirror'], 0.05, 1.0))
+    vt, gz, gh, br = CONFIG['vanityTop'], CONFIG['vanityGlassZ'], CONFIG['vanityGlassH'], CONFIG['vanityBulbR']
+    box('vanity', (4.45, 0, vt / 2), (0.8, 2.0, vt), mat('wood', P['wood'], 0.6))
+    box('vanity_mirror', (4.85, 0, gz), (0.04, 1.3, gh), mat('mirror', P['mirror'], 0.05, 1.0))
     for i in range(10):
         a = i / 10 * 2 * math.pi
-        sphere(f'bulb_{i}', (4.8, math.cos(a) * 0.78, 1.55 + math.sin(a) * 0.66), 0.05,
+        sphere(f'bulb_{i}', (4.8, math.cos(a) * br[0], gz + math.sin(a) * br[1]), 0.05,
                mat('bulb', P['ochre'], 0.4, 0.0, 6.0))
     box('chair_seat', (3.5, 0.2, 0.45), (0.5, 0.5, 0.06), mat('woodDk', P['woodDk'], 0.6))
     box('chair_back', (3.25, 0.2, 0.8), (0.06, 0.5, 0.7), mat('woodDk', P['woodDk'], 0.6))
