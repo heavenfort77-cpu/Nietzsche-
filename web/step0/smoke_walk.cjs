@@ -2,7 +2,7 @@
 // Needs web/step0/cube25d/setup.sh run first (lib/ and assets/). Serves web/step0 over http (module scripts and fetch).
 // Per screen: loads with no page error; walk speed measured from planted feet; a bot walks the route (corridor, meets both
 // performers, wings, ring entrance) to the end with the stick held across cuts; 3 shots; the clown never leaves the frame.
-// Walk back per screen: 3 shots in reverse, gloom rises, the cube room (gains paid, four walls, dressing table layout and buys,
+// Walk back per screen: 3 shots in reverse, gloom rises, the cube room (gains paid, four walls, dressing table off or its layout and buys,
 // HUD written on change only, no touch stick in the room), 'Walk back again'. Desktop: a flop's payout and a walk out from the room.
 // Once: depth occlusion probe (clown behind the costume rack is partly hidden by the plate depth, in the open he is not).
 'use strict';
@@ -127,7 +127,7 @@ function roomState() {
     paintBase: C.paint, prepWall: C.prepWall, prepShown: shown('prep'), gainsShown: shown('gains'), barShown: shown('roomBar'),
     prep: box(document.getElementById('prep')), bar: box(document.getElementById('roomBar')), btns, clown,
     vw: window.innerWidth, vh: window.innerHeight, order: C.roomOrder, roomStart: C.roomStart, results: C.actResults,
-    prepCfg: C.prep, gloomWalk: C.gloomWalk, moodBack: C.moodBack.tempo, moodRoom: C.moodRoom.tempo, moodOut: C.moodOut.tempo,
+    prepCfg: C.prep, prepOn: C.prepOn, gloomWalk: C.gloomWalk, moodBack: C.moodBack.tempo, moodRoom: C.moodRoom.tempo, moodOut: C.moodOut.tempo,
     faceBack: C.faceBack, faceOut: C.faceOut, back: S.back, cuts: S.cuts, watch: window.__roomWatch,
   };
 }
@@ -164,10 +164,30 @@ async function walkBack(page, vp, report) {
     await until(page, () => !window.__walk.turning);
     s = await page.evaluate(roomState);
     seen.push(s.view);
-    if (s.prepShown !== (s.view === s.prepWall)) prepOk = false;
+    if (s.prepShown !== (s.prepOn && s.view === s.prepWall)) prepOk = false;
   }
   report(new Set(seen).size === s.order.length && seen[seen.length - 1] === s.roomStart && prepOk,
-    `${vp.name}: turning shows all ${s.order.length} walls (${seen.join(', ')}), dressing table only on '${s.prepWall}'`);
+    `${vp.name}: turning shows all ${s.order.length} walls (${seen.join(', ')}), dressing table ${s.prepOn ? `only on '${s.prepWall}'` : 'on none (prepOn off)'}`);
+  if (!s.prepOn) {
+    // switched off (owner, 22 Nov: GDD, Laughs are spent only in the Mirror): a buy cannot happen even from script
+    await page.evaluate(() => document.querySelectorAll('#prep button').forEach((b) => b.click()));
+    await until(page, () => window.__walk.gainT >= window.__walkTest.CONFIG.gainSecs);
+    s = await page.evaluate(roomState);
+    report(s.laughs === good.laughs && s.mask === good.mask && !s.carry.length && s.hudCarry === `Into the Mirror: ${good.laughs} Laughs`,
+      `${vp.name}: no dressing table: all ${good.laughs} Laughs go into the Mirror (Laughs ${s.laughs}, Mask ${s.mask}, "${s.hudCarry}")`);
+  } else await dressingTable(page, vp, report, good);
+  report(s.watch.repeats === 0 && s.watch.writes > 0, `${vp.name}: room HUD written only on change (${s.watch.writes} writes, ${s.watch.repeats} repeats ${s.watch.what.join(', ')})`);
+  if (vp.mobile) report(s.watch.stickInRoom === 0, `${vp.name}: touch stick never shown in the room (shown ${s.watch.stickInRoom} times)`);
+  // walk back again from the room
+  if (vp.mobile) await page.tap('#again'); else await page.click('#again');
+  s = await page.evaluate(roomState);
+  report(!s.room && s.inWalkScene && s.back && !s.gainsShown && !s.prepShown && !s.barShown && s.gloom === 0 && s.cuts === 1 && Math.abs(s.paint - s.paintBase) < 1e-6,
+    `${vp.name}: 'Walk back again' leaves the room clean (room ${s.room}, HUD ${s.gainsShown}, table ${s.prepShown}, gloom ${s.gloom}, paint ${s.paint.toFixed(3)}, cuts ${s.cuts})`);
+}
+
+// the dressing table when prepOn: layout on this screen, each item bought once, a rebuy ignored
+async function dressingTable(page, vp, report, good) {
+  let s = await page.evaluate(roomState);
   // to the dressing table wall: layout on this screen
   for (let k = 0; k < s.order.length && s.view !== s.prepWall; k++) {
     await page.click('#roomR');
@@ -191,37 +211,35 @@ async function walkBack(page, vp, report) {
   report(s.laughs === good.laughs - spent && s.hudLaughs === String(s.laughs) && s.mask === maskWant && s.hudMask === String(maskWant)
     && s.btns.every((b) => b.disabled) && carryWant.every((n) => s.hudCarry.includes(n)) && Math.abs(s.paint - s.paintWant) < 1e-6,
     `${vp.name}: dressing table buys each item once: Laughs ${s.laughs} (want ${good.laughs - spent}), Mask ${s.mask} (want ${maskWant}), all greyed ${s.btns.every((b) => b.disabled)}, carry "${s.hudCarry}"`);
-  report(s.watch.repeats === 0 && s.watch.writes > 0, `${vp.name}: room HUD written only on change (${s.watch.writes} writes, ${s.watch.repeats} repeats ${s.watch.what.join(', ')})`);
-  if (vp.mobile) report(s.watch.stickInRoom === 0, `${vp.name}: touch stick never shown in the room (shown ${s.watch.stickInRoom} times)`);
-  // walk back again from the room
-  if (vp.mobile) await page.tap('#again'); else await page.click('#again');
-  s = await page.evaluate(roomState);
-  report(!s.room && s.inWalkScene && s.back && !s.gainsShown && !s.prepShown && !s.barShown && s.gloom === 0 && s.cuts === 1 && Math.abs(s.paint - s.paintBase) < 1e-6,
-    `${vp.name}: 'Walk back again' leaves the room clean (room ${s.room}, HUD ${s.gainsShown}, table ${s.prepShown}, gloom ${s.gloom}, paint ${s.paint.toFixed(3)}, cuts ${s.cuts})`);
 }
 
-// desktop only: a flop pays little, so the table greys what he cannot afford; then a walk out straight from the room
+// desktop only: a flop pays little (with prepOn the table greys what he cannot afford); then a walk out straight from the room
 async function flopAndOut(page, report) {
   await page.evaluate(() => { const T = window.__walkTest, S = window.__walk; T.begin(true, 'flop'); S.x = 0; S.y = T.CONFIG.backEndY - 0.05; });
   await until(page, () => window.__walk.room && window.__walk.gainT >= window.__walkTest.CONFIG.gainSecs);
   let s = await page.evaluate(roomState);
-  for (let k = 0; k < s.order.length && s.view !== s.prepWall; k++) {
-    await page.click('#roomR');
-    await until(page, () => !window.__walk.turning);
-    s = await page.evaluate(roomState);
-  }
   const flop = s.results.flop;
-  const offWant = s.prepCfg.map((it) => it.cost > flop.laughs);
-  report(s.hudLaughs === String(flop.laughs) && s.btns.every((b, k) => b.disabled === offWant[k]),
-    `flop pays ${s.hudLaughs} Laughs (want ${flop.laughs}); greyed ${s.btns.map((b) => b.disabled).join(', ')} (want ${offWant.join(', ')})`);
-  // buy the cheapest he can afford, then everything left must be greyed if it costs more than what is left
-  const cheap = s.prepCfg.map((it, k) => [it.cost, k]).filter(([c]) => c <= flop.laughs).sort((x, y) => x[0] - y[0])[0];
-  await page.click(`#prep button:nth-of-type(${cheap[1] + 1})`);
-  await until(page, () => window.__walk.gainT >= window.__walkTest.CONFIG.gainSecs);
-  s = await page.evaluate(roomState);
-  const left = flop.laughs - cheap[0];
-  report(s.laughs === left && s.btns.every((b, k) => b.disabled === (k === cheap[1] || s.prepCfg[k].cost > left)),
-    `flop: after one buy ${s.laughs} Laughs left (want ${left}), greyed ${s.btns.map((b) => b.disabled).join(', ')}`);
+  if (!s.prepOn) {
+    report(s.hudLaughs === String(flop.laughs) && s.hudMask === String(flop.mask) && s.hudCarry === `Into the Mirror: ${flop.laughs} Laughs`,
+      `flop pays ${s.hudLaughs} Laughs, Mask ${s.hudMask} (want ${flop.laughs} / ${flop.mask}), "${s.hudCarry}"`);
+  } else {
+    for (let k = 0; k < s.order.length && s.view !== s.prepWall; k++) {
+      await page.click('#roomR');
+      await until(page, () => !window.__walk.turning);
+      s = await page.evaluate(roomState);
+    }
+    const offWant = s.prepCfg.map((it) => it.cost > flop.laughs);
+    report(s.hudLaughs === String(flop.laughs) && s.btns.every((b, k) => b.disabled === offWant[k]),
+      `flop pays ${s.hudLaughs} Laughs (want ${flop.laughs}); greyed ${s.btns.map((b) => b.disabled).join(', ')} (want ${offWant.join(', ')})`);
+    // buy the cheapest he can afford, then everything left must be greyed if it costs more than what is left
+    const cheap = s.prepCfg.map((it, k) => [it.cost, k]).filter(([c]) => c <= flop.laughs).sort((x, y) => x[0] - y[0])[0];
+    await page.click(`#prep button:nth-of-type(${cheap[1] + 1})`);
+    await until(page, () => window.__walk.gainT >= window.__walkTest.CONFIG.gainSecs);
+    s = await page.evaluate(roomState);
+    const left = flop.laughs - cheap[0];
+    report(s.laughs === left && s.btns.every((b, k) => b.disabled === (k === cheap[1] || s.prepCfg[k].cost > left)),
+      `flop: after one buy ${s.laughs} Laughs left (want ${left}), greyed ${s.btns.map((b) => b.disabled).join(', ')}`);
+  }
   await page.evaluate(() => window.__walkTest.begin(false));
   s = await page.evaluate(roomState);
   report(!s.room && s.inWalkScene && !s.back && s.gloom === 0 && s.face === s.faceOut && s.tempo === s.moodOut && !s.gainsShown && !s.prepShown

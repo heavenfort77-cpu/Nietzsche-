@@ -355,7 +355,9 @@ const CONFIG = Object.freeze({
   paintPerMask: 0.08, paintMax: 1,
   // time for the Laughs count-up and the paint to settle after he comes in, s
   gainSecs: 1.2,
-  // the wall with the dressing table, and what it sells for Laughs (each once per night; proposal, waiting on the owner)
+  // dressing table that spends Laughs before the Mirror: off (owner, 22 Nov: "use gdd": Laughs are spent only in the Mirror World)
+  prepOn: false,
+  // the wall with the dressing table, and what it sells for Laughs (each once per night; used only when prepOn)
   prepWall: 'dressing',
   prep: [
     { id: 'cream', title: 'Cold cream', note: 'One paint layer off: the Mirror is calmer.', cost: 15, mask: -1 },
@@ -696,7 +698,7 @@ function setRoomView(name) {
   shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(roomCam.matrixWorldInverse);
   shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(roomCam.matrixWorldInverse);
   el.shotName.textContent = 'Cube room: ' + room.data.views[name].title;
-  showPrep(name === CONFIG.prepWall);
+  showPrep(CONFIG.prepOn && name === CONFIG.prepWall);
 }
 function fadeThen(ms, fn) {
   el.fade.style.setProperty('--fade', ms + 'ms');
@@ -728,7 +730,7 @@ function showCarry() {
   el.carry.textContent = 'Into the Mirror: ' + S.laughs + ' Laughs' + (S.carry.length ? ' + ' + S.carry.join(', ') : '');
 }
 function buy(it) {
-  if (!S.room || S.bought[it.id] || S.laughs < it.cost) return;
+  if (!CONFIG.prepOn || !S.room || S.bought[it.id] || S.laughs < it.cost) return;
   S.bought[it.id] = true;
   S.laughs -= it.cost;
   if (it.mask) S.mask = Math.max(0, S.mask + it.mask);
