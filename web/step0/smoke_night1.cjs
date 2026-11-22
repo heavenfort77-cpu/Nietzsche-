@@ -34,7 +34,8 @@ const MUTS = {
   actsegs: ['night1.html', "  for (const g of by) if (g) segs.push(g.m ? 'miss' : g.g ? 'good' : 'perfect');", ''],
   actexcite: ['night1.html', 'exciteMiss: 1.0,', 'exciteMiss: 0.5,'],
   acthold: ['night1.html', "  A.face = 'sad'; A.excite = 0; A.clip = 'idle';", "  A.excite = 0; A.clip = 'idle';"],
-  actskip: ['night1.html', '  if (!NS.actSeen || !A ||', '  if (true || !A ||'],
+  actskip: ['night1.html', "  el.actSkip.classList.toggle('hidden', !NS.actSeen);", "  el.actSkip.classList.add('hidden');"],
+  tapskip: ['night1.html', "  if (NS.scene === 'small') { smallPress(); return true; }\n  if (S.mode === 'act') return true;", "  if (NS.scene === 'small') { smallPress(); return true; }\n  if (S.mode === 'act') { actSkip(); return true; }"],
   actslump: ['night1.html', 'slumpMax: { tempo: 0.78, chest: 15,', 'slumpMax: { tempo: 0.78, chest: 6,'],
   // owner's answers 22 Nov 15:58 (panel B, C, D, E; session 17 batch 2)
   mwtempo: ['night1.html', 'mwTempo: 2.3,', 'mwTempo: 1.6,'],
@@ -57,11 +58,14 @@ const MUTS = {
   intense: ['night1.html', "  if (once(A, 'roll')) { drum(actObj.roll); A.fxN.roll++; }", ''],
   vanity: ['night1.html', "  const vanity = kind === 'paint';", '  const vanity = false;'],
   pale: ['night1.html', 'reflPale: 0.85, night: 1,', 'reflPale: 0, night: 1,'],
-  press: ['night1.html', '  if (press) handsMeet(dt);', ''],
+  press: ['night1.html', '  if (press && NS.press) pressMeasure();', ''],
   // owner's phone play 22 Nov 19:38 (panel 22 Nov c, session 18)
   vanitylow: ['night1.html', 'vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9],', 'vanityGlass: [4.83, 0, 1.55], vanitySize: [1.3, 1.1],'],
   bravado: ['night1.html', '  bravado: true,', '  bravado: false,'],
-  bravrefl: ['night1.html', 'bravReflLag: 0.5, bravReflAmt: 0.4,', 'bravReflLag: 0, bravReflAmt: 1,'],
+  bravrefl: ['night1.html', "  const lag = S.mirror === 'entry' ? N1.reflLag : 0, want", '  const lag = N1.reflLag, want'],
+  // owner 22 Nov 20:27 (session 18 batch 2): the big mirror is a true mirror, the press a close shot where the palms meet
+  pressshot: ['night1.html', 'pressShot: true,', 'pressShot: false,'],
+  truemirror: ['night1.html', '    rb.x = fx * dm + rx * x; rb.z = fz * dm + rz * x;', '    rb.x = fx * 7.2 + rx * -0.15; rb.z = fz * 7.2 + rz * -0.15;'],
   gprestore: ['night1.html', 'function moodRestore(c) { gpRestore(c);', 'function moodRestore(c) {'],
   fallfloor: ['night1.html', '  fallFloor: true,', '  fallFloor: false,'],
   tripacross: ['night1.html', 'tripAngles: [90, 75, 60, 45],', 'tripAngles: [],'],
@@ -120,24 +124,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         const H = (c, up) => { const v = new W.camera.position.constructor(); c.pb.head.getWorldPosition(v); v.y += up; v.project(W.roomCam); return [(v.x + 1) / 2 * N.S.w, (1 - v.y) / 2 * N.S.h]; };
         const IN = (q) => q[0] >= m[0] && q[0] <= m[0] + m[2] && N.S.h - q[1] >= m[1] && N.S.h - q[1] <= m[1] + m[3];
         const rh = H(N.refl, 0.15), ch = H(N.chars.clown, 0.15), inGlass = IN(H(N.refl, 0)) && IN(H(N.refl, 0.3)) && IN(rh);
-        return { view: N.S.roomView, mirror: N.S.mirror, sit: N.NS.sit, inGlass, apart: Math.abs(rh[0] - ch[0]) / N.S.h, faces: Math.cos(N.chars.clown.root.rotation.y - N.refl.root.rotation.y) }; });
-      console.log('    vanity: reflection in the glass', r.inGlass, '| heads apart', (r.apart * 100).toFixed(0) + '% of the height');
-      if (r.view !== 'dressing' || r.mirror !== 'paint' || r.sit !== 1 || !r.inGlass || r.apart < 0.04 || r.faces > -0.99) throw new Error('vanity ' + JSON.stringify(r));
+        const g = N.N1.vanityGlass, cp = N.chars.clown.root.position, rp = N.refl.root.position, mirr = Math.abs(rp.x - (2 * g[0] - cp.x)) < 1e-3 && Math.abs(rp.z - cp.z) < 1e-3;
+        // the image's face is not behind his head: screen distance at least both heads' half widths (0.18 m each, projected at their depths)
+        const half = (c) => { const V = W.camera.position.constructor, q = new V(); c.pb.head.getWorldPosition(q); const s = q.clone(); s.z += 0.18; q.project(W.roomCam); s.project(W.roomCam); return Math.abs((s.x - q.x) / 2 * N.S.w); };
+        const clear = Math.abs(rh[0] - ch[0]) - half(N.refl) - half(N.chars.clown);
+        return { view: N.S.roomView, mirror: N.S.mirror, sit: N.NS.sit, inGlass, mirr, clear: Math.round(clear), apart: Math.abs(rh[0] - ch[0]) / N.S.h, faces: Math.cos(N.chars.clown.root.rotation.y - N.refl.root.rotation.y) }; });
+      console.log('    vanity: reflection in the glass', r.inGlass, '| heads apart', (r.apart * 100).toFixed(0) + '% of the height | clear of his head', r.clear, 'px');
+      if (r.view !== 'dressing' || r.mirror !== 'paint' || r.sit !== 1 || !r.inGlass || !r.mirr || r.clear < 0 || r.faces > -0.99) throw new Error('vanity ' + JSON.stringify(r));
     });
     await step('first input finishes the paint', async () => { await pg.mouse.click(sc.w / 2, sc.h / 3); await pg.waitForSelector('#card_dazai', { timeout: 30000 }); await shot('paint'); });
     const boardWall = await pg.evaluate(() => window.__night.N1.boardWall);
     // panel F (owner 22 Nov 15:58): the act board is the room's wall; its two acts are 44 px buttons over their cards (land picks the sweep)
     const actPick = sc.n === 'land' ? 'sweep' : 'fall';
-    // panel 22 Nov c fix 2: after the Dazai line he stands and straightens (false bravado); the vanity reflection is late, partial and sad
-    await step('false bravado after the Dazai line (22c-2)', async () => {
+    // panel 22 Nov c fix 2: after the Dazai line he stands and straightens (false bravado); owner 22 Nov 20:27: the vanity image copies him at once
+    // (it is a mirror) and no tap skips the beat
+    await step('false bravado after the Dazai line, the vanity copies him exactly, no tap skip (22c-2)', async () => {
       await pg.click('#goOut');
-      await pg.waitForFunction(() => window.__night.NS.brav && window.__night.NS.brav.t > 1.0, null, { timeout: 20000 });
-      const mid = await pg.evaluate(() => { const N = window.__night, rf = N.refl.face.material.uniforms.uCell.value; return { sit: N.NS.sit, face: N.chars.clown.faceNow, reflSad: rf.x === 0 && rf.y === 0 }; });
-      await shot('bravado');
+      const box = await pg.evaluate(() => { const r = document.getElementById('gl').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+      await pg.waitForFunction(() => window.__night.NS.brav && window.__night.NS.brav.t > 0.3, null, { timeout: 20000 });
+      await pg.mouse.click(box[0], box[1]); await pg.keyboard.press('Space');
+      const diff = { chest: 0, sit: 0 };
+      for (let i = 0; i < 8; i++) {
+        const m = await pg.evaluate(() => { const N = window.__night, B = N.NS.brav; if (!B) return null; const rf = N.refl.face.material.uniforms.uCell.value, cf = N.chars.clown.face.material.uniforms.uCell.value; return { chest: Math.abs(B.chest - B.reflChest), sit: Math.abs(B.sit - B.reflSit), face: rf.x === cf.x && rf.y === cf.y, t: B.t }; });
+        if (!m) break;
+        diff.chest = Math.max(diff.chest, m.chest); diff.sit = Math.max(diff.sit, m.sit); if (!m.face) diff.face = false;
+        if (i === 3) await shot('bravado');
+        await sleep(150);
+      }
       await pg.waitForFunction(() => window.__night.NS.bravLast, null, { timeout: 20000 });
-      const r = Object.assign(mid, await pg.evaluate(() => window.__night.NS.bravLast));
+      const r = Object.assign(diff, await pg.evaluate(() => Object.assign({ sitEnd: window.__night.NS.sit, face: window.__night.chars.clown.faceNow }, window.__night.NS.bravLast)));
       console.log('    bravado', JSON.stringify(r));
-      if (!(r.peak >= 0.99 && r.reflPeak > 0.1 && r.reflPeak <= 0.5 && r.sit < 0.05 && r.face === 'smile' && r.reflSad && !r.skipped)) throw new Error('bravado ' + JSON.stringify(r));
+      if (!(r.peak >= 0.99 && r.chest < 0.01 && r.sit < 0.001 && r.face !== false && r.face === 'smile' && !r.skipped)) throw new Error('bravado ' + JSON.stringify(r));
     });
     await step('act board on the room wall, no board card (F)', async () => {
       if (!boardWall) throw new Error('N1.boardWall is off: the act is chosen on a card at the ring edge');
@@ -286,16 +303,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       });
       await step('act: the beat after (sad face, house silent)', async () => { const h = await pg.evaluate(() => window.__night.NS.A.hold); if (!h || h.face !== 'sad' || !(h.excite < 0.02)) throw new Error('hold ' + JSON.stringify(h)); });
       await step('act: caption and the bow with the dented hat', async () => { await shot('caption'); const r = await pg.evaluate(() => { const c = document.getElementById('card_crowd'); return { lines: c.querySelectorAll('p').length, knows: !!c.querySelector('.knows'), laughs: /Laughs \+\d+/.test(c.textContent), hat: window.__night.NS.A.hat, see: c.classList.contains('see'), cut: window.__night.chars.clown.body.material.uniforms.uHatCut.value.w }; }); if (r.lines > 2 || !r.knows || !r.laughs || r.hat !== 'dent' || !r.see || r.cut !== 1) throw new Error('caption ' + JSON.stringify(r)); });
-      await step('act: tap skips after the first full play', async () => {
+      await step('act: only the Skip button skips, after the first full play (owner 22 Nov 20:27)', async () => {
         // the replay is a check-only path (a player sees the caption once): the card count it adds is taken back after
         const cards = await pg.evaluate(() => { const N = window.__night, n = N.NS.contCount; N.NS.actRate = 1; N.actRoutine(); return n; });
         await pg.waitForFunction(() => { const A = window.__night.NS.A; return A.phase === 'seg' && A.t > 0.1; }, null, { timeout: 10000 });
         const box = await pg.evaluate(() => { const r = document.getElementById('gl').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
-        await pg.mouse.click(box[0], box[1]);
-        await pg.waitForSelector('#card_crowd', { timeout: 3000 });
-        const r = await pg.evaluate(() => ({ skipped: window.__night.NS.A.skipped, seg: window.__night.NS.A.seg }));
+        await pg.mouse.click(box[0], box[1]); await pg.keyboard.press('Space'); await pg.keyboard.press('Enter'); await sleep(300);
+        const tap = await pg.evaluate(() => ({ skipped: !!window.__night.NS.A.skipped, card: !!document.getElementById('card_crowd') }));
+        const btn = await pg.isVisible('#actSkipBtn');
+        if (btn) await pg.click('#actSkipBtn');
+        await pg.waitForSelector('#card_crowd', { timeout: 3000 }).catch(() => {});
+        const r = await pg.evaluate(() => ({ skipped: window.__night.NS.A.skipped, seg: window.__night.NS.A.seg, btnAfter: !document.getElementById('actSkipBtn').classList.contains('hidden') }));
         await pg.evaluate((n) => { window.__night.NS.contCount = n; }, cards);
-        if (!r.skipped || r.seg > 0) throw new Error('not skipped ' + JSON.stringify(r));
+        if (tap.skipped || tap.card || !btn || !r.skipped || r.seg > 0 || r.btnAfter) throw new Error('skip ' + JSON.stringify({ tap, btn, r }));
       });
     }
     // panel fix 2: with 1 fall, a pie in hand and the trip done, each hurt pays more than a clean Perfect (10, cue_model.html) and the card says so
@@ -350,12 +370,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       await pg.click('#sit'); await sleep(700);
       const pale = await pg.evaluate(() => { const N = window.__night; return { amt: N.refl.gAmt.value, want: N.N1.reflPale, tint: N.refl.gTint.value.r, night1: N.N1.reflShade[0], last: N.N1.reflShade[N.N1.reflShade.length - 1] }; });
       if (!(pale.amt === pale.want && pale.amt > 0.5 && pale.tint === pale.night1 && pale.last < pale.night1)) throw new Error('reflection not pale or not darker by night ' + JSON.stringify(pale));
+      // owner 22 Nov 20:27 ("it is a mirror"): standing at the mark, the image is at his true mirror place (no lift, no slide)
+      const plate = await pg.evaluate(() => { const N = window.__night, D = N.N1.mirrorGlassD, c = N.chars.clown.root.position, p = N.refl.root.position, fz = N.NS.reflBase.fz, fx = N.NS.reflBase.fx;
+        const dc = c.x * fx + c.z * fz, dr = p.x * fx + p.z * fz, rx = N.NS.reflBase.rx, rz = N.NS.reflBase.rz; return { depth: +(dr - (2 * D - dc)).toFixed(4), side: +((p.x * rx + p.z * rz) - (c.x * rx + c.z * rz)).toFixed(4), y: p.y }; });
       await pg.evaluate(() => { window.__night.NS.handGapMin = -1; });
-      await pg.mouse.click(sc.w / 2, sc.h / 2); await sleep(420); await shot('entry');
+      await pg.mouse.click(sc.w / 2, sc.h / 2);
+      await pg.waitForFunction(() => window.__night.NS.press, null, { timeout: 8000 }).catch(() => {});
       await pg.waitForFunction(() => { const N = window.__night; return N.NS.handGapMin >= 0 && N.NS.handGapMin <= N.N1.handMeet || N.S.mode === 'mw'; }, null, { timeout: 20000 }).catch(() => {});
-      const r = await pg.evaluate(() => ({ gap: window.__night.NS.handGapMin, want: window.__night.N1.handMeet, cracks: window.__night.NS.cracks }));
-      console.log('    hands apart', r.gap.toFixed(3), 'of the picture height (at most', r.want + ')');
-      if (!(r.gap >= 0 && r.gap <= r.want) || r.cracks < 1) throw new Error('entry ' + JSON.stringify(r));
+      const r = await pg.evaluate(() => { const N = window.__night, W = window.__walkTest, V = W.camera.position.constructor, D = N.N1.mirrorGlassD, c = N.chars.clown.root.position, p = N.refl.root.position;
+        const cam = N.pressCam, inF = (o) => { const v = new V(); o.pb.head.getWorldPosition(v); v.y += 0.15; v.project(cam); return Math.abs(v.x) < 0.95 && Math.abs(v.y) < 0.95 && v.z < 1; };
+        // each face turned to the camera within 75 degrees (facing = (sin yaw, cos yaw) on the floor)
+        const turned = (o) => { const y = o.root.rotation.y, v = new V(); o.pb.head.getWorldPosition(v); const dx = cam.position.x - v.x, dz = cam.position.z - v.z, h = Math.hypot(dx, dz); return Math.round(Math.acos((Math.sin(y) * dx + Math.cos(y) * dz) / h) * 180 / Math.PI); };
+        // the image is seen through the glass, not hidden by the wall: the camera's ray to its head crosses the glass plane at least 0.1 m inside the glass
+        const through = (() => { const v = new V(); N.refl.pb.head.getWorldPosition(v); v.y += 0.15; const k = (D - cam.position.z) / (v.z - cam.position.z), x = cam.position.x + (v.x - cam.position.x) * k, y = cam.position.y + (v.y - cam.position.y) * k; return Math.abs(x) <= 0.625 && y >= 0.325 && y <= 2.875; })();
+        return { through, press: N.NS.press, gap: N.NS.handGapMin, want: N.N1.handMeet, cracks: N.NS.cracks, mirr: Math.abs(p.x - c.x) < 1e-3 && Math.abs(p.z - (2 * D - c.z)) < 1e-3, feet: p.y, heads: inF(N.chars.clown) && inF(N.refl), turnHim: turned(N.chars.clown), turnImg: turned(N.refl) }; });
+      await shot('entry');
+      console.log('    mirror: at the mark depth/side error', plate.depth, plate.side, '| press shot', r.press, '| palms apart', r.gap.toFixed(3), 'm (at most', r.want + ') | both faces in frame', r.heads, '| faces turned to the camera', r.turnHim, r.turnImg, 'deg | image seen through the glass', r.through);
+      if (Math.abs(plate.depth) > 1e-3 || Math.abs(plate.side) > 1e-3 || Math.abs(plate.y) > 1e-3) throw new Error('reflection not at the mirror place ' + JSON.stringify(plate));
+      if (!r.press || !(r.gap >= 0 && r.gap <= r.want) || r.cracks < 1 || !r.mirr || Math.abs(r.feet) > 1e-3 || !r.heads || !r.through || r.turnHim > 75 || r.turnImg > 75) throw new Error('entry ' + JSON.stringify(r));
     });
     if (nAt === 'in' || nAt === 'both') await step('Nietzsche line at the mirror before he goes in', async () => { await pg.waitForSelector('#card_nietzscheIn', { timeout: 10000 }); const t = await pg.textContent('#card_nietzscheIn .quote'); console.log('   in:', t.slice(0, 60)); await shot('nietzsche_in'); await pg.click('#goIn'); });
     await step('fog into the Mirror World', async () => { await pg.waitForFunction(() => window.__night.S.mode === 'mw', null, { timeout: 8000 }); await sleep(1500); });

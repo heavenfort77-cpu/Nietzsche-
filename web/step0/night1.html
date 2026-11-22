@@ -92,8 +92,11 @@
   .card .parchment button.back { background: #3d332d; color: #f1e5c8; }
   #cracks { position: absolute; left: 0; top: 0; pointer-events: none; }
   #fog { position: fixed; inset: 0; background: radial-gradient(circle at 50% 60%, #c9d5d7, #9db5bb 45%, #44666e); opacity: 0; pointer-events: none; transition: opacity 1.4s linear; z-index: 15; display: flex; align-items: center; justify-content: center; color: #11272b; font: 600 26px Georgia, serif; }
-  #mwHud { position: absolute; right: 10px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
+  #mwHud { position: absolute; right: 120px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
   #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
+  /* session 18 batch 2: the act is skipped only by this button (owner 22 Nov 20:27); full screen where the browser allows it */
+  #actSkipBtn { position: fixed; right: 16px; bottom: 24px; min-width: 88px; min-height: 48px; border-radius: 24px; border: 1px solid #cfaa4e; background: #1e1714cc; color: #e9d9b0; font: 600 15px system-ui, sans-serif; z-index: 7; }
+  #fsBtn { position: fixed; right: 8px; top: 8px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 22px; border: 0; background: #1e1714b3; color: #e9d9b0; font: 600 13px system-ui, sans-serif; z-index: 12; }
   #pads { position: fixed; right: 12px; bottom: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 6; }
   #pads button { width: 72px; height: 64px; border-radius: 32px; border: 0; font: 600 14px system-ui, sans-serif; background: #44666e; color: #e2e3e3; }
   #pads button:disabled { opacity: .4; }
@@ -130,6 +133,8 @@
 <div id="boardActs" class="hidden"></div>
 <button id="verb" class="hidden"></button>
 <div id="mwTip"></div>
+<button id="actSkipBtn" class="hidden">Skip</button>
+<button id="fsBtn" class="hidden" aria-label="Full screen">Full screen</button>
 <div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">FALL</button></div>
 <div id="fog">The Mirror</div>
 <div id="curtain"><div class="half hl"></div><div class="half hr"></div><div class="val"></div>
@@ -705,28 +710,34 @@ const N1 = Object.freeze({
   missYaw: 1.5708, bowYaw: 0.9,
   // session 18 (owner 22 Nov 19:38, panel 22 Nov c fix 2): after the Dazai line he stands and straightens up, false bravado (switch)
   bravado: true,
-  // times, s: standing from the chair, the chest out and chin up, the hold, the shoulders dropping a hair; a tap skips after bravSkipAfter
-  bravRise: 0.6, bravPuff: 0.35, bravHold: 0.9, bravDrop: 0.45, bravSkipAfter: 0.2,
+  // times, s: standing from the chair, the chest out and chin up, the hold, the shoulders dropping a hair (owner 22 Nov 20:27: no tap skip)
+  bravRise: 0.6, bravPuff: 0.35, bravHold: 0.9, bravDrop: 0.45,
   // the straightened posture, degrees (negative = upright, chin up), and how far the chest drops back at the end
   bravChest: -16, bravNeck: -6, bravHead: -12, bravDropChest: 4,
-  // the vanity reflection copies it late (s) and only partly (0..1), keeping its sad face
-  bravReflLag: 0.5, bravReflAmt: 0.4,
   // pies from the props girl (Mirror World throws)
   pies: 3,
   // opening at the mirror: paint before the first input (half painted) and after, and the time it takes
   paintHalf: 0.14, paintSecs: 1.2,
   // mirror scenes: the clown stands this far from the camera and this far to the side (he faces the mirror)
-  mirrorClownDist: 2.8, mirrorClownX: -0.9,
+  mirrorClownDist: 2.8, mirrorClownX: -0.6,
   // his reflection: distance and side (stylised so the face shows inside the glass), metres
-  reflDist: 7.2, reflX: -0.15,
+  // the big mirror's glass face, metres from the room camera (build_cube.py big_mirror); the reflection stands at his true mirror place behind it
+  // (owner 22 Nov 20:27, "it is a mirror"; was reflDist 7.2 and reflX -0.15, a place fitted by eye and slid until the hands met)
+  mirrorGlassD: 4.71,
   // mirror glass in the mirror wall plate, fractions of the plate (x0, y0 from top, x1, y1); plate fov and play fov from views.json and CONFIG
   mirrorRect: [0.40, 0.0, 0.605, 0.675],
   // 22 Nov b item 6: the opening at the dressing table: chair (Blender x, y), vanity glass centre (x, y, z) and size (width, height) m, his reflection's side offset (Blender y) and depth past the glass
-  vanityChair: [3.5, 0.2], vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9], vanityReflY: -0.35, vanityReflPast: 1.35,
+  vanityChair: [3.2, 0.6], vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9],
   // 22 Nov b item 7: the big mirror shows a pale form of him, darker every night (tint per night 1-7, times his shading's grey); grade amount
   reflShade: [1.45, 1.25, 1.05, 0.85, 0.65, 0.5, 0.35], reflPale: 0.85, night: 1,
   // he presses his right hand to the glass instead of sitting; the reflection presses back (its left), late; hands must meet within this share of the picture height
   pressHand: true, handMeet: 0.06,
+  // session 18 batch 2 (owner 22 Nov 20:27): the press is a cut to a close shot at the glass, where his palm and the mirror image's meet for real (switch);
+  // camera angle off the glass's normal toward his right (degrees), distance from the touch point and height above it (m), field of view (degrees),
+  // palm to glass gap (m), the touch point's sideways place (m, room camera's right), cut fade (ms)
+  pressShot: true, pressCamAngle: 55, pressCamDist: 2.2, pressCamUp: 0.25, pressFov: 40, pressGap: 0.02, pressTouchX: -0.15, pressCutMs: 300,
+  // his turn toward the camera's side at the glass, degrees, so the close shot sees his face three-quarter on and the image's too
+  pressYaw: 65,
   // reflection lag behind him (night 1), s; sitting: drop of the hips metres, chest tilt degrees, time s
   reflLag: 0.35, sitDrop: 0.32, sitChest: 12, sitSecs: 0.6,
   // cracks where his pose and the reflection's disagree (night 1 at most), and the disagreement that makes one
@@ -906,6 +917,7 @@ const S = {
 // test hook: read by the headless checks
 window.__walk = S;
 const el = {
+  actSkip: document.getElementById('actSkipBtn'), fs: document.getElementById('fsBtn'),
   canvas: document.getElementById('gl'), frame: document.getElementById('frame'), shotName: document.getElementById('shotName'),
   panel: document.getElementById('panel'), panelText: document.getElementById('panelText'), state: document.getElementById('state'),
   go: document.getElementById('go'), stick: document.getElementById('stick'), knob: document.getElementById('knob'),
@@ -1479,7 +1491,8 @@ function renderFrame() {
   renderer.clear();
   if (S.mode === 'mw') { renderer.render(mwScene, mwCam); return; }
   if (S.mode === 'act') { renderer.render(actScene, actCam); return; }
-  if (S.room) { renderer.render(roomScene, roomCam); if (S.mirror) renderReflection(); }
+  if (S.room && NS.press) renderer.render(pressScene, pressCam);
+  else if (S.room) { renderer.render(roomScene, roomCam); if (S.mirror) renderReflection(); }
   else { renderer.render(plateScene, plateCam); renderer.render(scene, camera); }
   if (S.gloom > 0) renderer.render(vigScene, plateCam);
 }
@@ -1667,8 +1680,10 @@ const GPCLIP = {
   // kneeling (the sweep chase)
   kneel: { secs: 0.3, keys: [[0.30, { hy: -0.42, hr: 20, sp: 10, tL: 0, tR: 0, sL: 95, sR: 95, aLx: -40, aRx: -40 }]] },
   // a hand pressed flat to the glass (big mirror, panel item 7): right hand, or the left for the reflection
-  pressR: { secs: 0.6, keys: [[0.60, { sp: 6, hd: -4, aRx: -88, aRz: -8, fR: -6 }]] },
-  pressL: { secs: 0.6, keys: [[0.60, { sp: 6, hd: -4, aLx: -88, aLz: 8, fL: -6 }]] },
+  // session 18 batch 2: he turns his right side to the glass (pressYaw) and reaches out to it, forearm straight, so the fingertips pass his ruff and belly
+  // (pressReach: 0.03 m before; about 0.2 m with this pose at 65 degrees)
+  pressR: { secs: 0.6, keys: [[0.60, { sp: 6, hd: -4, aRx: -82, aRz: -60, fR: 0 }]] },
+  pressL: { secs: 0.6, keys: [[0.60, { sp: 6, hd: -4, aLx: -82, aLz: 60, fL: 0 }]] },
 };
 // precomputed key tables (Float32Array per key) so evaluating a clip allocates nothing
 for (const k in GPCLIP) GPCLIP[k].tab = GPCLIP[k].keys.map(([t, o]) => { const v = new Float32Array(GPC.length); GPC.forEach((n, i) => { v[i] = o[n] || 0; }); return [t, v]; });
@@ -1696,6 +1711,9 @@ function gpRig(c) {
     for (let d = 0; d < 6; d++) { const key = j * 6 + d, v = (d & 1 ? -1 : 1) * p[d >> 1], o = best.get(key); if (!o || v > o[0]) best.set(key, [v, i]); }
   }
   c.gpSamples = Int32Array.from(new Set(Array.from(best.values(), (o) => o[1])));
+  // the bone each sample belongs to (its largest weight), and whether it is on the right arm (the pressing arm at the big mirror)
+  const names = c.body.skeleton.bones.map((bn) => bn.name);
+  c.gpSampleArmR = Uint8Array.from(c.gpSamples, (i) => { let j = si.getX(i), w = sw.getX(i); if (sw.getY(i) > w) { j = si.getY(i); w = sw.getY(i); } if (sw.getZ(i) > w) { j = si.getZ(i); w = sw.getZ(i); } if (sw.getW(i) > w) j = si.getW(i); return /arm|hand|fingers|clavicle/.test(names[j]) ? (/_R$/.test(names[j]) ? 1 : 2) : 0; });
 }
 function gpRestore(c) {
   if (!c.gpDirty) return;
@@ -1864,6 +1882,7 @@ async function n1Load() {
   NS.tape.position.copy(NS.cable.position);
   scene.add(NS.cable, NS.tape);
   buildReflection();
+  buildPress();
   gpRig(chars.clown); gpRig(refl);
   buildMW();
   buildAct();
@@ -1883,6 +1902,7 @@ function n1Warm() {
   for (const o of hide) o.visible = true;
   actFit();
   renderer.compile(actScene, actCam);
+  renderer.compile(pressScene, pressCam);
   for (const o of hide) o.visible = false;
   scene.add(c.root, cast.child);
 }
@@ -1962,11 +1982,11 @@ function goOut() {
   walkOut();
 }
 // panel 22 Nov c fix 2: false bravado at the vanity before the board. He stands, chest out, chin up, the smile; held; the shoulders drop a hair.
-// The reflection is late, only half follows and stays sad. Played by updateMirror (bravPose); a tap or key after bravSkipAfter skips it.
+// The vanity image copies him exactly. Played by updateMirror (bravPose); no input skips it (owner 22 Nov 20:27).
 function startBravado() {
   NS.scene = 'bravado';
   hideCard();
-  NS.brav = { t: 0, peak: 0, reflPeak: 0, smile: false };
+  NS.brav = { t: 0, peak: 0, smile: false };
   NS.sitTarget = 0;
 }
 function bravPose(dt) {
@@ -1980,17 +2000,16 @@ function bravPose(dt) {
   m.head = CONFIG.moodRoom.head + (n.bravHead - CONFIG.moodRoom.head) * p;
   if (B.t >= n.bravRise * 0.6 && !B.breath) { B.breath = true; if (actObj.breath) drum(actObj.breath); }
   if (p > 0.5 && !B.smile) { B.smile = true; setFace(c, 'smile'); }
-  const r = puff(B.t - n.bravReflLag) * n.bravReflAmt, rm = NS.rmood;
-  rm.chest = rm.chest + (n.bravChest - rm.chest) * r;
-  rm.neck = CONFIG.moodRoom.neck + (n.bravNeck - CONFIG.moodRoom.neck) * r;
-  rm.head = CONFIG.moodRoom.head + (n.bravHead - CONFIG.moodRoom.head) * r;
-  B.peak = Math.max(B.peak, p); B.reflPeak = Math.max(B.reflPeak, r);
-  B.chest = m.chest; B.reflChest = rm.chest;
+  // the vanity is a mirror (owner 22 Nov 20:27): the image does exactly what he does, at once
+  const rm = NS.rmood;
+  rm.chest = m.chest; rm.neck = m.neck; rm.head = m.head;
+  B.peak = Math.max(B.peak, p);
+  B.chest = m.chest; B.reflChest = rm.chest; B.reflSit = NS.reflSit; B.sit = NS.sit;
   if (B.t >= t2 + n.bravDrop) endBravado();
 }
 function endBravado() {
   if (NS.scene !== 'bravado') return;
-  NS.bravLast = { peak: NS.brav.peak, reflPeak: NS.brav.reflPeak, t: NS.brav.t, skipped: NS.brav.t < N1.bravRise * 0.6 + N1.bravPuff + N1.bravHold + N1.bravDrop };
+  NS.bravLast = { peak: NS.brav.peak, t: NS.brav.t, skipped: NS.brav.t < N1.bravRise * 0.6 + N1.bravPuff + N1.bravHold + N1.bravDrop };
   NS.brav = null;
   for (const m of [NS.mood, NS.rmood]) { m.neck = CONFIG.moodRoom.neck; m.head = CONFIG.moodRoom.head; }
   NS.scene = 'paint';
@@ -2427,6 +2446,7 @@ function actRoutine() {
   hatTo('real');
   segStart(A);
   NS.scene = 'act'; S.mode = 'act';
+  el.actSkip.classList.toggle('hidden', !NS.actSeen);
   if (!c.root.parent || c.root.parent !== actScene) actScene.add(c.root, c.blob);
   S.running = true; startLoop();
 }
@@ -2591,13 +2611,14 @@ function actCaption() {
   const A = NS.A;
   if (A.done) return;
   A.done = true; A.phase = 'caption';
+  el.actSkip.classList.add('hidden');
   NS.actSeen = true;
   try { localStorage.setItem('n1ActSeen', '1'); } catch (e) { /* storage off */ }
   const line = NS.hurtHead || NS.crowd;
   const d = show('crowd', `<p class="knows">${line}</p><p>Laughs +${NS.laughs} &middot; Mask ${NS.mask}</p><button id="walkBack">Walk back</button>`);
   d.querySelector('#walkBack').addEventListener('click', walkBackGo);
 }
-// a returning player taps to skip: the routine's end state at once
+// a returning player skips with the Skip button only (owner 22 Nov 20:27: "should not be skip by any button except skip button"): the routine's end state at once
 function actSkip() {
   const A = NS.A;
   if (!NS.actSeen || !A || A.done || (A.phase !== 'seg' && A.phase !== 'hold' && A.phase !== 'bow')) return false;
@@ -2695,6 +2716,17 @@ function doVerb() {
   setVerb(null);
 }
 el.verb.addEventListener('click', doVerb);
+el.actSkip.addEventListener('click', () => { if (actSkip() !== false) el.actSkip.classList.add('hidden'); });
+// full screen (owner 22 Nov 20:30 "can be full screen?"): the button, or F on a keyboard; shown only where the browser allows it (not iPhone Safari)
+function toggleFs() {
+  try {
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    document.documentElement.requestFullscreen({ navigationUI: 'hide' }).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* no orientation lock */ } }).catch(() => {});
+  } catch (e) { /* full screen refused */ }
+}
+if (document.fullscreenEnabled) el.fs.classList.remove('hidden');
+el.fs.addEventListener('click', toggleFs);
+document.addEventListener('fullscreenchange', () => { el.fs.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
 // the notes are made once from N1.acts (projected onto the board when shown)
 for (const a of N1.acts) {
   const b = document.createElement('button');
@@ -2786,15 +2818,17 @@ function mirrorSetup(kind) {
     // 22 Nov b item 6: seated at the dressing table, back to the camera; his reflection faces him from the vanity glass
     const ch = N1.vanityChair, g = N1.vanityGlass;
     c.root.position.set(ch[0], 0, -ch[1]);
-    rb.x = g[0] + N1.vanityReflPast; rb.z = -N1.vanityReflY;
+    // a mirror: the image stands as far behind the glass as he sits in front of it, at the same side place
+    rb.x = 2 * g[0] - ch[0]; rb.z = -ch[1];
   } else {
     const d = N1.mirrorClownDist, x = N1.mirrorClownX;
     c.root.position.set(fx * d + rx * x, 0, fz * d + rz * x);
-    rb.x = fx * N1.reflDist + rx * N1.reflX; rb.z = fz * N1.reflDist + rz * N1.reflX;
+    const dm = 2 * N1.mirrorGlassD - d;
+    rb.x = fx * dm + rx * x; rb.z = fz * dm + rz * x;
   }
   c.root.rotation.set(0, yaw + Math.PI, 0);
   c.blob.position.set(c.root.position.x, 0.02, c.root.position.z);
-  rb.fx = fx; rb.fz = fz; rb.rx = rx; rb.rz = rz; NS.reflAdj = 0; NS.reflLift = 0; NS.handGap = -1;
+  rb.fx = fx; rb.fz = fz; rb.rx = rx; rb.rz = rz; NS.press = false;
   refl.root.position.set(rb.x, 0, rb.z);
   refl.root.rotation.y = yaw;
   // the big mirror's reflection is a pale form of him, darker each night; the vanity shows him as he is
@@ -2820,8 +2854,8 @@ function mirrorSetup(kind) {
 }
 function leaveMirror() {
   const c = chars.clown;
-  roomScene.remove(refl.root);
-  S.mirror = null;
+  roomScene.remove(refl.root); pressScene.remove(refl.root);
+  S.mirror = null; NS.press = false; NS.pressing = false;
   gpStop(c); gpStop(refl);
   c.root.position.y = 0; c.root.rotation.x = 0;
   room.flakes.visible = true;
@@ -2837,6 +2871,12 @@ function sizeCracks() {
     const g = N1.vanityGlass, sz = N1.vanitySize, pr = (y, z) => { const v = tmp.set(g[0], z, -y).project(roomCam); return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * h]; };
     const a = pr(g[1] + sz[0] / 2, g[2] + sz[1] / 2), b = pr(g[1] - sz[0] / 2, g[2] - sz[1] / 2);
     x0 = Math.min(a[0], b[0]); x1 = Math.max(a[0], b[0]); y0 = Math.min(a[1], b[1]); y1 = Math.max(a[1], b[1]);
+  }
+  NS.mpoly = null;
+  if (S.mirror === 'entry' && NS.press) {
+    // the glass in the press shot, projected through its camera (canvas px); cracks are clipped to this quad
+    NS.mpoly = pressSet.glassCorners.map((q) => { const v = pressSet.v.copy(q).project(pressCam); return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * h]; });
+    x0 = Math.min(...NS.mpoly.map((q) => q[0])); x1 = Math.max(...NS.mpoly.map((q) => q[0])); y0 = Math.min(...NS.mpoly.map((q) => q[1])); y1 = Math.max(...NS.mpoly.map((q) => q[1]));
   }
   NS.mrect[0] = x0; NS.mrect[1] = h - y1; NS.mrect[2] = x1 - x0; NS.mrect[3] = y1 - y0;
   const dpr = renderer.getPixelRatio();
@@ -2881,9 +2921,10 @@ function drawCracks() {
   if (!S.mirror) return;
   const r = NS.mrect;
   g.fillStyle = S.mirror === 'paint' ? 'rgba(17,39,43,0.12)' : 'rgba(17,39,43,0.28)';
-  g.fillRect(r[0], S.h - r[1] - r[3], r[2], r[3]);
+  const glassPath = () => { g.beginPath(); if (NS.mpoly) { g.moveTo(NS.mpoly[0][0], NS.mpoly[0][1]); for (let i = 1; i < 4; i++) g.lineTo(NS.mpoly[i][0], NS.mpoly[i][1]); g.closePath(); } else g.rect(r[0], S.h - r[1] - r[3], r[2], r[3]); };
+  if (!NS.mpoly) { glassPath(); g.fill(); }
   g.strokeStyle = '#F4F4F2'; g.lineWidth = 1.2;
-  g.save(); g.beginPath(); g.rect(r[0], S.h - r[1] - r[3], r[2], r[3]); g.clip();
+  g.save(); glassPath(); g.clip();
   for (const pts of NS.crackList) {
     g.beginPath();
     let pen = false;
@@ -2906,7 +2947,7 @@ function updateMirror(dt) {
   NS.sit += Math.sign(NS.sitTarget - NS.sit) * Math.min(Math.abs(NS.sitTarget - NS.sit), dt / N1.sitSecs);
   // history of his pose; the reflection reads it reflLag late (the way in: the reflection is a beat behind)
   NS.histI = (NS.histI + 1) % 256; NS.hist[NS.histI] = NS.sit; NS.histT[NS.histI] = NS.mirT;
-  const lag = S.mirror === 'entry' ? N1.reflLag : NS.brav ? N1.bravReflLag : 0, want = NS.mirT - lag;
+  const lag = S.mirror === 'entry' ? N1.reflLag : 0, want = NS.mirT - lag;
   let v = NS.sit;
   if (lag > 0) {
     v = NS.hist[(NS.histI + 1) % 256];
@@ -2922,7 +2963,7 @@ function updateMirror(dt) {
   if (press && NS.sit > 0) gpApply(c, ease(NS.sit));
   moodRestore(refl); refl.mixer.update(dt); moodApply(refl, NS.rmood);
   if (press && NS.reflSit > 0) gpApply(refl, ease(NS.reflSit));
-  if (press) handsMeet(dt);
+  if (press && NS.press) pressMeasure();
   if (NS.paintT >= 0 && !NS.painted) {
     NS.paintT += dt;
     const k = Math.min(1, NS.paintT / N1.paintSecs);
@@ -2940,7 +2981,6 @@ function updateMirror(dt) {
   // the reflection's face follows his, except while it stands and performs (the grin)
   const rf = refl.face.material.uniforms, cf = c.face.material.uniforms;
   if (NS.reflUp > 0) { rf.uCell.value.fromArray(CONFIG.faces[N1.learnGrin]); rf.uPaintAmt.value = N1.learnGrinPaint; }
-  else if (NS.brav) { rf.uCell.value.fromArray(CONFIG.faces.sad); rf.uPaintAmt.value = cf.uPaintAmt.value; }
   else { rf.uCell.value.copy(cf.uCell.value); rf.uPaintAmt.value = cf.uPaintAmt.value; }
   rf.uFlake.value = cf.uFlake.value;
   if (S.mirror === 'entry') {
@@ -2948,19 +2988,89 @@ function updateMirror(dt) {
     if (NS.sitTarget === 1 && NS.sit >= 1 && NS.reflSit >= 0.999 && !NS.fogging) { NS.fogging = true; setTimeout(nietzscheInCard, 600); }
   }
 }
-// the reflection's place is eased sideways (and up or down) until its raised hand meets his on screen (22 Nov b item 7)
-function handsMeet(dt) {
-  if (NS.sit < 0.5 || NS.reflSit < 0.5) return;
-  const c = chars.clown, rb = NS.reflBase;
-  c.pb.hand_R.getWorldPosition(mwTmp.v).project(roomCam);
-  refl.pb.hand_L.getWorldPosition(mwTmp.v2).project(roomCam);
-  const dx = mwTmp.v.x - mwTmp.v2.x, dy = mwTmp.v.y - mwTmp.v2.y;
-  NS.handGap = Math.hypot(dx * CONFIG.aspect, dy) / 2;
+// ----- the press at the big mirror (owner 22 Nov 20:27, "it is a mirror"): a cut to a close shot at the glass -----
+// Seen from the room camera behind him, his own body hides a true mirror image, so the press is filmed from his right at the glass.
+// The image is his true mirror (same side place, as far behind the glass as he is in front); his palm and its palm meet on the glass.
+const pressScene = new THREE.Scene(), pressCam = new THREE.PerspectiveCamera(40, CONFIG.aspect, 0.05, 30);
+pressCam.layers.enable(1);
+const pressSet = { glassCorners: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], touch: new THREE.Vector3(), off: new THREE.Vector3(), v: new THREE.Vector3() };
+// built once at load: wall with the glass opening, gold frame, drapes, floor running through into the mirror room, its dark far wall, the glass tint
+function buildPress() {
+  const D = N1.mirrorGlassD, col = (h) => new THREE.MeshBasicMaterial({ color: rawColor(h) });
+  const wall = col('#2A221E'), gold = col('#CFAA4E'), drape = col('#6A1D29'), floor = col('#3D332D'), far = col('#1C353B');
+  const box = (m, x, y, z, w, h, d) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.matrixAutoUpdate = false; b.updateMatrix(); pressScene.add(b); return b; };
+  // glass 1.45 x 2.75 m centred 1.6 m up (build_cube.py big_mirror); everything is in the room's three.js frame, the glass faces -z
+  box(wall, -2.4, 2.5, D + 0.08, 3.1, 5, 0.05); box(wall, 2.4, 2.5, D + 0.08, 3.1, 5, 0.05);
+  box(wall, 0, 4.0, D + 0.08, 1.7, 2.0, 0.05); box(wall, 0, 0.11, D + 0.08, 1.7, 0.22, 0.05);
+  box(gold, -0.79, 1.6, D + 0.03, 0.125, 3.0, 0.1); box(gold, 0.79, 1.6, D + 0.03, 0.125, 3.0, 0.1);
+  box(gold, 0, 3.04, D + 0.03, 1.7, 0.125, 0.1); box(gold, 0, 0.16, D + 0.03, 1.7, 0.125, 0.1);
+  box(drape, -1.5, 2.2, D - 0.13, 0.7, 4.4, 0.25); box(drape, 1.5, 2.2, D - 0.13, 0.7, 4.4, 0.25);
+  box(floor, 0, -0.01, D, 9, 0.02, 10);
+  box(far, 0, 2.5, D + 4.5, 9, 5, 0.05);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 2.75), new THREE.MeshBasicMaterial({ color: rawColor('#6E8D94'), transparent: true, opacity: 0.16, depthWrite: false }));
+  glass.position.set(0, 1.6, D - 0.001); glass.rotation.y = Math.PI; glass.renderOrder = 2; glass.matrixAutoUpdate = false; glass.updateMatrix();
+  pressScene.add(glass);
+  pressScene.background = rawColor('#0d0a0b');
+  [[-0.725, 2.975], [0.725, 2.975], [0.725, 0.225], [-0.725, 0.225]].forEach((q, i) => pressSet.glassCorners[i].set(q[0], q[1], D));
+}
+// the cut: he steps to the glass (placed so his pressed palm stops pressGap short of it), the image is his true mirror, then the press plays
+function pressStart() {
+  if (!N1.pressShot) { NS.sitTarget = 1; setPrompt(''); return; }
+  setPrompt('');
+  NS.pressing = true;
+  fadeThen(N1.pressCutMs, () => {
+    const c = chars.clown, D = N1.mirrorGlassD;
+    pressScene.add(c.root, c.blob, refl.root);
+    // where his palm ends up at the full press, relative to his feet (measured once on the real rig, then put back)
+    const r = pressReach(c);
+    c.root.rotation.set(0, deg(N1.pressYaw), 0);
+    c.root.position.set(N1.pressTouchX - r.palmX, 0, D - N1.pressGap - r.palm);
+    NS.pressClear = r.palm - r.front; NS.pressTip = r.palmIdx;
+    c.blob.position.set(c.root.position.x, 0.02, c.root.position.z);
+    pressSet.touch.set(N1.pressTouchX, r.palmY, D);
+    // the camera: off the glass's normal toward his right, looking at the glass between his face and its face
+    const a = deg(N1.pressCamAngle), T = pressSet.touch;
+    pressCam.fov = N1.pressFov; pressCam.aspect = CONFIG.aspect; pressCam.updateProjectionMatrix();
+    pressCam.position.set(T.x + Math.sin(a) * N1.pressCamDist, T.y + N1.pressCamUp, D - Math.cos(a) * N1.pressCamDist);
+    pressCam.lookAt(T.x, T.y + 0.12, D);
+    NS.press = true;
+    mirrorImage();
+    sizeCracks();
+    NS.sitTarget = 1;
+  });
+}
+// his pressed palm and his body's front (lowest... the furthest-forward skin sample), relative to his feet, in the full press pose
+// (read-only for the game state: the rig is put back; also a test hook)
+function pressReach(c, pose, yaw) {
+  const keepP = c.root.position.clone(), keepR = c.root.rotation.y, b = c.body, s = c.gpSamples, out = { hand: new THREE.Vector3(), front: -9, palm: -9, palmX: 0, palmY: 0, palmIdx: -1 };
+  c.root.position.set(0, 0, 0); c.root.rotation.set(0, yaw === undefined ? deg(N1.pressYaw) : yaw, 0); c.root.updateMatrixWorld(true);
+  const keep = Float32Array.from(c.gp.now);
+  moodRestore(c); c.mixer.update(0); c.gp.now.set(pose ? GPC.map((n) => pose[n] || 0) : GPCLIP.pressR.tab[0][1]); gpApply(c, 1); c.root.updateMatrixWorld(true);
+  c.pb.hand_R.getWorldPosition(out.hand); out.tip = new THREE.Vector3(); c.pb.fingers_R.getWorldPosition(out.tip);
+  // front = the rest of him (not the pressing arm); palm = the pressing hand's furthest skin
+  for (let i = 0; i < s.length; i++) { b.getVertexPosition(s[i], pressSet.v); pressSet.v.applyMatrix4(b.matrixWorld); if (c.gpSampleArmR[i] === 1) { if (pressSet.v.z > out.palm) { out.palm = pressSet.v.z; out.palmX = pressSet.v.x; out.palmY = pressSet.v.y; out.palmIdx = s[i]; } } else out.front = Math.max(out.front, pressSet.v.z); }
+  moodRestore(c); c.gp.now.set(keep); c.root.position.copy(keepP); c.root.rotation.set(0, keepR, 0);
+  return out;
+}
+// the image is his true mirror in the glass plane z = mirrorGlassD: same x, z reflected, facing back (its pose is the mirrored press, pressL)
+function mirrorImage() {
+  const c = chars.clown, D = N1.mirrorGlassD;
+  refl.root.position.set(c.root.position.x, refl.root.position.y, 2 * D - c.root.position.z);
+  refl.root.rotation.y = Math.PI - c.root.rotation.y;
+}
+// read only: the palms' distance in metres (for the checks)
+function pressMeasure() {
+  const c = chars.clown;
+  c.body.getVertexPosition(NS.pressTip, pressSet.v); pressSet.v.applyMatrix4(c.body.matrixWorld);
+  // the image presses with its left hand: the nearest of its left-arm skin points to his fingertip
+  let best = 9;
+  for (let i = 0; i < refl.gpSamples.length; i++) {
+    if (refl.gpSampleArmR[i] !== 2) continue;
+    refl.body.getVertexPosition(refl.gpSamples[i], mwTmp.v2); mwTmp.v2.applyMatrix4(refl.body.matrixWorld);
+    best = Math.min(best, pressSet.v.distanceTo(mwTmp.v2));
+  }
+  NS.handGap = best;
   NS.handGapMin = Math.min(NS.handGapMin === undefined || NS.handGapMin < 0 ? 9 : NS.handGapMin, NS.handGap);
-  const span = N1.reflDist * Math.tan(deg(roomCam.fov) / 2), k = 1 - Math.exp(-8 * dt);
-  NS.reflAdj += dx * span * CONFIG.aspect * k;
-  NS.reflLift = (NS.reflLift || 0) + dy * span * k;
-  refl.root.position.set(rb.x + rb.rx * NS.reflAdj, NS.reflLift, rb.z + rb.rz * NS.reflAdj);
 }
 // Nietzsche line at the big mirror before he goes in (nietzscheAt 'in' or 'both'); otherwise straight into the fog
 function nietzscheInCard() {
@@ -2977,19 +3087,20 @@ function fogIn() {
 
 // ----- input for the night layer -----
 function n1Key(e) {
+  if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { toggleFs(); return true; }
   if (e.repeat) return NS.scene !== 'walk' && NS.scene !== 'back' && NS.scene !== 'room' && NS.scene !== 'mw';
   if (NS.scene === 'logo') { logoOut(); return true; }
   if (NS.scene === 'title') { if (e.code === 'Enter' || e.code === 'Space') el.start.click(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
-  if (NS.scene === 'bravado') { if (NS.brav && NS.brav.t > N1.bravSkipAfter) endBravado(); return true; }
+  if (NS.scene === 'bravado') return true;
   if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (e.code === 'Enter' || e.code === 'Space') smallPress(); return true; }
   if (NS.scene === 'boardwall') { const i = Number(e.code.replace('Digit', '')) - 1; if (N1.acts[i]) pickAct(N1.acts[i].id); return true; }
   if (NS.scene === 'note') { if (e.code === 'Enter' || e.code === 'Space') performAct(NS.noteAct); else if (e.code === 'Escape') noteBack(); return true; }
-  if (S.mode === 'act') { actSkip(); return true; }
+  if (S.mode === 'act') return true;
   if (S.mirror === 'entry') {
     if (NS.card && NS.card.id === 'card_nietzscheIn') { if (e.code === 'Enter' || e.code === 'Space') NS.card.querySelector('#goIn').click(); return true; }
-    if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); }
+    if (NS.sitTarget === 0 && !NS.pressing) pressStart();
     return true;
   }
   if (S.mode === 'mw') {
@@ -3005,10 +3116,10 @@ function n1Pointer(e) {
   if (e.target.closest && e.target.closest('button, .card, iframe')) return true;
   if (NS.scene === 'logo') { logoOut(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } return true; }
-  if (NS.scene === 'bravado') { if (NS.brav && NS.brav.t > N1.bravSkipAfter) endBravado(); return true; }
-  if (S.mirror === 'entry') { if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); } return true; }
+  if (NS.scene === 'bravado') return true;
+  if (S.mirror === 'entry') { if (NS.sitTarget === 0 && !NS.pressing) pressStart(); return true; }
   if (NS.scene === 'small') { smallPress(); return true; }
-  if (S.mode === 'act') { actSkip(); return true; }
+  if (S.mode === 'act') return true;
   if (S.mode === 'mw' && e.pointerType === 'mouse') {
     aimMouse(e);
     if (e.button === 0) gag('slap', NS.mouse); else if (e.button === 2) gag('pie', NS.mouse);
@@ -3676,7 +3787,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

@@ -46,6 +46,10 @@ CONFIG = dict(
     vanityGlassH=0.90,
     # bulb ring around the glass: horizontal and vertical radius, metres (was 0.78 and 0.66)
     vanityBulbR=(0.78, 0.55),
+    # chair place (Blender x, y), metres (owner 22 Nov 20:27 "it is a mirror": was 3.5, 0.2): seen from the room camera behind him,
+    # his true mirror image then sits beside his head in the glass, not behind it
+    chairX=3.2,
+    chairY=0.6,
 )
 
 # view name -> (scene title, camera yaw in degrees; 0 looks +Y)
@@ -180,11 +184,12 @@ def build_room():
         a = i / 10 * 2 * math.pi
         sphere(f'bulb_{i}', (4.8, math.cos(a) * br[0], gz + math.sin(a) * br[1]), 0.05,
                mat('bulb', P['ochre'], 0.4, 0.0, 6.0))
-    box('chair_seat', (3.5, 0.2, 0.45), (0.5, 0.5, 0.06), mat('woodDk', P['woodDk'], 0.6))
-    box('chair_back', (3.25, 0.2, 0.8), (0.06, 0.5, 0.7), mat('woodDk', P['woodDk'], 0.6))
+    cx, cy = CONFIG['chairX'], CONFIG['chairY']
+    box('chair_seat', (cx, cy, 0.45), (0.5, 0.5, 0.06), mat('woodDk', P['woodDk'], 0.6))
+    box('chair_back', (cx - 0.25, cy, 0.8), (0.06, 0.5, 0.7), mat('woodDk', P['woodDk'], 0.6))
     for dx in (-0.2, 0.2):
         for dy in (-0.2, 0.2):
-            box(f'chair_leg_{dx}_{dy}', (3.5 + dx, 0.2 + dy, 0.22), (0.05, 0.05, 0.44), mat('woodDk', P['woodDk']))
+            box(f'chair_leg_{dx}_{dy}', (cx + dx, cy + dy, 0.22), (0.05, 0.05, 0.44), mat('woodDk', P['woodDk']))
     box('rack_bar', (4.2, -2.2, 1.8), (0.05, 1.6, 0.05), mat('silver', P['silver'], 0.3, 1.0))
     for i, c in enumerate(['curtain', 'ochre', 'rug', 'hat']):
         box(f'costume_{i}', (4.2, -2.85 + i * 0.42, 1.25), (0.25, 0.32, 1.0), mat(c, P[c], 0.8))
