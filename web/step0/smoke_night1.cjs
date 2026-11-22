@@ -1,6 +1,7 @@
 // One pass through night1.html in GDD order (desktop 1280x720, phone 390x844): page errors, each scene reached, a few frames.
 // Needs web/step0/cube25d/setup.sh first. Usage: node web/step0/smoke_night1.cjs [out dir]; ONLY=desk|phone; CHROME=<path>; N_AT=out|in|both overrides N1.nietzscheAt.
 // MUTATE=<name> serves a page with one feature broken (see MUTS); the matching step must FAIL.
+// UNTIL=<text> (mutation runs only): stop each screen after the first step whose name contains <text>; the full smoke never sets it.
 // Screens: desk 1280x720, phone 390x844, land 844x390 (land plays the Mirror World as a loss to cover the small win's loss branch).
 // Ends with RESULT night1 smoke <passed> of <steps> pass.
 // Waits are on game state (software GL runs about 9 fps and frame time is capped at 0.05 s, so game time runs slower than wall time).
@@ -25,6 +26,16 @@ const MUTS = {
   jokes: ['night1.html', 'corridorJokes: true,', 'corridorJokes: false,'],
   mergekept: ['night1.html', 'mergeKept: true,', 'mergeKept: false,'],
   endbrief: ['night1.html', 'endBrief: true,', 'endBrief: false,'],
+  // the act at the zoom-out (session 17, PANEL-act-price.md): each mutation must FAIL its own act step
+  actshow: ['night1.html', 'actShow: true,', 'actShow: false,'],
+  actpx: ['night1.html', 'actPx: 62,', 'actPx: 90,'],
+  actcalls: ['night1.html', '  actScene.add(actObj.crowd);', '  actScene.add(actObj.crowd); for (let i = 0; i < 160; i++) actScene.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), actObj.lit[0].m));'],
+  actloop: ['night1.html', '  S.running = false;\n  openCue();', '  openCue();'],
+  actsegs: ['night1.html', "  for (const g of by) if (g) segs.push(g.m ? 'miss' : g.g ? 'good' : 'perfect');", ''],
+  actexcite: ['night1.html', 'exciteMiss: 1.0,', 'exciteMiss: 0.5,'],
+  acthold: ['night1.html', "  A.face = 'sad'; A.excite = 0; A.clip = 'idle';", "  A.excite = 0; A.clip = 'idle';"],
+  actskip: ['night1.html', '  if (!NS.actSeen || !A ||', '  if (true || !A ||'],
+  actslump: ['night1.html', 'slumpMax: { tempo: 0.78, chest: 15,', 'slumpMax: { tempo: 0.78, chest: 6,'],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
@@ -55,7 +66,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (fr) t += '\n[act screen] ' + await fr.evaluate(() => document.body.innerText.replace(/\n{2,}/g, '\n').trim()).catch(() => '');
       fs.appendFileSync(process.env.TRANSCRIPT, `\n=== ${sc.n} after: ${name}\n${t}\n`);
     };
-    const step = async (name, fn) => { nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); } await seen(name).catch(() => {}); };
+    let until = false;
+    const step = async (name, fn) => { if (until) return; if (process.env.UNTIL && name.indexOf(process.env.UNTIL) >= 0) until = true; nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); } await seen(name).catch(() => {}); };
     const shot = (n) => pg.screenshot({ path: `${OUT}/${sc.n}_${n}.png` });
     await pg.goto(url);
     await step('loads', async () => { await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 120000 }); });
@@ -77,7 +89,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('trip button does not say "on purpose" (H2)', async () => { await tp(-1.3, 17.0); await sleep(500); const t = await pg.textContent('#verb'); if (!/^Trip\b/.test(t) || /purpose/i.test(t)) throw new Error('verb reads "' + t + '"'); });
     await step('trip for the child', async () => { await verb(-1.3, 17.0, 'trip'); await pg.waitForFunction(() => /on purpose/.test(window.__night.crew[4].lab.textContent), null, { timeout: 8000 }); await shot('child'); });
     await step('ring edge: board', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForSelector('#card_board', { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); });
-    await step('board: act page opens', async () => { await pg.click('[data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
+    const actShow = await pg.evaluate(() => window.__night.N1.actShow);
+    // the act at the zoom-out: he walks on into the spot, the house quiets, then the cue page (FAIL here when N1.actShow is off)
+    // the land screen plays the spotlight sweep, the others the deliberate fall (both routines run every pass)
+    await step('act: walk-on into the spot (scene reached)', async () => { if (!actShow) throw new Error('N1.actShow is off: the act is a text card'); await pg.click(sc.n === 'land' ? '[data-act="sweep"]' : '[data-act="fall"]'); await pg.waitForFunction(() => { const A = window.__night.NS.A; return A && (A.phase === 'walkon' || A.phase === 'cue'); }, null, { timeout: 8000 }); await sleep(600); await shot('walkon'); });
+    if (actShow) {
+      await step('act: clown 60-64 px at the spot', async () => { const r = await pg.evaluate(() => { const N = window.__night, s = N.N1.actSpotAt; return { px: N.actPxAt(s[0], s[1]), want: N.N1.actPx }; }); if (!(r.px >= 60 && r.px <= 64)) throw new Error('clown ' + r.px.toFixed(1) + ' px tall'); console.log('    clown', r.px.toFixed(1), 'px'); });
+      await step('act: draw calls under 150', async () => { const n = await pg.evaluate(() => window.__walkTest.renderer.info.render.calls); if (!(n > 0 && n < 150)) throw new Error('draw calls ' + n); console.log('    draw calls', n); });
+      await step('act: loop stopped behind the cue page', async () => { await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(1500); const r = await pg.evaluate(() => ({ run: window.__night.S.running, raf: window.__night.S.raf, phase: window.__night.NS.A.phase })); if (r.run || r.raf || r.phase !== 'cue') throw new Error('behind the cue ' + JSON.stringify(r)); await shot('act'); });
+    } else await step('board: act page opens', async () => { await pg.click('[data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
     // owner's item 4 (stranger cold read): hosted, the act screen shows one line and its start button, none of the cue page's own notes or settings
     await step('act screen: one line, no developer notes (item 4)', async () => {
       const fr = pg.frames().find((f) => /cue_model/.test(f.url()));
@@ -110,7 +130,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (Math.abs(r.side) > 0.05) throw new Error('face moved sideways ' + r.side.toFixed(3) + ' m');
       console.log('    lean: back', r.back.toFixed(2), 'm, side', r.side.toFixed(3), 'm');
     });
-    await step('crowd card (stand-in act result)', async () => { await pg.evaluate(() => { const N = window.__night; N.NS.actInfo = { scene: 'results', perfects: 2, goods: 4, misses: 1, actLaughs: 45, mask: 2 }; N.crowdCard(); }); await pg.waitForSelector('#card_crowd'); });
+    if (!actShow) await step('crowd card (stand-in act result)', async () => { await pg.evaluate(() => { const N = window.__night; N.NS.actInfo = { scene: 'results', perfects: 2, goods: 4, misses: 1, actLaughs: 45, mask: 2 }; N.crowdCard(); }); await pg.waitForSelector('#card_crowd'); });
+    else {
+      // stand-in act: chain 1 all Perfect, chain 2 with one miss, chain 3 Good; game time x3 (logic checked at the fast rate)
+      await step('act: one routine segment per cue chain', async () => {
+        await pg.evaluate(() => {
+          const N = window.__night, R = ['perfect', 'perfect', 'perfect', 'good', 'miss', 'good', 'good', 'good', 'good'];
+          N.NS.actBeats = R.map((r, k) => ({ fit: 1000 + k * 600, chain: Math.floor(k / 3), result: r }));
+          N.NS.actInfo = { scene: 'results', perfects: 3, goods: 5, misses: 1, actLaughs: 45, mask: 2 };
+          N.NS.actSeen = false; N.NS.actRate = 3; N.actAfter();
+        });
+        await pg.waitForFunction(() => { const A = window.__night.NS.A; return A && A.phase === 'seg' && A.seg >= 1; }, null, { timeout: 60000 });
+        await shot('routine');
+        await pg.waitForSelector('#card_crowd', { timeout: 120000 });
+        const s = await pg.evaluate(() => window.__night.NS.A.segs.join(','));
+        if (s !== 'perfect,miss,good') throw new Error('segments ' + s);
+      });
+      await step('act: the crowd rocks hardest at the miss, then a Perfect, then a Good', async () => { const p = await pg.evaluate(() => window.__night.NS.A.peaks); console.log('    crowd peaks', p.map((x) => x.toFixed(2)).join(' ')); if (!(p[1] > p[0] && p[0] > p[2])) throw new Error('peaks ' + p.map((x) => x.toFixed(2))); });
+      await step('act: the beat after (sad face, house silent)', async () => { const h = await pg.evaluate(() => window.__night.NS.A.hold); if (!h || h.face !== 'sad' || !(h.excite < 0.02)) throw new Error('hold ' + JSON.stringify(h)); });
+      await step('act: caption and the bow with the dented hat', async () => { await shot('caption'); const r = await pg.evaluate(() => { const c = document.getElementById('card_crowd'); return { lines: c.querySelectorAll('p').length, knows: !!c.querySelector('.knows'), laughs: /Laughs \+\d+/.test(c.textContent), hat: window.__night.NS.A.hat, see: c.classList.contains('see'), cut: window.__night.chars.clown.body.material.uniforms.uHatCut.value.w }; }); if (r.lines > 2 || !r.knows || !r.laughs || r.hat !== 'dent' || !r.see || r.cut !== 1) throw new Error('caption ' + JSON.stringify(r)); });
+      await step('act: tap skips after the first full play', async () => {
+        // the replay is a check-only path (a player sees the caption once): the card count it adds is taken back after
+        const cards = await pg.evaluate(() => { const N = window.__night, n = N.NS.contCount; N.NS.actRate = 1; N.actRoutine(); return n; });
+        await pg.waitForFunction(() => { const A = window.__night.NS.A; return A.phase === 'seg' && A.t > 0.1; }, null, { timeout: 10000 });
+        const box = await pg.evaluate(() => { const r = document.getElementById('gl').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+        await pg.mouse.click(box[0], box[1]);
+        await pg.waitForSelector('#card_crowd', { timeout: 3000 });
+        const r = await pg.evaluate(() => ({ skipped: window.__night.NS.A.skipped, seg: window.__night.NS.A.seg }));
+        await pg.evaluate((n) => { window.__night.NS.contCount = n; }, cards);
+        if (!r.skipped || r.seg > 0) throw new Error('not skipped ' + JSON.stringify(r));
+      });
+    }
     // panel fix 2: with 1 fall, a pie in hand and the trip done, each hurt pays more than a clean Perfect (10, cue_model.html) and the card says so
     await step('crowd pays most for what hurts him (fix 2)', async () => {
       const r = await pg.evaluate(() => { const N = window.__night, n = N.N1; return { laughs: N.NS.laughs, pies: N.NS.pies, want: 45 + n.hurtFall + n.hurtPie + n.hurtTrip, each: [n.hurtFall, n.hurtPie, n.hurtTrip], head: (document.querySelector('#card_crowd .knows') || {}).textContent || '' }; });
@@ -140,7 +190,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (r.clean !== 0) throw new Error('a clean act pays hurt ' + r.clean);
       console.log('    hurt pay: fall at once', r.early, '| 7 Perfect then 2 falls', r.late, '| clean', r.clean);
     });
-    await step('walk back to the room', async () => { await pg.click('#walkBack'); await sleep(800); await tp(0, 2.8); await pg.evaluate(() => { window.__night.input.ty = -1; }); await pg.waitForFunction(() => window.__night.S.room, null, { timeout: 10000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); await sleep(800); });
+    if (actShow) await step('walk back: slump set by the act\'s Laughs, dented hat on', async () => {
+      await pg.click('#walkBack'); await sleep(300);
+      const r = await pg.evaluate(() => { const N = window.__night, lo = N.slumpFor(30), hi = N.slumpFor(140), m = N.S.mood, w = N.slumpFor(N.NS.laughs); return { lo: lo.chest, hi: hi.chest, tempo: [lo.tempo, hi.tempo], same: m.chest === w.chest && m.head === w.head && m.tempo === w.tempo, dent: N.actObj.dent.visible, mode: N.S.mode || '' }; });
+      if (!(r.hi > r.lo) || !r.same || r.tempo[0] !== r.tempo[1] || !r.dent || r.mode) throw new Error('walk back ' + JSON.stringify(r));
+    });
+    await step('walk back to the room', async () => { if (await pg.$('#walkBack')) await pg.click('#walkBack'); await sleep(800); await tp(0, 2.8); await pg.evaluate(() => { window.__night.input.ty = -1; }); await pg.waitForFunction(() => window.__night.S.room, null, { timeout: 10000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); await sleep(800); });
     await step('turn to the mirror wall, sit button', async () => { for (let i = 0; i < 4; i++) { const v = await pg.evaluate(() => window.__night.S.roomView); if (v === 'mirror') break; await pg.click('#roomR'); await sleep(500); } await pg.waitForSelector('#sit:not(.hidden)', { timeout: 3000 }); });
     await step('mirror entry: sit, reflection late, cracks', async () => { await pg.click('#sit'); await sleep(700); await pg.mouse.click(sc.w / 2, sc.h / 2); await sleep(420); await shot('entry'); await sleep(900); const n = await pg.evaluate(() => window.__night.NS.cracks); if (n < 1) throw new Error('no crack'); });
     if (nAt === 'in' || nAt === 'both') await step('Nietzsche line at the mirror before he goes in', async () => { await pg.waitForSelector('#card_nietzscheIn', { timeout: 10000 }); const t = await pg.textContent('#card_nietzscheIn .quote'); console.log('   in:', t.slice(0, 60)); await shot('nietzsche_in'); await pg.click('#goIn'); });

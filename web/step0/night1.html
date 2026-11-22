@@ -232,9 +232,11 @@ varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vView;
 varying float vSpec;
+varying vec3 vBind;
 void main() {
   vUv = uv;
   vSpec = _spec;
+  vBind = position;
   #include <beginnormal_vertex>
   #include <skinbase_vertex>
   #include <skinnormal_vertex>
@@ -274,10 +276,12 @@ uniform float uSpecPow;
 uniform float uSpecCut;
 uniform float uSpecOn;
 uniform float uMode;
+uniform vec4 uHatCut;
 varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vView;
 varying float vSpec;
+varying vec3 vBind;
 float hash12(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) {
   vec2 i = floor(p);
@@ -288,6 +292,11 @@ float vnoise(vec2 p) {
 void main() {
   vec2 uv = vUv + uCell;
   vec3 albedo = texture2D(uMap, uv).rgb;
+  // act: his bowler is off (uHatCut.w 1): drop the low-saturation hat texels above the brim line (curls, ears and skin are saturated)
+  if (uHatCut.w > 0.5 && vBind.y > uHatCut.x) {
+    float mx = max(albedo.r, max(albedo.g, albedo.b));
+    if ((mx - min(albedo.r, min(albedo.g, albedo.b))) / max(mx, 0.001) < 0.38) discard;
+  }
   if (uHasPaint > 0.5) {
     vec4 p = texture2D(uPaint, uv);
     float keep = step(uFlake, vnoise(vUv * uFlakeScale));
@@ -348,12 +357,57 @@ void main() {
   gl_FragColor = vec4(c, 1.0);
 }
 </script>
+<!-- the act's crowd: head-and-shoulders cards, one instanced draw; they face the camera about the vertical and bob from one excitement value -->
+<script type="x-shader/x-vertex" id="crowdVert">
+attribute float aSeed;
+attribute float aShade;
+uniform float uTime;
+uniform float uExcite;
+uniform float uBob;
+uniform float uLean;
+varying vec2 vUv;
+varying float vShade;
+void main() {
+  vUv = uv;
+  vShade = aShade;
+  vec3 base = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  float s = length(instanceMatrix[0].xyz);
+  vec3 f = cameraPosition - base;
+  f.y = 0.0;
+  f = normalize(f);
+  vec3 r = vec3(f.z, 0.0, -f.x);
+  float ph = uTime * (6.0 + 3.0 * aSeed) + aSeed * 40.0;
+  float bob = uExcite * uBob * abs(sin(ph));
+  float lean = uExcite * uLean * sin(ph * 0.5 + aSeed * 9.0) * position.y;
+  vec3 p = base + r * (position.x * s + lean) + vec3(0.0, position.y * s + bob, 0.0);
+  gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="crowdFrag">
+uniform float uLit;
+uniform float uAspect;
+varying vec2 vUv;
+varying float vShade;
+void main() {
+  vec2 q = vec2((vUv.x - 0.5) * uAspect, vUv.y);
+  float head = length(q - vec2(0.0, 0.76)) - 0.12 * uAspect * 1.45;
+  vec2 sh = (q - vec2(0.0, 0.14)) / vec2(0.46 * uAspect, 0.42);
+  float body = length(sh) - 1.0;
+  if (min(head, body) > 0.0 || vUv.y < 0.01) discard;
+  vec3 c = mix(vec3(0.020, 0.011, 0.012), vec3(0.075, 0.045, 0.035), vShade);
+  c = mix(c, vec3(0.13, 0.085, 0.065), step(head, 0.0) * 0.45);
+  gl_FragColor = vec4(c * uLit, 1.0);
+  #include <colorspace_fragment>
+}
+</script>
 <script type="x-shader/x-vertex" id="hullVert">
 #include <common>
 #include <skinning_pars_vertex>
 #include <fog_pars_vertex>
 uniform float uThick;
+varying vec3 vBind;
 void main() {
+  vBind = position;
   #include <beginnormal_vertex>
   #include <skinbase_vertex>
   #include <skinnormal_vertex>
@@ -368,7 +422,13 @@ void main() {
 #include <common>
 #include <fog_pars_fragment>
 uniform vec3 uColor;
+uniform vec4 uHatCut;
+uniform float uHatR;
+uniform float uHatTop;
+varying vec3 vBind;
 void main() {
+  // the outline of the bowler goes with it: the brim (outside the head's radius) and the crown (above the head's top)
+  if (uHatCut.w > 0.5 && vBind.y > uHatCut.x && (length(vBind.xz) > uHatR || vBind.y > uHatTop)) discard;
   gl_FragColor = vec4(uColor, 1.0);
   #include <colorspace_fragment>
   #include <fog_fragment>
@@ -658,6 +718,41 @@ const N1 = Object.freeze({
   corridorJokes: true, echoSecs: 0.65, echoVol: 0.45,
   // he sniffs the pie he was told not to eat: time s, head dips degrees
   sniffSecs: 0.9, sniffHead: 16,
+  // ----- the act after the cue (owner 22 Nov 13:45, design/PANEL-act-price.md 11 of 12; session 17 order A) -----
+  // switch: walk-on, cue, the act's routine at the zoom-out, the beat after, the bow, one-line caption (false = the crowd text card)
+  actShow: true,
+  // ring radius, tent wall radius, metres; the bank the crowd sits on rises from the curb to this radius and height
+  actRingR: 6.5, actWallR: 14, actBankR: 12.5, actBankH: 3.0,
+  // the low seat behind the back rows (GDD performance view): camera position and the point it looks at, metres
+  actCamPos: [0, 4.6, 15.5], actLook: [0, 0.9, 0],
+  // the clown's height on screen at the spot, CSS px (owner 21 Nov: fills a 64 x 64 box); the field of view is fitted to it
+  actPx: 62, actFovMin: 14, actFovMax: 80,
+  // crowd cards: count, card width and height m, the near sector left open as an aisle (half width m), the entrance gap (half angle degrees)
+  actCrowd: 460, actCardW: 0.62, actCardH: 0.9, actAisle: 0.9, actGapDeg: 13,
+  // crowd bob height m and lean at excitement 1; excitement per segment: Perfect, Good (share of Perfect), a miss (the real accident)
+  actBob: 0.12, actLean: 0.22, excitePerfect: 0.8, exciteGood: 0.45, exciteMiss: 1.0,
+  // house before the walk-on, and how fast the crowd follows a new excitement, per s
+  exciteHouse: 0.45, exciteRate: 5,
+  // walk-on: he starts here (x, z m, ring floor; z toward the camera) and walks to the spot in this many s, the house quieting
+  walkOnFrom: [0, -2.0], walkOnSecs: 2.2,
+  // spotlight: centre, radius m, lamp height m; the sweep shrinks it to 0 under the rug
+  actSpotAt: [0, 0], actSpotR: 1.6, actLampH: 9,
+  // how fast the follow spot catches up with him (deliberate fall), per s
+  spotFollow: 4,
+  // props (x, z m): the bar for the deliberate fall, the rug and dustpan for the sweep; the child watches from the ring entrance
+  actBar: [1.6, 0], actRug: [-1.5, 0.5], actPan: [-0.9, 1.0], actChild: [1.1, -6.9],
+  // one routine segment per cue chain, s; Good plays it at this share of the full moves
+  segSecs: 2.0, goodAmt: 0.55,
+  // the fall backwards about his feet, radians (a miss, the bar miss, the bow that tips him over); the knees in the sweep sink him this far, m
+  fallBack: 1.25, kneelDrop: 0.38,
+  // the beat after: laughter stops, he is alone in the spot with the sad face, s; then the smile and the bow with the hat back on, dented, s
+  holdSecs: 1.5, bowSecs: 1.4, bowChest: 34,
+  // the floor, curb and crowd go this dark when the last of the light is swept under the rug
+  darkLit: 0.28,
+  // walk back: tempo stays (owner 22 Nov: keep the slow speed); the slump goes from min to max as the act's Laughs go from lo to hi
+  slumpMin: { tempo: 0.78, chest: 6, neck: 4, head: 8 }, slumpMax: { tempo: 0.78, chest: 15, neck: 9, head: 19 }, slumpLo: 15, slumpHi: 140,
+  // the bowler (Blender style units, clown.py): cut line under the brim, brim radius just outside the head, top of the head
+  hatCutU: 52.6, hatRU: 8.2, hatTopU: 55.4,
 });
 
 // ===== STATE =====
@@ -722,7 +817,7 @@ function makeToon(map, paint) {
     uMap: { value: map }, uPaint: { value: paint || map }, uHasPaint: { value: paint ? 1 : 0 }, uCell: { value: new THREE.Vector2() },
     uPaintAmt: { value: CONFIG.paint }, uFlake: { value: 0 }, uFlakeScale: { value: CONFIG.flakeScale }, uBand1: { value: CONFIG.band1 },
     uBand2: { value: CONFIG.band2 }, uSoft: { value: CONFIG.soft }, uRimPow: { value: CONFIG.rimPow }, uSpecPow: { value: CONFIG.specPow },
-    uSpecCut: { value: CONFIG.specCut },
+    uSpecCut: { value: CONFIG.specCut }, uHatCut: { value: new THREE.Vector4(0, 0, 0, 0) },
   }]);
   Object.assign(uniforms, shared);
   return new THREE.ShaderMaterial({ uniforms, vertexShader: shaderText('toonVert'), fragmentShader: shaderText('toonFrag'), fog: true });
@@ -731,7 +826,7 @@ function makeHull(body, face) {
   const strip = (g) => { const c = g.clone(); for (const k of Object.keys(c.attributes)) if (!['position', 'normal', 'skinIndex', 'skinWeight'].includes(k)) c.deleteAttribute(k); return c; };
   const geo = mergeGeometries([strip(body.geometry), strip(face.geometry)], false);
   const mat = new THREE.ShaderMaterial({
-    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uThick: { value: CONFIG.outlineThick }, uColor: { value: new THREE.Color(CONFIG.outline) } }]),
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uThick: { value: CONFIG.outlineThick }, uColor: { value: new THREE.Color(CONFIG.outline) }, uHatR: { value: 0 }, uHatTop: { value: 0 } }]),
     vertexShader: shaderText('hullVert'), fragmentShader: shaderText('hullFrag'), side: THREE.BackSide, fog: true,
   });
   const hull = new THREE.SkinnedMesh(geo, mat);
@@ -784,6 +879,9 @@ async function loadChar(name, tl) {
   c.face.material = makeToon(face, paint);
   const hull = makeHull(c.body, c.face);
   c.body.parent.add(hull);
+  // the act takes his bowler off: one cut value shared by the body and its outline (w 0 = hat on)
+  hull.material.uniforms.uHatCut = c.body.material.uniforms.uHatCut;
+  c.hull = hull;
   [c.body, c.face, hull].forEach(growBounds);
   c.mixer = new THREE.AnimationMixer(c.root);
   const clip = (n) => gltf.animations.find((a) => a.name === n);
@@ -1020,6 +1118,7 @@ function showPrep(on) { if (on !== S.prepOn) { S.prepOn = on; el.prep.classList.
 function enterRoom() {
   const c = chars.clown;
   S.room = true; S.moving = false; S.hold = false; S.roomT = 0; S.mood = CONFIG.moodRoom;
+  if (n1) hatHome();
   c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
   roomScene.add(c.root, c.blob);
   setFace(c, CONFIG.faceBack);
@@ -1235,6 +1334,7 @@ function fit() {
 function renderFrame() {
   renderer.clear();
   if (S.mode === 'mw') { renderer.render(mwScene, mwCam); return; }
+  if (S.mode === 'act') { renderer.render(actScene, actCam); return; }
   if (S.room) { renderer.render(roomScene, roomCam); if (S.mirror) renderReflection(); }
   else { renderer.render(plateScene, plateCam); renderer.render(scene, camera); }
   if (S.gloom > 0) renderer.render(vigScene, plateCam);
@@ -1254,6 +1354,7 @@ function frame(t) {
   const dt = Math.min(0.05, ms / 1000);
   S.lastT = t;
   if (S.mode === 'mw') updateMW(dt);
+  else if (S.mode === 'act') updateAct(dt);
   else if (S.room) { if (S.mirror) updateMirror(dt); else updateRoom(dt); }
   else { updateClown(dt); updatePerformers(dt); updateCrew(dt); }
   renderFrame();
@@ -1373,7 +1474,10 @@ const NS = {
   maskStart: 0, wipe: null, smallDone: '', laughed: false, smallT: 0, smallFor: 0,
   // item 4: continue-only cards seen this night; item 5: the corridor jokes played, the rigger's trip clock (-1 = off), the sniff posture
   contCount: 0, jokes: { echo: false, rigger: false, sniff: false }, riggerT: -1, sniffMood: { tempo: 1, chest: 0, neck: 0, head: 0 }, keptLine: '',
+  // the act at the zoom-out: routine state, game-time rate (checks may raise it), seen once (tap skips after), slump for the walk back, dented hat carried, clown height m
+  A: null, actRate: 1, actSeen: false, slump: null, hatDent: false, clownH: 1.79,
 };
+try { NS.actSeen = localStorage.getItem('n1ActSeen') === '1'; } catch (e) { NS.actSeen = false; }
 const crew = [];
 const cast = {};
 const rampMats = {};
@@ -1426,7 +1530,8 @@ function makeLabel() {
 async function n1Load() {
   NS.touch = window.matchMedia('(pointer: coarse)').matches;
   const box = new THREE.Box3().setFromObject(chars.clown.root);
-  NS.unit = ((box.max.y - box.min.y) || 1.75) / N1.clownUnits;
+  NS.clownH = (box.max.y - box.min.y) || 1.75;
+  NS.unit = NS.clownH / N1.clownUnits;
   chars.clown.root.rotation.order = 'YXZ';
   const ids = N1.crew.map((c) => c.id).concat(['light', 'whisper', 'stare', 'shame']);
   const roots = await Promise.all(ids.map(loadCast));
@@ -1450,6 +1555,8 @@ async function n1Load() {
   scene.add(NS.cable, NS.tape);
   buildReflection();
   buildMW();
+  buildAct();
+  actRigProps();
   // H8: the laughs are rendered here, under the loading card (first use is never a render)
   NS.laughBuf = await window.makeLaughs();
 }
@@ -1459,7 +1566,14 @@ function n1Warm() {
   for (const k of ['light', 'whisper', 'stare', 'shame']) mwScene.add(cast[k]);
   renderer.compile(mwScene, mwCam);
   for (const k of ['light', 'whisper', 'stare', 'shame']) mwScene.remove(cast[k]);
-  scene.add(c.root);
+  // the act's ring, props, hat and broom compile here (hidden props shown for the compile only)
+  actScene.add(c.root, cast.child);
+  const hide = [actObj.hat, actObj.dent, actObj.broom];
+  for (const o of hide) o.visible = true;
+  actFit();
+  renderer.compile(actScene, actCam);
+  for (const o of hide) o.visible = false;
+  scene.add(c.root, cast.child);
 }
 
 // ----- sound (one-shot WebAudio, made on the first tap) -----
@@ -1481,7 +1595,7 @@ function laugh(delay, kind) {
   if (N1.laughReal) {
     const a = audio(); if (!a) return;
     const s = a.createBufferSource(); s.buffer = NS.laughBuf[kind || 'one']; s.connect(a.destination); s.start(a.currentTime + (delay || 0));
-    return;
+    return s;
   }
   const L = N1.laugh;
   for (let i = 0; i < L.n; i++) { const f = L.f0 + (L.f1 - L.f0) * i / Math.max(1, L.n - 1); tone(f, f * 0.85, L.dur, 'triangle', L.vol, (delay || 0) + i * L.gap); }
@@ -1493,7 +1607,7 @@ function honk(vol, delay) { tone(520, 390, 0.12, 'square', 0.12 * vol, delay); t
 function show(id, html) {
   hideCard();
   const d = document.createElement('div');
-  d.className = 'card' + (id === 'dazai' || id === 'small' ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
+  d.className = 'card' + (id === 'dazai' || id === 'small' || (id === 'crowd' && N1.actShow) ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
   d.id = 'card_' + id;
   if (N1.continueCards.indexOf(id) >= 0) NS.contCount++;
   d.innerHTML = html;
@@ -1554,6 +1668,10 @@ function n1Board() {
 function startAct(id) {
   NS.act = id; NS.scene = 'act';
   hideCard();
+  if (N1.actShow) { actEnter(); return; }
+  openCue();
+}
+function openCue() {
   NS.cue = document.createElement('iframe');
   NS.cue.id = 'cueFrame';
   // hosted: the cue page hides its own title, notes and settings and shows one line and its start button (owner's item 4)
@@ -1567,7 +1685,7 @@ function startAct(id) {
     // panel item 1: tell the cue page that a fall gets the big laugh tonight
     if (!NS.cue.contentWindow.__cueOpts) NS.cue.contentWindow.__cueOpts = { hurt: N1.hurtPays };
     const i = g.info();
-    if (i.scene === 'results' && !NS.actInfo) { NS.actInfo = i; NS.actBeats = g.beats(); clearInterval(NS.poll); setTimeout(crowdCard, 900); }
+    if (i.scene === 'results' && !NS.actInfo) { NS.actInfo = i; NS.actBeats = g.beats(); clearInterval(NS.poll); setTimeout(N1.actShow ? actAfter : crowdCard, 900); }
   }, 250);
 }
 // fix 2: what hurt him pays more than a clean beat (each fall, the pie in his own face, the trip the front rows saw)
@@ -1594,7 +1712,7 @@ function hurtLaughs(i) {
   if (NS.verbs.trip) add('the trip', N1.hurtTrip);
   return h;
 }
-function crowdCard() {
+function actPay() {
   const i = NS.actInfo, total = i.perfects + i.goods + i.misses;
   if (NS.hurtFor !== i) { NS.hurt = hurtLaughs(i); NS.hurtFor = i; }
   const h = NS.hurt;
@@ -1607,21 +1725,446 @@ function crowdCard() {
   const best = h.best.charAt(0).toUpperCase() + h.best.slice(1);
   // "hardest" only when one hurt alone out-earned the whole act (stranger cold read: the pie 25 vs the act 45 read as a contradiction)
   NS.hurtHead = !h.total ? '' : h.bestN > i.actLaughs ? `They laughed hardest at ${h.best}.` : `${best} got a bigger laugh than a clean beat.`;
+}
+function crowdCard() {
+  actPay();
+  const i = NS.actInfo, h = NS.hurt;
   const d = show('crowd', `<h2>The crowd</h2>${NS.hurtHead ? `<p class="knows">${NS.hurtHead}</p>` : ''}<p>${NS.crowd}</p>
     <p>Laughs +${NS.laughs}${h.total ? ` (${h.rows.join(', ')})` : ''} &middot; Mask ${i.mask} (his paint thickens)</p>${h.pie ? '<p><small>One pie fewer for the Mirror.</small></p>' : ''}
     <p><small>Perfect ${i.perfects} &middot; Good ${i.goods} &middot; Miss ${i.misses}</small></p><button id="walkBack">Walk back</button>`);
-  d.querySelector('#walkBack').addEventListener('click', () => {
-    hideCard();
-    NS.cue.src = 'about:blank'; NS.cue.remove(); NS.cue = null;
-    NS.scene = 'back';
-    S.actPay = { laughs: NS.laughs, mask: NS.mask };
-    begin(true, 'good');
-    NS.cable.visible = NS.tape.visible = false;
-    el.hint.textContent = 'Walk back to the room.';
-  });
+  d.querySelector('#walkBack').addEventListener('click', walkBackGo);
+}
+function walkBackGo() {
+  hideCard();
+  actCueClose();
+  if (S.mode === 'act') actLeave();
+  NS.scene = 'back';
+  S.actPay = { laughs: NS.laughs, mask: NS.mask };
+  begin(true, 'good');
+  // the price of the laugh: the more the act earned, the lower he walks back (tempo kept)
+  if (N1.actShow) { NS.slump = slumpFor(NS.laughs); S.mood = NS.slump; }
+  NS.cable.visible = NS.tape.visible = false;
+  el.hint.textContent = 'Walk back to the room.';
 }
 // after the walk back the room is shown (gains); the Mirror wall offers the seat
 el.sit.addEventListener('click', () => { if (S.room && !S.mirror && S.roomView === 'mirror') fadeThen(CONFIG.turnFadeMs, () => mirrorSetup('entry')); });
+
+// ----- the act at the zoom-out (owner 22 Nov 13:45, PANEL-act-price.md): walk-on, cue, one routine segment per chain, the beat after, bow, caption -----
+// Built once at load in code; the clown, the child, the hat and the broom are moved in and out.
+const actScene = new THREE.Scene();
+const actCam = new THREE.PerspectiveCamera(40, CONFIG.aspect, 0.5, 60);
+const actU = { uTime: { value: 0 }, uExcite: { value: 0 }, uLit: { value: 1 }, uBob: { value: N1.actBob }, uLean: { value: N1.actLean } };
+const actObj = { lit: [], spot: null, beam: null, hat: null, dent: null, broom: null, bar: null, rug: null, pan: null, crowd: null, head: null, hand: null,
+  hatP: new THREE.Vector3(), hatQ: new THREE.Quaternion(), hatS: new THREE.Vector3(), broomP: new THREE.Vector3(), broomQ: new THREE.Quaternion(), broomS: new THREE.Vector3(),
+  look: new THREE.Vector3(), v: new THREE.Vector3(), v2: new THREE.Vector3(), childAt: new THREE.Vector3(), childYaw: 0, srcs: [] };
+function actRand(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function actLitMat(color) { const m = new THREE.MeshBasicMaterial({ color }); actObj.lit.push({ m, base: m.color.clone() }); return m; }
+function buildAct() {
+  const R = N1.actRingR, bg = new THREE.Color('#140b0d');
+  actScene.background = bg;
+  actScene.fog = new THREE.Fog(bg, 20, 42);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 0.4, 56), actLitMat('#7d5f35'));
+  floor.rotation.x = -Math.PI / 2;
+  const curb = new THREE.Mesh(new THREE.TorusGeometry(R + 0.4, 0.2, 8, 72), actLitMat('#7a2430'));
+  curb.rotation.x = -Math.PI / 2; curb.position.y = 0.1;
+  const bankGeo = new THREE.CylinderGeometry(N1.actBankR, R + 1.2, N1.actBankH, 64, 1, true); bankGeo.translate(0, N1.actBankH / 2, 0);
+  const bankMat = actLitMat('#24161a'); bankMat.side = THREE.DoubleSide;
+  const bank = new THREE.Mesh(bankGeo, bankMat);
+  const wallGeo = new THREE.CylinderGeometry(N1.actWallR, N1.actWallR, 10, 48, 1, true); wallGeo.translate(0, 5, 0);
+  const wallMat = actLitMat('#1a0d10'); wallMat.side = THREE.BackSide;
+  const wall = new THREE.Mesh(wallGeo, wallMat);
+  actScene.add(floor, curb, bank, wall);
+  // spotlight: one additive disc on the floor and one cone (the sweep shrinks both)
+  actObj.spot = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({ color: '#FFE2AE', transparent: true, opacity: 0.34, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  actObj.spot.rotation.x = -Math.PI / 2;
+  const cone = new THREE.ConeGeometry(1, 1, 28, 1, true); cone.translate(0, -0.5, 0);
+  actObj.beam = new THREE.Mesh(cone, new THREE.MeshBasicMaterial({ color: '#FFE9C4', transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  actScene.add(actObj.spot, actObj.beam);
+  // crowd: ONE instanced draw of alpha-cut head-and-shoulders cards that face the camera and bob from one excitement value (vertex shader)
+  const cw = N1.actCardW, ch = N1.actCardH, rnd = actRand(1795), pos = [], seed = [], shade = [];
+  const gap = deg(N1.actGapDeg), r0 = R + 1.6, r1 = N1.actBankR - 0.4;
+  while (pos.length < N1.actCrowd * 3) {
+    const r = r0 + (r1 - r0) * rnd(), a = rnd() * Math.PI * 2, x = Math.sin(a) * r, z = Math.cos(a) * r;
+    if (z > 0 && Math.abs(x) < N1.actAisle) continue;
+    if (Math.abs(Math.atan2(x, -z)) < gap) continue;
+    pos.push(x, N1.actBankH * (r - (R + 1.2)) / (N1.actBankR - (R + 1.2)), z);
+    seed.push(rnd()); shade.push(rnd());
+  }
+  const card = new THREE.PlaneGeometry(cw, ch); card.translate(0, ch / 2, 0);
+  card.setAttribute('aSeed', new THREE.InstancedBufferAttribute(new Float32Array(seed), 1));
+  card.setAttribute('aShade', new THREE.InstancedBufferAttribute(new Float32Array(shade), 1));
+  const crowdMat = new THREE.ShaderMaterial({ uniforms: { ...actU, uAspect: { value: cw / ch } }, vertexShader: shaderText('crowdVert'), fragmentShader: shaderText('crowdFrag'), side: THREE.DoubleSide });
+  actObj.crowd = new THREE.InstancedMesh(card, crowdMat, N1.actCrowd);
+  const m4 = new THREE.Matrix4(), sc = new THREE.Vector3(), q = new THREE.Quaternion(), p = new THREE.Vector3();
+  for (let i = 0; i < N1.actCrowd; i++) { const k = 0.9 + 0.2 * seed[i]; p.fromArray(pos, i * 3); sc.set(k, k, k); actObj.crowd.setMatrixAt(i, m4.compose(p, q, sc)); }
+  actObj.crowd.computeBoundingSphere(); actObj.crowd.boundingSphere.radius += 1;
+  actScene.add(actObj.crowd);
+  // props as boxes (box-and-shape): the bar, the rug, the dustpan; the broom and the hat ride on his bones
+  const merged = (parts) => mergeGeometries(parts.map(([g, x, y, z, rx, rz]) => { if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); g.translate(x, y, z); return g; }), false);
+  actObj.bar = new THREE.Mesh(merged([[new THREE.BoxGeometry(0.08, 1.2, 0.08), 0, 0.6, -0.7], [new THREE.BoxGeometry(0.08, 1.2, 0.08), 0, 0.6, 0.7], [new THREE.CylinderGeometry(0.035, 0.035, 1.5, 10), 0, 1.15, 0, Math.PI / 2]]), rampMat('SILVER'));
+  actObj.bar.position.set(N1.actBar[0], 0, N1.actBar[1]);
+  actObj.rug = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.04, 0.85), rampMat('CRIMSON'));
+  actObj.rug.position.set(N1.actRug[0], 0.02, N1.actRug[1]);
+  actObj.pan = new THREE.Mesh(merged([[new THREE.BoxGeometry(0.4, 0.05, 0.32), 0, 0.03, 0], [new THREE.BoxGeometry(0.05, 0.05, 0.4), 0, 0.12, -0.3, -0.5]]), rampMat('HAT'));
+  actObj.pan.position.set(N1.actPan[0], 0, N1.actPan[1]);
+  actScene.add(actObj.bar, actObj.rug, actObj.pan);
+  for (const o of [floor, curb, bank, wall, actObj.crowd, actObj.bar, actObj.rug, actObj.pan]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
+  actObj.broom = new THREE.Mesh(merged([[new THREE.CylinderGeometry(0.022, 0.022, 1.25, 8), 0, -0.25, 0], [new THREE.BoxGeometry(0.34, 0.13, 0.07), 0, -0.9, 0]]), rampMat('WOOL'));
+  // the bowler: brim and crown from clown.py (style units), clean and dented
+  const u = NS.unit;
+  const crown = (sy, tilt) => { const g = new THREE.SphereGeometry(1, 16, 10); g.scale(6.1 * u, 3.3 * u * sy, 5.6 * u); if (tilt) g.rotateZ(tilt); g.translate(0, 2.4 * u * sy, 0); return g; };
+  const brim = () => new THREE.CylinderGeometry(9.4 * u, 9.4 * u, 1.0 * u, 24);
+  actObj.hat = new THREE.Mesh(mergeGeometries([brim(), crown(1, 0)], false), rampMat('HAT'));
+  actObj.dent = new THREE.Mesh(mergeGeometries([brim(), crown(0.55, 0.32)], false), rampMat('HAT'));
+  actObj.hat.visible = actObj.dent.visible = actObj.broom.visible = false;
+}
+// at load (bind pose): where the bowler sits on the head bone and the broom in the right hand
+function actRigProps() {
+  const c = chars.clown, g = c.body.geometry;
+  c.root.traverse((o) => { if (o.isBone && o.name === 'head') actObj.head = o; if (o.isBone && o.name === 'hand_R') actObj.hand = o; });
+  g.computeBoundingBox();
+  const gu = (g.boundingBox.max.y - g.boundingBox.min.y) / N1.clownUnits;
+  // hat cut line, brim radius and head top in the body's bind-pose space (the shaders compare the unskinned position)
+  c.body.material.uniforms.uHatCut.value.set(N1.hatCutU * gu, 0, 0, 0);
+  c.hull.material.uniforms.uHatR.value = N1.hatRU * gu; c.hull.material.uniforms.uHatTop.value = N1.hatTopU * gu;
+  c.root.updateMatrixWorld(true);
+  // a bone's world matrix at bind = mesh world x bindMatrix^-1 x boneInverse^-1; a prop's local matrix = that inverse x its world matrix at bind
+  const sk = c.body.skeleton, bind = (bone) => new THREE.Matrix4().copy(c.body.matrixWorld).multiply(new THREE.Matrix4().copy(c.body.bindMatrix).invert()).multiply(new THREE.Matrix4().copy(sk.boneInverses[sk.bones.indexOf(bone)]).invert());
+  const w = new THREE.Matrix4(), loc = new THREE.Matrix4(), p = new THREE.Vector3(0, 53.8 * gu, 0).applyMatrix4(c.body.matrixWorld);
+  loc.multiplyMatrices(bind(actObj.head).invert(), w.makeTranslation(p.x, p.y, p.z));
+  loc.decompose(actObj.hatP, actObj.hatQ, actObj.hatS);
+  const hb = bind(actObj.hand);
+  p.setFromMatrixPosition(hb);
+  w.makeRotationX(0.45).setPosition(p.x, p.y, p.z + 0.04);
+  loc.multiplyMatrices(hb.invert(), w);
+  loc.decompose(actObj.broomP, actObj.broomQ, actObj.broomS);
+  actObj.slap = c.mixer.clipAction(c.slapClip);
+  actObj.head.add(actObj.hat, actObj.dent); actObj.hand.add(actObj.broom);
+  for (const [o, P, Q, S2] of [[actObj.hat, actObj.hatP, actObj.hatQ, actObj.hatS], [actObj.dent, actObj.hatP, actObj.hatQ, actObj.hatS], [actObj.broom, actObj.broomP, actObj.broomQ, actObj.broomS]]) { o.position.copy(P); o.quaternion.copy(Q); o.scale.copy(S2); }
+}
+// where the hat is: 'real' (his own bowler on), 'lift' (tipped to the house), 'free' (knocked off, flying or rolling), 'pan' (in the dustpan), 'dent' (back on, dented)
+function hatTo(where) {
+  const A = NS.A, c = chars.clown, h = actObj.hat, d = actObj.dent;
+  A.hat = where;
+  c.body.material.uniforms.uHatCut.value.w = where === 'real' ? 0 : 1;
+  if (where === 'free' || where === 'pan') { actScene.attach(h); h.visible = true; d.visible = false; }
+  else {
+    if (h.parent !== actObj.head) { actObj.head.add(h); h.position.copy(actObj.hatP); h.quaternion.copy(actObj.hatQ); h.scale.copy(actObj.hatS); }
+    h.visible = where === 'lift'; d.visible = where === 'dent';
+  }
+  if (where === 'pan') { h.position.set(N1.actPan[0], 0.12, N1.actPan[1]); h.rotation.set(0.3, 0, 0.2); }
+}
+// knock the hat off his head: it flies backwards from where he faces, a and up set the throw
+function hatKnock(A, a, up) {
+  hatTo('free');
+  A.hatV.set(-Math.sin(A.yaw) * 1.6 * a, up, -Math.cos(A.yaw) * 1.6 * a);
+  A.hatSpin = 9;
+}
+function hatFly(A, dt) {
+  const h = actObj.hat;
+  if (A.hat !== 'free' || A.hatSpin === 0) return;
+  h.position.addScaledVector(A.hatV, dt);
+  A.hatV.y -= 9.8 * dt;
+  h.rotation.x += A.hatSpin * dt;
+  if (h.position.y <= 0.06 && A.hatV.y < 0) {
+    h.position.y = 0.06; A.hatV.y *= -0.3; A.hatV.x *= 0.6; A.hatV.z *= 0.6; A.hatSpin *= 0.5;
+    if (Math.abs(A.hatV.y) < 0.4) { A.hatV.set(0, 0, 0); A.hatSpin = 0; h.rotation.set(0.25, h.rotation.y, 0.15); }
+  }
+}
+function actLaugh(kind) { const s = laugh(0, kind); if (s) actObj.srcs.push(s); }
+function actHush() { for (const s of actObj.srcs) { try { s.stop(); } catch (e) { /* already ended */ } } actObj.srcs.length = 0; }
+function actLit(v) {
+  if (NS.A.litNow === v) return;
+  NS.A.litNow = v; actU.uLit.value = v;
+  for (const L of actObj.lit) L.m.color.copy(L.base).multiplyScalar(v);
+}
+// field of view fitted so the clown is N1.actPx CSS px tall at the spot (owner: fills a 64 x 64 box), refitted when the canvas changes
+function actPxAt(x, z) {
+  const v = actObj.v.set(x, 0, z).project(actCam), y0 = v.y, y1 = actObj.v.set(x, NS.clownH, z).project(actCam).y;
+  return (y1 - y0) / 2 * S.h;
+}
+function actFit() {
+  if (NS.A) NS.A.fitH = S.h;
+  actCam.position.fromArray(N1.actCamPos); actObj.look.fromArray(N1.actLook);
+  let fov = 40;
+  for (let i = 0; i < 4; i++) {
+    actCam.fov = fov; actCam.updateProjectionMatrix(); actCam.lookAt(actObj.look); actCam.updateMatrixWorld();
+    const px = actPxAt(N1.actSpotAt[0], N1.actSpotAt[1]);
+    fov = THREE.MathUtils.clamp(2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(deg(fov) / 2) * px / N1.actPx)), N1.actFovMin, N1.actFovMax);
+  }
+  actCam.fov = fov; actCam.updateProjectionMatrix(); actCam.updateMatrixWorld();
+  shared.uKeyDir.value.fromArray(CONFIG.keyDir).normalize().transformDirection(actCam.matrixWorldInverse);
+  shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(actCam.matrixWorldInverse);
+  shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(actCam.matrixWorldInverse);
+}
+// board -> the walk-on (he steps into the spot, the house quiets), then the cue page
+function actEnter() {
+  const c = chars.clown, ch = cast.child;
+  S.mode = 'act'; NS.scene = 'act';
+  NS.A = { phase: 'walkon', t: 0, x: N1.walkOnFrom[0], z: N1.walkOnFrom[1], yaw: 0, rx: 0, y: 0, clip: 'idle', clipNow: 'idle', tempo: 1, face: 'smile',
+    mood: { tempo: 1, chest: -6, neck: -3, head: -4 }, excite: N1.exciteHouse, spotR: N1.actSpotR, spotX: N1.actSpotAt[0], spotZ: N1.actSpotAt[1], litNow: -1, lit: 1,
+    segs: [], seg: 0, sx: 0, sz: 0, srx: 0, sy: 0, fired: {}, peaks: [], hat: 'real', hatV: new THREE.Vector3(), hatSpin: 0, hatLift: 0, fitH: 0, hold: null, done: false };
+  actU.uExcite.value = N1.exciteHouse;
+  actLit(1);
+  actScene.add(c.root, c.blob);
+  c.walk.stop(); actObj.slap.stop(); c.idle.reset().setEffectiveWeight(1).play();
+  c.root.rotation.set(0, 0, 0);
+  setGloom(0); shared.uGradeAmt.value = 0;
+  hatTo('real');
+  const sweep = NS.act === 'sweep';
+  actObj.bar.visible = !sweep; actObj.rug.visible = actObj.pan.visible = actObj.broom.visible = sweep;
+  // the child from the corridor watches from the ring entrance: the one figure who does not laugh
+  actObj.childAt.copy(ch.position); actObj.childYaw = ch.rotation.y;
+  actScene.add(ch); ch.position.set(N1.actChild[0], 0, N1.actChild[1]); ch.rotation.y = Math.atan2(-N1.actChild[0], -N1.actChild[1]);
+  crewQuiet();
+  el.hint.textContent = ''; el.shotName.textContent = '';
+  actFit();
+  S.running = true; startLoop();
+}
+function actClip(c, name) {
+  const A = NS.A;
+  if (A.clipNow === name) return;
+  const act = (n) => n === 'walk' ? c.walk : n === 'sweep' ? actObj.slap : c.idle;
+  const to = act(name);
+  if (name === 'sweep') to.setLoop(THREE.LoopRepeat, Infinity);
+  to.reset().setEffectiveWeight(1).play();
+  act(A.clipNow).crossFadeTo(to, 0.15, false);
+  A.clipNow = name;
+}
+function once(A, key) { if (A.fired[key]) return false; A.fired[key] = true; return true; }
+const lerp = THREE.MathUtils.lerp;
+// grade of each cue chain, in the order played: any miss = the real accident; all Perfect = full; else Good
+function actSegments() {
+  const by = [];
+  for (const b of NS.actBeats || []) {
+    if (!b.result || b.result === 'cut') continue;
+    const g = by[b.chain] || (by[b.chain] = { g: 0, m: 0 });
+    if (b.result === 'miss' || b.result === 'slap') g.m++; else if (b.result !== 'perfect') g.g++;
+  }
+  const segs = [];
+  for (const g of by) if (g) segs.push(g.m ? 'miss' : g.g ? 'good' : 'perfect');
+  if (!segs.length) { const i = NS.actInfo; segs.push(i.misses ? 'miss' : i.goods ? 'good' : 'perfect'); }
+  return segs;
+}
+// results in: pay is computed once, the cue page goes, the routine plays
+function actAfter() {
+  actPay();
+  actCueClose();
+  if (NS.scene !== 'act' || !NS.A) actEnter();
+  const A = NS.A;
+  A.segs = actSegments(); A.seg = 0; A.peaks = A.segs.map(() => 0);
+  actRoutine();
+}
+// (re)start the routine from the spot (a returning player can tap to skip it)
+function actRoutine() {
+  const A = NS.A, c = chars.clown;
+  hideCard();
+  A.phase = 'seg'; A.t = 0; A.seg = 0; A.x = N1.actSpotAt[0]; A.z = N1.actSpotAt[1]; A.yaw = 0; A.rx = 0; A.y = 0; A.excite = 0.1; A.done = false; A.hold = null;
+  A.spotR = N1.actSpotR; A.spotX = N1.actSpotAt[0]; A.spotZ = N1.actSpotAt[1]; A.lit = 1; A.hatSpin = 0;
+  A.mood.chest = 0; A.mood.neck = 0; A.mood.head = 0;
+  hatTo('real');
+  segStart(A);
+  NS.scene = 'act'; S.mode = 'act';
+  if (!c.root.parent || c.root.parent !== actScene) actScene.add(c.root, c.blob);
+  S.running = true; startLoop();
+}
+function segStart(A) { A.sx = A.x; A.sz = A.z; A.srx = A.rx; A.sy = A.y; A.sSpotR = A.spotR; A.sSpotX = A.spotX; A.fired = {}; A.excite = Math.min(A.excite, 0.12); }
+function segPeak(grade) { return grade === 'miss' ? N1.exciteMiss : grade === 'perfect' ? N1.excitePerfect : N1.exciteGood; }
+// the real accident (a missed chain): stumble, fall backwards about his feet, the hat flies, the biggest laugh; up again unless it was the last chain
+function segMiss(A, k, last) {
+  A.clip = 'idle'; A.mood.chest = 0;
+  if (k < 0.12) A.rx = A.srx + 0.15 * Math.sin(Math.PI * k / 0.12);
+  else if (k < 0.35) {
+    A.rx = lerp(A.srx, -N1.fallBack, ease((k - 0.12) / 0.23)); A.y = lerp(A.sy, 0, (k - 0.12) / 0.23); A.face = 'startle';
+    if (once(A, 'fall')) { if (A.hat === 'real' || A.hat === 'dent' || A.hat === 'lift') hatKnock(A, 1, 2.4); actLaugh('crowd'); A.excite = N1.exciteMiss; }
+  } else if (k < 0.8 || last) { A.rx = -N1.fallBack; A.face = 'wince'; }
+  else { A.rx = -N1.fallBack * (1 - ease((k - 0.8) / 0.2)); A.face = 'smile'; }
+}
+// the deliberate fall (Dazai's horizontal bar): strut and hat tip / the swing, the miss, flat on his back, the hat rolls / up, fetch the hat, the bow tips him over
+function segFall(A, i, k, a, peak) {
+  const bx = N1.actBar[0] - 0.75, bz = N1.actBar[1];
+  if (i === 0) {
+    A.mood.chest = -12 * a; A.mood.head = -8 * a;
+    if (k < 0.6) {
+      const m = k / 0.6, d = Math.hypot(bx - A.sx, bz - A.sz);
+      A.x = lerp(A.sx, bx, ease(m)); A.z = lerp(A.sz, bz, ease(m));
+      if (d > 0.05) A.yaw = Math.atan2(bx - A.sx, bz - A.sz);
+      A.clip = d > 0.05 ? 'walk' : 'idle'; A.tempo = Math.max(0.6, d / (0.6 * N1.segSecs) / S.speed);
+    } else {
+      const m = (k - 0.6) / 0.4;
+      A.clip = 'idle'; A.yaw = turnToward(A.yaw, 0, 8, A.dt);
+      if (once(A, 'tip')) { hatTo('lift'); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+      A.hatLift = 0.16 * a * Math.sin(Math.PI * Math.min(1, m * 1.4));
+      if (m > 0.75 && A.hat === 'lift') { A.hatLift = 0; hatTo('real'); }
+    }
+  } else if (i === 1) {
+    A.mood.chest = 0; A.mood.head = 0;
+    if (k < 0.3) { const m = k / 0.3; A.yaw = turnToward(A.yaw, Math.PI / 2, 10, A.dt); A.y = Math.sin(Math.PI * m) * 0.45 * a; A.x = A.sx + 0.4 * a * m; A.clip = 'idle'; }
+    else if (k < 0.5) {
+      const m = (k - 0.3) / 0.2; A.rx = -N1.fallBack * ease(m); A.y = 0; A.face = 'startle';
+      if (once(A, 'miss')) { hatKnock(A, a, 2.2); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+    } else { A.rx = -N1.fallBack; A.face = 'wince'; }
+  } else {
+    const h = actObj.hat.position;
+    if (k < 0.2) { A.rx = A.srx * (1 - ease(k / 0.2)); A.face = 'smile'; A.clip = 'idle'; }
+    else if (k < 0.5) {
+      A.rx = 0;
+      if (A.hat === 'free' && once(A, 'to')) { A.tx = h.x + 0.35 * Math.sign(A.x - h.x || 1); A.tz = h.z; A.fx = A.x; A.fz = A.z; }
+      if (A.tx !== undefined && A.fired.to) {
+        const m = (k - 0.2) / 0.3, d = Math.hypot(A.tx - A.fx, A.tz - A.fz);
+        A.x = lerp(A.fx, A.tx, ease(m)); A.z = lerp(A.fz, A.tz, ease(m));
+        if (d > 0.05) { A.yaw = Math.atan2(A.tx - A.fx, A.tz - A.fz); A.clip = 'walk'; A.tempo = Math.max(0.6, d / (0.3 * N1.segSecs) / S.speed); }
+      }
+    } else if (k < 0.75) {
+      if (once(A, 'pick')) { A.clip = 'idle'; hatTo('dent'); }
+      A.yaw = turnToward(A.yaw, 0, 8, A.dt);
+      A.mood.chest = N1.bowChest * a * ease((k - 0.5) / 0.25);
+    } else {
+      const m = (k - 0.75) / 0.25;
+      A.mood.chest = N1.bowChest * a * (1 - ease(m)); A.rx = -N1.fallBack * ease(m); A.face = 'startle';
+      if (once(A, 'over')) { hatKnock(A, a, 2.0); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+    }
+  }
+}
+// spotlight sweep (Emmett Kelly): sweep the light / it shrinks, he chases it on his knees / the last of it under the rug, dark, the hat in the dustpan
+function segSweep(A, i, k, a, peak) {
+  const r0 = N1.actSpotR;
+  if (i === 0) {
+    A.mood.chest = 22; A.mood.head = 18;
+    if (k < 0.25) A.clip = 'idle';
+    else { A.clip = 'sweep'; A.tempo = 1.2; A.spotR = r0 - 0.45 * a * ease((k - 0.25) / 0.75); }
+    if (k > 0.5 && once(A, 'laugh')) { A.excite = peak * 0.85; actLaugh(a < 1 ? 'small' : 'crowd'); }
+  } else if (i === 1) {
+    const tx = N1.actRug[0] + 0.9, m = ease(k);
+    A.y = -N1.kneelDrop * ease(Math.min(1, k / 0.2)); A.mood.chest = 16; A.mood.head = 10;
+    A.spotX = lerp(N1.actSpotAt[0], N1.actRug[0] + 0.3, m); A.spotZ = lerp(N1.actSpotAt[1], N1.actRug[1], m);
+    A.spotR = Math.max(0.25, r0 - 0.45 * a - 0.6 * a * m);
+    A.x = lerp(A.sx, tx, m); A.z = lerp(A.sz, N1.actRug[1], m); A.yaw = -Math.PI / 2;
+    A.clip = 'walk'; A.tempo = 0.7;
+    if (k > 0.4 && once(A, 'laugh')) { A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+  } else {
+    A.y = A.sy * (1 - ease(Math.min(1, k / 0.2))); A.yaw = -Math.PI / 2; A.mood.chest = 22; A.mood.head = 16;
+    A.clip = k < 0.65 ? 'sweep' : 'idle'; A.tempo = 1.4;
+    A.spotX = lerp(A.sSpotX, N1.actRug[0], ease(Math.min(1, k * 2))); A.spotR = A.sSpotR * (1 - ease(Math.min(1, k / 0.6)));
+    if (k >= 0.6) { A.spotR = 0; A.lit = N1.darkLit; }
+    if (k >= 0.7 && once(A, 'pan')) { hatTo('pan'); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+  }
+}
+function actSeg(A, dt) {
+  const k = Math.min(1, A.t / N1.segSecs), grade = A.segs[A.seg], amt = grade === 'good' ? N1.goodAmt : 1, peak = segPeak(grade), last = A.seg === A.segs.length - 1;
+  if (grade === 'miss') segMiss(A, k, last);
+  else if (NS.act === 'sweep') segSweep(A, A.seg % 3, k, amt, peak);
+  else segFall(A, A.seg % 3, k, amt, peak);
+  // the crowd's peak for this gag, read in its second half (the last gag's laugh has died away by then)
+  if (k >= 0.5) A.peaks[A.seg] = Math.max(A.peaks[A.seg], actU.uExcite.value);
+  if (k < 1) return;
+  A.seg++; A.t = 0; segStart(A);
+  if (A.seg >= A.segs.length) { A.phase = 'hold'; actHush(); A.excite = 0; }
+}
+// the beat after: the laughter stops, he is alone in the spot with the sad face; the child does not laugh
+function actHoldStep(A) {
+  A.face = 'sad'; A.excite = 0; A.clip = 'idle';
+  if (A.t < N1.holdSecs) return;
+  A.hold = { face: chars.clown.faceNow, excite: actU.uExcite.value };
+  A.phase = 'bow'; A.t = 0; segStart(A);
+}
+// then the smile and the bow with the hat back on, dented
+function actBowStep(A) {
+  const k = Math.min(1, A.t / N1.bowSecs);
+  if (k < 0.3) { const m = ease(k / 0.3); A.rx = A.srx * (1 - m); A.y = A.sy * (1 - m); }
+  else {
+    A.rx = 0; A.y = 0; A.face = 'smile'; A.yaw = turnToward(A.yaw, 0, 8, A.dt);
+    if (once(A, 'hat')) { hatTo('dent'); A.excite = 0.2; }
+    A.mood.chest = N1.bowChest * Math.sin(Math.PI * Math.min(1, (k - 0.3) / 0.55)); A.mood.head = 0;
+  }
+  if (k >= 1) actCaption();
+}
+function actStep(A, dt) {
+  if (A.phase === 'walkon') {
+    const k = Math.min(1, A.t / N1.walkOnSecs), f = N1.walkOnFrom, s = N1.actSpotAt, d = Math.hypot(s[0] - f[0], s[1] - f[1]);
+    A.x = lerp(f[0], s[0], k); A.z = lerp(f[1], s[1], k); A.yaw = 0;
+    A.clip = k < 1 ? 'walk' : 'idle'; A.tempo = d / N1.walkOnSecs / S.speed;
+    A.excite = N1.exciteHouse * (1 - k);
+    if (k >= 1) actCueOpen();
+  } else if (A.phase === 'seg') actSeg(A, dt);
+  else if (A.phase === 'hold') actHoldStep(A);
+  else if (A.phase === 'bow') actBowStep(A);
+}
+function updateAct(dt) {
+  const A = NS.A, c = chars.clown;
+  dt *= NS.actRate;
+  A.dt = dt; A.t += dt; actU.uTime.value += dt;
+  actStep(A, dt);
+  actU.uExcite.value += (A.excite - actU.uExcite.value) * (1 - Math.exp(-N1.exciteRate * dt));
+  actLit(A.lit);
+  hatFly(A, dt);
+  if (A.hat === 'lift') actObj.hat.position.set(actObj.hatP.x, actObj.hatP.y + A.hatLift / Math.max(1e-6, actObj.hatS.y), actObj.hatP.z);
+  // spotlight: a follow spot on him, except in the sweep, where the light itself is the gag
+  if (NS.act !== 'sweep' || A.phase === 'walkon') { const f = 1 - Math.exp(-N1.spotFollow * dt); A.spotX += (A.x - A.spotX) * f; A.spotZ += (A.z - A.spotZ) * f; }
+  const r = Math.max(0.001, A.spotR);
+  actObj.spot.visible = actObj.beam.visible = A.spotR > 0.01;
+  actObj.spot.position.set(A.spotX, 0.02, A.spotZ); actObj.spot.scale.set(r, r, 1);
+  actObj.beam.position.set(A.spotX, N1.actLampH, A.spotZ); actObj.beam.scale.set(r, N1.actLampH, r);
+  // the clown: root about his feet, clips, posture on top
+  actClip(c, A.clip);
+  c.walk.timeScale = A.tempo; actObj.slap.timeScale = A.clipNow === 'sweep' ? A.tempo : 1;
+  setFace(c, A.face);
+  c.root.position.set(A.x, A.y, A.z); c.root.rotation.set(A.rx, A.yaw, 0);
+  c.blob.position.set(A.x, 0.02, A.z);
+  moodRestore(c); c.mixer.update(dt); moodApply(c, A.mood);
+  if (A.fitH !== S.h) actFit();
+}
+// the cue page over the ring (zoom in); the loop stops behind it
+function actCueOpen() {
+  const A = NS.A;
+  A.phase = 'cue'; A.clip = 'idle';
+  S.running = false;
+  openCue();
+}
+function actCueClose() { if (NS.cue) { NS.cue.src = 'about:blank'; NS.cue.remove(); NS.cue = null; } }
+// one-line caption over the bow (the fix-2 headline and the Laughs), then the walk back
+function actCaption() {
+  const A = NS.A;
+  if (A.done) return;
+  A.done = true; A.phase = 'caption';
+  NS.actSeen = true;
+  try { localStorage.setItem('n1ActSeen', '1'); } catch (e) { /* storage off */ }
+  const line = NS.hurtHead || NS.crowd;
+  const d = show('crowd', `<p class="knows">${line}</p><p>Laughs +${NS.laughs} &middot; Mask ${NS.mask}</p><button id="walkBack">Walk back</button>`);
+  d.querySelector('#walkBack').addEventListener('click', walkBackGo);
+}
+// a returning player taps to skip: the routine's end state at once
+function actSkip() {
+  const A = NS.A;
+  if (!NS.actSeen || !A || A.done || (A.phase !== 'seg' && A.phase !== 'hold' && A.phase !== 'bow')) return false;
+  actHush();
+  A.rx = 0; A.y = 0; A.yaw = 0; A.face = 'smile'; A.mood.chest = 0; A.mood.head = 0; A.excite = 0.2; A.clip = 'idle'; A.hatSpin = 0;
+  if (NS.act === 'sweep') { A.spotR = 0; A.lit = N1.darkLit; }
+  hatTo('dent');
+  A.skipped = true;
+  actCaption();
+  return true;
+}
+// the slump on the walk back: deeper the more the act earned (the price of the laugh), tempo unchanged
+function slumpFor(laughs) {
+  const k = THREE.MathUtils.clamp((laughs - N1.slumpLo) / (N1.slumpHi - N1.slumpLo), 0, 1), a = N1.slumpMin, b = N1.slumpMax;
+  return { tempo: lerp(a.tempo, b.tempo, k), chest: lerp(a.chest, b.chest, k), neck: lerp(a.neck, b.neck, k), head: lerp(a.head, b.head, k) };
+}
+// leaving the ring: the clown and the child go back to the corridor; he keeps the dented hat on the walk back
+function actLeave() {
+  const c = chars.clown, ch = cast.child, A = NS.A;
+  actHush();
+  S.mode = '';
+  scene.add(c.root, c.blob); scene.add(ch);
+  ch.position.copy(actObj.childAt); ch.rotation.y = actObj.childYaw;
+  c.root.rotation.set(0, 0, 0); c.root.position.y = 0;
+  actObj.slap.stop(); actObj.slap.setLoop(THREE.LoopOnce, 1); c.walk.timeScale = 1;
+  actObj.broom.visible = false;
+  if (A && A.hat !== 'dent') hatTo('dent');
+  NS.hatDent = true;
+}
+// the room takes the dented hat off (close-ups keep his own bowler)
+function hatHome() { if (!NS.hatDent) return; NS.hatDent = false; actObj.dent.visible = false; actObj.hat.visible = false; chars.clown.body.material.uniforms.uHatCut.value.w = 0; }
 
 // ----- crew and verbs -----
 function crewLabel(m, text) {
@@ -1898,6 +2441,7 @@ function n1Key(e) {
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
   if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (e.code === 'Enter' || e.code === 'Space') smallPress(); return true; }
+  if (S.mode === 'act') { actSkip(); return true; }
   if (S.mirror === 'entry') {
     if (NS.card && NS.card.id === 'card_nietzscheIn') { if (e.code === 'Enter' || e.code === 'Space') NS.card.querySelector('#goIn').click(); return true; }
     if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); }
@@ -1918,6 +2462,7 @@ function n1Pointer(e) {
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } return true; }
   if (S.mirror === 'entry') { if (NS.sitTarget === 0) { NS.sitTarget = 1; setPrompt(''); } return true; }
   if (NS.scene === 'small') { smallPress(); return true; }
+  if (S.mode === 'act') { actSkip(); return true; }
   if (S.mode === 'mw' && e.pointerType === 'mouse') {
     aimMouse(e);
     if (e.button === 0) gag('slap', NS.mouse); else if (e.button === 2) gag('pie', NS.mouse);
@@ -2426,7 +2971,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });
