@@ -51,6 +51,16 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
+Owner, 22 Nov 11:22, after playing night 1 (session 14 starts here, in this order; each a sample for approval, then run the panel again on the changed night 1):
+1. "the new model are lacking in details in comparison to the clowns. work on it." Read as: the 9 `art/cast2` figures are flat toon-band meshes with no texture, outline, face atlas or rig, while the clown, Whiteface and Performer went through `clown_v2` (painted atlas, face texture with expressions, inverted-hull outline, rig, idle/walk clips). Put the crew and constructs through the same pipeline as data (`clown_v2/chars/<name>.py`, like whiteface.py and performer.py), and add modelled detail at the clowns' level (seams, folds, buttons, hair masses, props); one figure first at play size for approval.
+2. "background in mirror should look unworldly as it signals the unstable mental state." Mirror World backdrop: replace the plain cold ring with something unworldly (warped and drifting tiers, reflections that lag or flicker, fog, floating glass, a shimmer/warp shader), scaled with Mask; frame rate rules apply.
+3. "the quote use dazai line on why he become a clown and where is nietzsche line?" Night 1 Dazai line should be the one about why he clowns (GDD night 2 row: "My clowning was my last courtship of humanity."; check the GDD table and swap the rows, owner to confirm the swap in the GDD). The Nietzsche line now shows only after the Mirror World (GDD placement); owner did not see it: make it visible where he expects it (asked 22 Nov where he wants it; if no answer, also show it at the mirror before going in).
+4. "mirror world, we spoke that it should not be straight to ring." The agreed panel rounds 2-4 have a Mirror World route of 4 spaces with 5 camera spots and return legs; the night-1 prototype drops him straight into the ring. Start in the mirror corridor and go through the route (night 1: at least corridor, then ring), cuts only between spaces.
+5. "the cube room should not show the ring and the dresser table feel empty in this iteration, it is there but serve no purpose." Replace the cube room's Ring wall (`cube25d/build_cube.py` view `ring`) with a backstage wall (the act board, GDD step 5) and give the dressing table a job (proposal: the opening paint happens at its vanity mirror; the big mirror stays the way in and the shop).
+6. Run the panel again (same rebuilt roster as `art/cast2/PANEL.md`) on the cast and the changed night 1.
+
+Earlier list (session 13 built night 1 first):
+
 Session 13 (owner, 22 Nov): night-1 prototype built first (above); waits on the owner's play verdict (rule 1: art and systems after the loop works). Then the list below, unchanged.
 
 Owner, 22 Nov 10:13: "agree to all 3" (panel rounds 2, 3, 4) and hand over. All panel decisions are agreed: round 1 items A, B, D, W2, W3 and rounds 2, 3, 4, each with its producer checks (Project docs `claude/Panel-review-22-Nov.md`, `-round2.md`, `-round3.md`, `-round4.md`). One goal at a time, in this order; each a box-and-shape play-size sample for approval first:
