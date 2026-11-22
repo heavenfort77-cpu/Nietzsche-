@@ -21,6 +21,10 @@ const MUTS = {
   triplabel: ['night1.html', "verbText: 'Trip',", "verbText: 'Trip (on purpose)',"],
   laughreal: ['night1.html', 'laughReal: true,', 'laughReal: false,'],
   whisperfeed: ['night1.html', 'w.hp += falls * N1.whisperFeed.hp;', ''],
+  host: ['night1.html', "NS.cue.src = 'cue_model.html?host=night1';", "NS.cue.src = 'cue_model.html';"],
+  jokes: ['night1.html', 'corridorJokes: true,', 'corridorJokes: false,'],
+  mergekept: ['night1.html', 'mergeKept: true,', 'mergeKept: false,'],
+  endbrief: ['night1.html', 'endBrief: true,', 'endBrief: false,'],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
@@ -62,16 +66,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('first input finishes the paint', async () => { await pg.mouse.click(sc.w / 2, sc.h / 3); await pg.waitForSelector('#card_dazai', { timeout: 30000 }); await shot('paint'); });
     await step('go out: corridor', async () => { await pg.click('#goOut'); await sleep(900); await pg.waitForFunction(() => window.__night.S.shot === 'corridor'); });
     const tp = (x, y) => pg.evaluate(([x, y]) => { const S = window.__night.S; S.x = x; S.y = y; }, [x, y]);
-    const verb = async (x, y, v) => { await tp(x, y); await sleep(500); const vis = await pg.isVisible('#verb'); if (!vis) throw new Error('no verb button for ' + v); await pg.click('#verb'); await sleep(1100); const done = await pg.evaluate((v) => window.__night.NS.verbs[v], v); if (!done) throw new Error(v + ' not done'); };
+    const verb = async (x, y, v) => { await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 }); await tp(x, y); await sleep(500); const vis = await pg.isVisible('#verb'); if (!vis) throw new Error('no verb button for ' + v); await pg.click('#verb'); await sleep(1100); const done = await pg.evaluate((v) => window.__night.NS.verbs[v], v); if (!done) throw new Error(v + ' not done'); };
     await step('cable blocks before the jump', async () => { await tp(0.15, 7.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await sleep(1500); await pg.evaluate(() => { window.__night.input.ty = 0; }); const y = await pg.evaluate(() => window.__night.S.y); if (y > 7.95) throw new Error('walked through the cable, y ' + y); await shot('cable'); });
     await step('jump the cable', () => verb(0.15, 7.4, 'jump'));
     await step('take the pie', () => verb(1.0, 9.0, 'take'));
     await step('honk the horn', () => verb(0.5, 12.2, 'honk'));
     // harsh panel H2: the button must not tell the player it is on purpose before the child does
+    // owner's item 5 (H7): one physical joke per verb: the horn honks back late, the rigger trips on the cable, he sniffs the pie
+    await step('corridor: one physical joke per verb (item 5)', async () => { await pg.waitForFunction(() => { const j = window.__night.NS.jokes; return j.echo && j.rigger && j.sniff; }, null, { timeout: 20000 }).catch(async () => { throw new Error('jokes ' + JSON.stringify(await pg.evaluate(() => window.__night.NS.jokes))); }); });
     await step('trip button does not say "on purpose" (H2)', async () => { await tp(-1.3, 17.0); await sleep(500); const t = await pg.textContent('#verb'); if (!/^Trip\b/.test(t) || /purpose/i.test(t)) throw new Error('verb reads "' + t + '"'); });
     await step('trip for the child', async () => { await verb(-1.3, 17.0, 'trip'); await pg.waitForFunction(() => /on purpose/.test(window.__night.crew[4].lab.textContent), null, { timeout: 8000 }); await shot('child'); });
     await step('ring edge: board', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForSelector('#card_board', { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); });
     await step('board: act page opens', async () => { await pg.click('[data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
+    // owner's item 4 (stranger cold read): hosted, the act screen shows one line and its start button, none of the cue page's own notes or settings
+    await step('act screen: one line, no developer notes (item 4)', async () => {
+      const fr = pg.frames().find((f) => /cue_model/.test(f.url()));
+      const r = await fr.evaluate(() => { const vis = (id) => { const e = document.getElementById(id); return !!e && e.offsetParent !== null; }; const t = document.getElementById('title').innerText; return { line: vis('hostLine') && document.getElementById('hostLine').textContent, nights: vis('nightRow'), look: vis('btnLook'), start: vis('btnStart'), notes: /Blender|plates|Latency|Timing windows|approved/i.test(t) }; });
+      if (!r.line || r.nights || r.look || !r.start || r.notes) throw new Error('act screen ' + JSON.stringify(r));
+      console.log('    act line:', r.line);
+    });
     // panel item 1: night 1 tells the cue page that a fall gets the big laugh; one forced early press is a miss
     await step('a fall in the act gets the big laugh, not the cough (item 1)', async () => {
       const fr = pg.frames().find((f) => /cue_model/.test(f.url()));
@@ -104,7 +117,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (r.each.some((x) => !(x > 10))) throw new Error('a hurt pays no more than a clean beat: ' + r.each);
       if (r.laughs !== r.want) throw new Error(`laughs ${r.laughs}, want ${r.want}`);
       if (r.pies !== 2) throw new Error('the pie in his face should cost one of 3 pies, pies ' + r.pies);
-      if (!/laughed hardest at/.test(r.head)) throw new Error('crowd card does not say it: "' + r.head + '"');
+      // "hardest" only when one hurt alone beats the whole act (stranger cold read, 22 Nov); stand-in: act 45, best single hurt 25
+      const hard = Math.max(...r.each) > 45;
+      if (!(hard ? /laughed hardest at/ : /got a bigger laugh than a clean beat/).test(r.head)) throw new Error('crowd card headline: "' + r.head + '"');
       console.log('   ', r.head, 'laughs', r.laughs);
     });
     // harsh panel H1: a fall pays by how high he had climbed (falling at once pays nothing extra), the second fall pays fallRepeat, the pie scales with the first
@@ -155,13 +170,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         const b = await pg.evaluate(() => { const N = window.__night; return { mask: N.NS.mask, laughed: N.NS.laughed, done: N.NS.smallDone, want: N.N1.loseDone }; });
         if (b.mask !== a.mask || b.laughed || b.done !== b.want) throw new Error('loss branch ' + JSON.stringify(b));
       }
-      await pg.waitForSelector('#card_kept', { timeout: 30000 });
-      if (await pg.evaluate(() => window.__night.S.running)) throw new Error('loop still running behind the shards card');
+      // owner's item 4: with mergeKept the shards he kept show on the shop card (no shards card)
+      const merged = await pg.evaluate(() => window.__night.N1.mergeKept);
+      await pg.waitForSelector(merged ? '#card_shop #keptLine' : '#card_kept', { state: 'attached', timeout: 30000 });
+      if (!merged && await pg.evaluate(() => window.__night.S.running)) throw new Error('loop still running behind the shards card');
     });
     // panel fix 5: the shop is at the mirror; each purchase: the reflection stands (he stays seated), steps toward him by learnStep, performs, and a crack shows
     await step('shop at the mirror: the reflection performs each buy back at him (fix 5)', async () => {
-      await pg.evaluate(() => { window.__night.NS.shards = 11; });
-      await pg.click('#toShop'); await pg.waitForSelector('#card_shop');
+      if (await pg.$('#toShop')) { await pg.evaluate(() => { window.__night.NS.shards = 11; }); await pg.click('#toShop'); } else await pg.evaluate(() => { const N = window.__night; N.NS.shards = 11; N.shopCard(); });
+      await pg.waitForSelector('#card_shop');
       const at = await pg.evaluate(() => { const N = window.__night; return { mirror: N.S.mirror, run: N.S.running, see: N.NS.card.classList.contains('shopAt') }; });
       if (at.mirror !== 'shop' || !at.run || !at.see) throw new Error('shop not at the mirror ' + JSON.stringify(at));
       for (let k = 1; k <= 2; k++) {
@@ -204,6 +221,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const learned = await pg.evaluate(() => window.__night.N1.endLearned);
       if (r.t.indexOf(learned) < 0) throw new Error('missing the line "' + learned + '" (item 4)');
       if (r.run || r.mirror) throw new Error('loop still running behind the end card');
+      // owner's item 4: at most maxContinue continue-only cards this night; the end card says three facts, the log sits behind Details
+      const e = await pg.evaluate(() => { const N = window.__night, f = (document.querySelector('#card_end .facts') || {}).textContent || '', d = document.querySelector('#card_end details#endLog'); return { n: N.NS.contCount, max: N.N1.maxContinue, facts: /Laughs earned/.test(f) && /laughed hardest at/.test(f) && /Mask/.test(f), log: !!d && !d.open && !!d.querySelector('.sum') }; });
+      if (e.n > e.max) throw new Error(`${e.n} continue-only cards, at most ${e.max}`);
+      if (!e.facts || !e.log) throw new Error('end card brief ' + JSON.stringify(e));
+      console.log('    continue-only cards', e.n, 'of at most', e.max);
     });
     console.log(sc.n, errs.length ? 'ERRORS\n  ' + errs.slice(0, 8).join('\n  ') : 'no page errors');
     await ctx.close();

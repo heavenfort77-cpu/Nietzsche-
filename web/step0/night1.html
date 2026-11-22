@@ -42,7 +42,7 @@
     .card.shopAt { background: linear-gradient(#0c080900 55%, #0c0809e6 78%); align-items: center; justify-content: flex-end; text-align: center; padding: 0 16px 16px; }
     .card.shopAt > * { max-width: 100%; }
     .card.shopAt .opts { flex-direction: row; justify-content: center; }
-    .card.shopAt h2, .card.shopAt > p:first-of-type { display: none; }
+    .card.shopAt h2, .card.shopAt > p:first-of-type, .card.shopAt #keptLine { display: none; }
   }
   .card .knows { color: #f0d27a; font: 400 18px/1.5 Georgia, serif; }
   .card h2 { margin: 0; font: 600 22px/1.2 Georgia, serif; color: #f0d27a; }
@@ -646,6 +646,18 @@ const N1 = Object.freeze({
   winDone: 'He wiped away one line.', loseDone: 'He got up.',
   // hold after the action before the shards card, s; the one real laugh after the wipe, delay s
   smallHoldSecs: 1.4, laughAfter: 0.15,
+  // ----- owner's item 4 (harsh panel H5/H6, 22 Nov): fewer cards, an end card that says something -----
+  // switch: the shards he kept show on the shop card (no separate shards card)
+  mergeKept: true,
+  // cards whose only action is "continue" (the cue page's own start counts too); at most this many per night
+  continueCards: ['dazai', 'crowd', 'nietzsche', 'kept'], maxContinue: 4,
+  // switch: end card = heading, purchases, the small win, three facts; the full log behind a Details button
+  endBrief: true,
+  // ----- owner's item 5 (harsh panel H7): one physical joke per corridor verb, no new lines -----
+  // switch; the horn honks back this many s late (the reflection's lag), quieter by this share
+  corridorJokes: true, echoSecs: 0.65, echoVol: 0.45,
+  // he sniffs the pie he was told not to eat: time s, head dips degrees
+  sniffSecs: 0.9, sniffHead: 16,
 });
 
 // ===== STATE =====
@@ -1359,6 +1371,8 @@ const NS = {
   hurt: null, hurtFor: null, learn: null, learnOff: 0, reflUp: 0, reflBase: { x: 0, z: 0, fx: 0, fz: 0 }, learnDone: 0,
   // small win: Mask at the start of the night (the wipe never goes below it), the wipe in progress, the end-card line, whether the laugh played
   maskStart: 0, wipe: null, smallDone: '', laughed: false, smallT: 0, smallFor: 0,
+  // item 4: continue-only cards seen this night; item 5: the corridor jokes played, the rigger's trip clock (-1 = off), the sniff posture
+  contCount: 0, jokes: { echo: false, rigger: false, sniff: false }, riggerT: -1, sniffMood: { tempo: 1, chest: 0, neck: 0, head: 0 }, keptLine: '',
 };
 const crew = [];
 const cast = {};
@@ -1425,7 +1439,7 @@ async function n1Load() {
     m.lineText = cd.title && cd.line ? who + cd.line : '';
     m.doneText = cd.done ? who + cd.done : '';
     m.afterText = cd.title && cd.done ? who + cd.done : m.lineText;
-    root.position.set(m.x, 0, -m.y); root.rotation.y = m.restYaw;
+    root.position.set(m.x, 0, -m.y); root.rotation.order = 'YXZ'; root.rotation.y = m.restYaw;
     scene.add(root);
     crew.push(m);
   }
@@ -1472,7 +1486,8 @@ function laugh(delay, kind) {
   const L = N1.laugh;
   for (let i = 0; i < L.n; i++) { const f = L.f0 + (L.f1 - L.f0) * i / Math.max(1, L.n - 1); tone(f, f * 0.85, L.dur, 'triangle', L.vol, (delay || 0) + i * L.gap); }
 }
-function honk() { tone(520, 390, 0.12, 'square', 0.12); setTimeout(() => tone(400, 300, 0.22, 'square', 0.12), 120); }
+// two-note horn on the audio clock; vol share and delay s (the corridor joke: it honks back late)
+function honk(vol, delay) { tone(520, 390, 0.12, 'square', 0.12 * vol, delay); tone(400, 300, 0.22, 'square', 0.12 * vol, delay + 0.12); }
 
 // ----- flow -----
 function show(id, html) {
@@ -1480,6 +1495,7 @@ function show(id, html) {
   const d = document.createElement('div');
   d.className = 'card' + (id === 'dazai' || id === 'small' ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
   d.id = 'card_' + id;
+  if (N1.continueCards.indexOf(id) >= 0) NS.contCount++;
   d.innerHTML = html;
   document.body.appendChild(d);
   NS.card = d;
@@ -1532,7 +1548,7 @@ function n1Board() {
   const d = show('board', `<h2>Tonight's board</h2><p>Choose an act.</p><div class="opts">
     <button class="opt" data-act="fall"><b>The deliberate fall</b>Yours. The classic pratfall; it always pays a little.</button>
     <button class="opt" data-act="sweep"><b>Spotlight sweep</b>Lent for tonight, free. Sweep up the spotlight.</button></div>
-    <p><small>The act is the cue: press when the ring fits the mask on his face.</small></p>`);
+    <p><small>Then press in time with the drum, when the ring closes onto the mask on his face.</small></p>`);
   d.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => startAct(b.dataset.act)));
 }
 function startAct(id) {
@@ -1540,7 +1556,9 @@ function startAct(id) {
   hideCard();
   NS.cue = document.createElement('iframe');
   NS.cue.id = 'cueFrame';
-  NS.cue.src = 'cue_model.html';
+  // hosted: the cue page hides its own title, notes and settings and shows one line and its start button (owner's item 4)
+  NS.cue.src = 'cue_model.html?host=night1';
+  NS.contCount++;
   document.body.appendChild(NS.cue);
   NS.poll = setInterval(() => {
     let g = null;
@@ -1587,7 +1605,8 @@ function crowdCard() {
     : r >= 0.35 ? 'A few laughs: scattered heads move.' : r > 0 ? 'Silence: the house is still.' : 'Bad: coughs, a phone glow, someone walks out.';
   NS.laughs = i.actLaughs + h.total; NS.mask = i.mask;
   const best = h.best.charAt(0).toUpperCase() + h.best.slice(1);
-  NS.hurtHead = !h.total ? '' : h.total >= i.actLaughs ? `They laughed hardest at ${h.best}.` : `${best} got a bigger laugh than a clean beat.`;
+  // "hardest" only when one hurt alone out-earned the whole act (stranger cold read: the pie 25 vs the act 45 read as a contradiction)
+  NS.hurtHead = !h.total ? '' : h.bestN > i.actLaughs ? `They laughed hardest at ${h.best}.` : `${best} got a bigger laugh than a clean beat.`;
   const d = show('crowd', `<h2>The crowd</h2>${NS.hurtHead ? `<p class="knows">${NS.hurtHead}</p>` : ''}<p>${NS.crowd}</p>
     <p>Laughs +${NS.laughs}${h.total ? ` (${h.rows.join(', ')})` : ''} &middot; Mask ${i.mask} (his paint thickens)</p>${h.pie ? '<p><small>One pie fewer for the Mirror.</small></p>' : ''}
     <p><small>Perfect ${i.perfects} &middot; Good ${i.goods} &middot; Miss ${i.misses}</small></p><button id="walkBack">Walk back</button>`);
@@ -1624,6 +1643,12 @@ function updateCrew(dt) {
     if (m.saidT > 0) m.saidT -= dt;
     const text = m.saidT > 0 ? m.doneText : (near ? (m.done ? m.afterText : m.lineText) : '');
     crewLabel(m, text);
+    if (m.cd.id === 'rigger' && NS.riggerT >= 0) {
+      NS.riggerT += dt;
+      const k = Math.min(1, NS.riggerT / N1.tripSecs), p = k < 0.35 ? k / 0.35 : 1 - (k - 0.35) / 0.65;
+      m.root.rotation.x = N1.tripPitch * ease(p);
+      if (k >= 1) { NS.riggerT = -1; m.root.rotation.x = 0; NS.jokes.rigger = true; }
+    }
     if (!S.back && !S.ended && m.cd.verb && !m.done && !NS.anim) {
       const a = m.cd.anchor || m.cd.at, dv = Math.hypot(S.x - a[0], S.y - a[1]);
       if (dv < N1.verbDist && dv < bestD) { best = m; bestD = dv; }
@@ -1646,8 +1671,8 @@ function doVerb() {
   if (v === 'jump') {
     if (S.y > N1.cableY) return;
     NS.anim = { kind: 'hop', t: 0, y0: S.y, y1: N1.cableY + N1.hopLand };
-  } else if (v === 'take') NS.pies = N1.pies;
-  else if (v === 'honk') honk();
+  } else if (v === 'take') { NS.pies = N1.pies; if (N1.corridorJokes) NS.anim = { kind: 'sniff', t: 0 }; }
+  else if (v === 'honk') { honk(1, 0); if (N1.corridorJokes) { honk(N1.echoVol, N1.echoSecs); NS.jokes.echo = true; } }
   else if (v === 'trip') NS.anim = { kind: 'trip', t: 0, who: m };
   m.done = true; NS.verbs[v] = true;
   if (v !== 'trip') m.saidT = N1.saidSecs;
@@ -1663,7 +1688,13 @@ function n1Anim(c, dt) {
     S.y = a.y0 + (a.y1 - a.y0) * k;
     S.yaw = turnToward(S.yaw, Math.PI, CONFIG.turnRate, dt);
     c.root.position.set(S.x, Math.sin(Math.PI * k) * N1.hopH, -S.y);
-    if (k >= 1) { NS.anim = null; c.root.position.y = 0; }
+    if (k >= 1) { NS.anim = null; c.root.position.y = 0; if (N1.corridorJokes) NS.riggerT = 0; }
+  } else if (a.kind === 'sniff') {
+    const k = Math.min(1, a.t / N1.sniffSecs), m = NS.sniffMood;
+    m.tempo = S.mood.tempo; m.chest = S.mood.chest; m.neck = S.mood.neck;
+    m.head = S.mood.head + N1.sniffHead * Math.sin(Math.PI * k) * (0.75 + 0.25 * Math.sin(k * 28));
+    c.root.position.set(S.x, 0, -S.y);
+    if (k >= 1) { NS.anim = null; NS.jokes.sniff = true; }
   } else {
     const k = Math.min(1, a.t / N1.tripSecs), p = k < 0.35 ? k / 0.35 : 1 - (k - 0.35) / 0.65;
     c.root.position.set(S.x, -0.05 * p, -S.y);
@@ -1672,7 +1703,7 @@ function n1Anim(c, dt) {
   }
   c.root.rotation.y = S.yaw;
   c.blob.position.set(S.x, 0.02, -S.y);
-  moodRestore(c); c.mixer.update(dt); moodApply(c, S.mood);
+  moodRestore(c); c.mixer.update(dt); moodApply(c, a.kind === 'sniff' ? NS.sniffMood : S.mood);
   pickShot();
   return true;
 }
@@ -2272,7 +2303,15 @@ function nietzscheCard() {
   setTimeout(() => { if (NS.card === d) b.classList.remove('held'); }, N1.nietzscheHoldMs);
 }
 // small win (owner pitch, panel 11 of 12): back at the mirror; a win wipes one line of paint and a real laugh answers, a loss stands up by himself
-function afterMirror() { if (N1.smallWin) smallWinCard(); else keptCard(); }
+function afterMirror() { if (N1.smallWin) smallWinCard(); else toShop(); }
+// item 4: the shards he kept go on the shop card (mergeKept), or the old shards card
+function toShop() {
+  if (!N1.mergeKept) { keptCard(); return; }
+  const lost = NS.result === 'lose';
+  NS.keptLine = (lost ? 'He woke at the mirror and kept half his shards: ' : 'He came out of the mirror with ') + NS.mwKept + ' shard' + (NS.mwKept === 1 ? '' : 's') + '.';
+  if (!N1.performerLearns) { if (S.mirror) leaveMirror(); S.running = false; }
+  shopCard();
+}
 function smallWinCard() {
   hideCard();
   mirrorSetup('after'); S.running = true; startLoop();
@@ -2296,7 +2335,7 @@ function smallPress() {
 function smallUpdate(dt) {
   if (NS.scene !== 'small' || !NS.smallDone) return;
   NS.smallT += dt;
-  if (NS.smallT >= NS.smallFor && !NS.wipe) keptCard();
+  if (NS.smallT >= NS.smallFor && !NS.wipe) toShop();
 }
 function keptCard() {
   // nothing renders behind the opaque card
@@ -2351,7 +2390,7 @@ function shopCard() {
     return `<button class="opt" data-id="${it.id}" ${owned || !can || NS.learn ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b>${it.note}<div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
   }).join('');
   const d = show('shop', `<h2>The mirror shop</h2><p>The reflection keeps the shop. Prices are glass pieces on the ledge.</p>
-    <div id="shards">${shardRow(NS.shards)}</div><div class="opts">${items}</div>
+    ${NS.keptLine ? `<p id="keptLine">${NS.keptLine}</p>` : ''}<div id="shards">${shardRow(NS.shards)}</div><div class="opts">${items}</div>
     <p id="shopSay"><small>${NS.shopSay || 'Every purchase adds a paint layer, and the Performer learns it.'}</small></p><button id="endNight">End the night</button>`);
   d.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => {
     const it = N1.shop.find((x) => x.id === b.dataset.id);
@@ -2374,18 +2413,20 @@ function endCard() {
   const v = NS.verbs, i = NS.actInfo || {};
   const titles = NS.bought.map((id) => (N1.shop.find((x) => x.id === id) || { title: id }).title);
   const knows = N1.performerLearns ? `<p class="knows">${N1.endKnows}<br>${titles.length ? titles.join('<br>') + `<br><small>${N1.endLearned}</small>` : 'nothing bought tonight'}</p>` : '';
-  const d = show('end', `<h2>End of night 1</h2>${knows}<div class="sum">
+  const best = NS.hurt && NS.hurt.bestN > (i.actLaughs || 0) ? NS.hurt.best : 'the act';
+  const brief = N1.endBrief ? `<p class="facts">Laughs earned ${NS.laughs} &middot; They laughed hardest at ${best} &middot; Mask ${NS.mask}</p>${NS.smallDone ? `<p>${NS.smallDone}</p>` : ''}` : '';
+  const d = show('end', `<h2>End of night 1</h2>${knows}${brief}${N1.endBrief ? '<details id="endLog"><summary>Details</summary>' : ''}<div class="sum">
     Corridor: jumped the cable ${v.jump ? 'yes' : 'no'}, took the pie ${v.take ? 'yes' : 'no'}, honked the horn ${v.honk ? 'yes' : 'no'}, tripped for the child ${v.trip ? 'yes' : 'no'}<br>
     Act: ${NS.act === 'fall' ? 'The deliberate fall' : 'Spotlight sweep (lent)'}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
     Crowd: ${NS.crowd}<br>
     Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
-    Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>
+    Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>${N1.endBrief ? '</details>' : ''}
     <button id="again1">Play night 1 again</button>`);
   d.querySelector('#again1').addEventListener('click', () => location.reload());
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

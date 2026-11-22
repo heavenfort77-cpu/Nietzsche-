@@ -13,6 +13,10 @@
   #look .back { position: fixed; top: 44px; left: 50%; transform: translateX(-50%); min-height: 44px; padding: 6px 16px; border-radius: 10px; border: 2px solid #B68C45; background: #3D332D; color: #F2EBDD; font-size: 16px; }
   #look .pad { bottom: 40%; }
   .hidden { display: none !important; }
+  /* hosted by night1.html: one line and the start button; the page's own notes, night choice and settings stay hidden */
+  .hostOnly { display: none; }
+  .hosted .hostOnly { display: block; }
+  .hosted #title h1, .hosted #title > p:not(.hostOnly):not(#modelState), .hosted #title .row:not(:last-child), .hosted #btnLook, .hosted #results .row { display: none !important; }
   #hud { position: fixed; top: 8px; left: 8px; right: 8px; display: flex; gap: 16px; font-weight: 600; pointer-events: none; }
   .panel { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(17, 12, 14, 0.92); text-align: center; overflow: auto; }
   .panel h1 { font-size: 22px; margin: 0; }
@@ -39,6 +43,7 @@
 <div id="title" class="panel">
   <h1>The Clown and the Mirror: the cue on the 3D clown</h1>
   <p>The approved clown model stands in the ring (3D), in a room rendered in Blender (2D plates with parallax). A thin ring closes in on his face: press when the ring fits the pale circle at his face's edge. The drum plays on every fit.</p>
+  <p id="hostLine" class="hostOnly"></p>
   <p id="modelState">Loading the clown model...</p>
   <p>Desktop: Space = hit, K or Shift = take. Phone: right button = hit, left button = take.</p>
   <p>Night 1: hit only. Night 2 and later: the whiteface steps in (a crimson ring under his silver cone hat closes in instead): press take. On the last beat of each chain, take instead of hit turns the grin upside down.</p>
@@ -73,6 +78,12 @@
 
 <script src="./laugh.js"></script>
 <script>
+  'use strict';
+  // hosted by night1.html (?host=...): only the one line and the start button show (owner's item 4, stranger cold read)
+  if (/[?&]host=/.test(location.search)) {
+    document.documentElement.classList.add('hosted');
+    document.getElementById('hostLine').textContent = window.matchMedia('(pointer: coarse)').matches ? 'Tap HIT when the ring closes onto the mask on his face.' : 'Press Space when the ring closes onto the mask on his face.';
+  }
 'use strict';
 (function () {
   // ===== MAP =====
