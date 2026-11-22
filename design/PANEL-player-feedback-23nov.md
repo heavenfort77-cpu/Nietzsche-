@@ -343,3 +343,74 @@ Cost of the dissent: full signals overlap the next ring once the gap drops below
 - A's third way says a flopped chain pays 0 Laughs. In the build a timing miss is a fall and falls pay, and the deliberate fall has a guaranteed floor (`night1.html` line 834 and the cue's floor value). Paying 0 for a flopped chain changes that act's rule, so it is the owner's choice, separate from removing the cut-off.
 - A tap-to-skip on the corridor is a new control; whether the walk scenes already have one was not checked.
 - The "about 12 s" act length is computed from the CONFIG timings, not measured.
+
+## Round 4: thirteen separate agents, one per seat (owner 23 Nov 06:07: "get agents to fully immersed in each role and debates. i want not a single model act as panel")
+
+One agent per seat, each given only its own role, the build facts and the player's words; none saw another seat or any earlier round. Models: Opus (Story writer, Dazai, Chaplin, Clinical psychologist), Sonnet (Core gamer, Jam judge, Auguste clown, Mobile producer), Haiku (Casual phone player, Streamer), Fable (Nietzsche, Camus, Indie critic). All four are Claude models, so this is separate agents on different models, still not a playtest. Each seat was held to one change per sentence of the comment. The lead counted and did not vote or write compromises. Nothing is built.
+
+### Positions, written separately
+
+- Story writer: drop the HUD line; one slow ring alone in the corridor before the curtain, nothing counts. First miss does not end the act; a missed act restarts at the curtain. Figures step out of the glass one at a time, each met with his own line. Refuses a goal counter.
+- Nietzsche: one ring closes by itself before the counted ones, no words. When two misses end the act, "Once more" on the spot, crowd colder, fewer Laughs kept. Figures one at a time. Refuses a rehearsal room with nothing at stake.
+- Dazai: one silent ring at the paint mirror, no grade. Misses never end the act; all nine, the crowd quieter on each fall. Only Shame in the room first. Refuses any explanation of why the crowd did not laugh.
+- Core gamer: one slow demo ring, cut the text. Two-miss rule kept, with a free restart of the same act 1 s later in the ring. One figure lit at a time with its name and a count. Refuses assists or wider windows.
+- Casual phone player: one practice ring that cannot end the act. An "Again" button at the fall, no corridor. An icon over each figure. Refuses more text.
+- Jam judge: a looping practice ring before Start; Start unlocks after one on-time tap. Third miss ends it. The Light alone first with a pinned line. Refuses a tutorial layer.
+- Camus: first ring at half speed, unmissable. Two-miss rule kept; "Again tonight" to the board wall. A plain count, all four figures present. Refuses any consoling voice.
+- Chaplin: delete the text; the clown does the bit once himself before the start. Two-miss rule kept, curtain straight back up on the same act. Figures one at a time, the Light first. Refuses every caption.
+- Auguste clown: a slow first ring. Three slow rings on the corridor wall, no penalty, skippable; first miss forgiven. One figure at a time. Refuses any popup that stops the show.
+- Clinical psychologist: no change to the instruction. All 9 rings always run. One figure at a time with its rule fixed above it. Refuses hint, skip or easy mode.
+- Indie critic: delete the line and the start button; ring one closes untouched. A miss never ends the act. Figures one at a time, nothing new on screen. Refuses a rehearsal or practice room, and a counter.
+- Streamer: one free practice ring. A RETRY button on the fall. Icons over each figure plus an x/4 tally. Refuses pre-act explainers.
+- Mobile producer: the first ring is a slow free demo. First two misses restart the chain, the third ends it. One figure at a time with a pinned line and a marker. Refuses a tutorial or rehearsal scene.
+
+Agreed without debate: all 13 read the comment as "I could not learn it and could not get back to it", none as "too hard" and none as "add explanation". No seat asked for more text. No seat keeps the walk back through the title.
+
+### Debate round: each seat saw the other twelve, attacked two, defended, and voted
+
+X. The act after misses.
+First vote: 6 of 13
+(a) keep two misses, instant "again" on the spot 6 (Nietzsche, Core gamer, Casual, Camus, Chaplin, Streamer); (b) no miss ends it, all nine always play 4 (Story writer, Dazai, Clinical psychologist, Indie critic); (c) the third miss ends it 3 (Jam judge, Auguste, Mobile producer); (d) return only to the board wall 0. Jam judge and Mobile producer also want the instant "again" after the act ends, so 8 of 13 want a restart on the spot. Whether that restart costs Laughs: yes (Nietzsche, Camus, Streamer, Auguste); free (Core gamer, Mobile producer).
+
+Y. Teaching the ring.
+First vote: 10 of 13
+(a) one shown or free ring inside the act before the counted ones 10; (b) a separate rehearsal before the ring 3 (Story writer and Dazai at the paint mirror, Auguste in the corridor). Words on that ring ("TAP", "HIT", "practice"): fought by Chaplin, Story writer, Indie critic; the Jam judge wants one plain sentence kept.
+
+Z. The mirror.
+First vote: 11 of 13
+(a) figures enter one at a time 11; (b) all four at once with an icon over each 2 (Casual, Streamer). A line or icon over the lone figure: for (Clinical psychologist, Jam judge, Mobile producer, Core gamer); against (Nietzsche, Indie critic, Camus, Chaplin, Story writer).
+
+W. A visible count of figures left.
+First vote: 7 of 13
+Yes 7 (Casual, Core gamer, Jam judge, Camus, Auguste, Clinical psychologist, Streamer); no 6 (Story writer, Nietzsche, Dazai, Chaplin, Indie critic, Mobile producer).
+
+Who moved and why: Story writer to X(b) and to the paint-mirror rehearsal (Dazai: "being made to stay is the cruelty"); Camus from the board wall to the instant "again" (Chaplin, Nietzsche) and from four figures to one at a time (Indie critic); Clinical psychologist from no change to the shown ring (Chaplin, Indie critic) and to the count (Camus); Auguste from first-miss-forgiven to the third miss (Jam judge, Mobile producer) and to the count (Core gamer, Streamer); Mobile producer added "Again" on the spot (Core gamer, Streamer); Streamer took Nietzsche's cost on the retry.
+
+## Red team
+
+Y and Z passed 75%. The debate round itself served as the red team: every seat attacked two others in full.
+- Against Y(a), Auguste: "Every clown I ever worked beside warmed up in the wings, and the crowd never saw it. Life gets you in the ring, not in the wings. Nobody learns the bit by failing it on the night." Vote unchanged: 10 of 13.
+- Against Z(a), Casual phone player: "It holds me up before the figure is even there, and I'd just wait." Streamer: "entering one at a time is a wait." Vote unchanged: 11 of 13.
+
+### Round 4 dissent
+
+- Dazai (X): "I would still fight the instant Again on the spot, in any form. If the fall costs nothing, it's no longer a fall, it's just a reset."
+- Clinical psychologist (X): "Every try still stops at the third ring, so he only ever gets to practise the start."
+- Indie critic (X): "They add a button and a restart loop to repair a rule that should simply be deleted."
+- Nietzsche (X): "If no miss can end the act, nothing can be lost in it, and what cannot be lost cannot be willed."
+- Core gamer (X): "Any cost on retry makes practice a hidden-ledger penalty. A retry has to be free and readable."
+- Mobile producer (X): "Short failure with a fast retry beats long failure. Retry on night 1 should be free."
+- Camus (X): "If again costs nothing, the two-miss rule is decoration."
+- Story writer, Dazai, Auguste (Y): the rehearsal belongs before the ring, at the paint mirror or in the corridor.
+- Chaplin (Y): "If the picture needs a word, reshoot the picture."
+- Jam judge (Y): "Keep one plain sentence at the ring and one pinned line in the mirror."
+- Casual phone player, Streamer (Z): all four at once with icons; one at a time is a wait.
+- Indie critic, Nietzsche (Z): "A label over its head turns an enemy into an exercise."
+- Story writer, Indie critic (W): "A counter tells him how much he has not understood."
+- Camus (W): "A number is not a stranger; it is the size of the rock."
+
+### What changed against rounds 1-3 (lead)
+
+- Gone, because no separate seat asked for it: the dressing-room practice offer, the faster corridor walk, the frozen goal card, body leans and tinted rings, the later-night miss rules, the slower first chain.
+- New, and not in rounds 1-3: an instant "again" on the spot in the ring, which 8 separate seats reached.
+- Still open for the owner: X (6-4-3), whether a restart costs Laughs, W (7-6), and whether the lone figure carries a line or icon.
