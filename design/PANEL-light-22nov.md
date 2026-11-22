@@ -77,3 +77,42 @@ What the panel would build first: Light (a) on night 1 (small, cold, far, never 
 - (a) changes the GDD: the Light leaves the monster table, and "the player learns three times that stopping works" falls to two (the Neighbour, the Double) plus the Light as the exit. It also needs a new rule for what ends the Mirror World (now: all constructs gone).
 - Q4 is where "softer" would land if the owner meant the picture and not the music; this session read it as the music level (`musicSoft`).
 - Owner, 22 Nov 23:22, after reading the votes: "last night light is a spotlight on him not by monster". The last night's spotlight is his own and is not the Light construct; the construct stays an insecurity on the earlier nights. Q2 is closed that way. Open: the construct and his spotlight must look different (Indie critic's and Jam judge's dissent, the stranger's finding 6).
+
+## Round 2: the owner's own wording (owner 22 Nov 23:24: "one more panel round")
+
+Subagent aee7fdc4d29fc5ae9, same 13 seats, same stranger report, round 1 results shown. Question as the owner worded it: the Light construct stays a monster, one of his insecurities, on the earlier nights; the last night's spotlight is a separate light, his own, on himself, "not by monster".
+
+| # | Question | First vote | After red team |
+|---|---|---|---|
+| R1 | The owner's reading exactly as worded. | First vote: 9 of 13 (no: Nietzsche, Camus, Auguste clown, Indie critic) | no red team (under 75%) |
+| R2 | How the player tells the two lights apart: (a) colour and edge only; (b) source and behaviour: the monster's beam comes from a visible lamp-headed figure and hunts him, his has no lamp, opens around him and moves only when he moves; (c) both; (d) the same look on purpose. | First vote: 6 of 13 for (b) (Dazai, Core gamer, Jam judge, Chaplin, Auguste clown, Psychologist); (c) 3: Story writer, Casual, Streamer; (d) 3: Nietzsche, Camus, Indie critic; (a) 1: Mobile producer | no red team |
+| R3 | The monster Light on the earlier nights: (a) as built, hold still 3 s and it goes out; (b) it cannot be put out before the last night, holding still only stops the drain; (c) beaten by an active clown answer (face it and bow), stillness saved for the last night. | First vote: 8 of 13 for (c) (Story writer, Core gamer, Casual, Jam judge, Chaplin, Auguste clown, Psychologist, Streamer); (b) 4: Nietzsche, Dazai, Camus, Indie critic; (a) 1: Mobile producer | no red team |
+| R4 | On the last night the monster Light is seen once more and fails (finds him, he does not move, it goes out by itself) just before his own spotlight opens. | First vote: 10 of 13 (no: Dazai, Camus, Indie critic) | 9 |
+
+Where the panel still disagrees with the owner: four seats reject two lights and want one light whose meaning changes; ten of 13 (R2 a, b, c) say the monster must stop looking like the stage follow spot, which is how it is built; twelve of 13 reject hold-still-to-kill as built on the earlier nights.
+
+What it would build first: a visible lamp-headed source for the monster Light with a warning before the drain; face-it-and-bow in place of hold-still; then night 1 back to a stranger. Risk it names: a judge who stops after night 1 never sees the second light and may read the lamp-head as one more enemy with one more rule in a build scored 2 for clarity.
+
+Open question from the red team, for the owner: whose spotlight is the Performer fight held in (GDD: "beaten by standing still in the spotlight")?
+
+## Round 2 red team
+
+- R4, Jam judge (voted yes): the last night already has the Performer beaten by standing still in a spotlight. The monster Light failing the same way plays that beat twice, and then a third light opens. "Goes out by itself" gives the player nothing to do at the peak. The design doc does not say whose light the Performer fight happens in; if it is the monster's, R4 is already there. Mobile producer changed to no (an extra scene for a repeated beat).
+
+## Round 2 dissent
+
+- Nietzsche, R1: "A clarity that arrives as a second lamp is a gift. What hunted him should be what he finally stands in."
+- Camus, R1: "The light should not care about him. Two lights give the world a moral."
+- Auguste clown, R1: "A spotlight that bites on night 1 teaches the audience the trick before the finale."
+- Indie critic, R1: "Two lights is tidier and weaker. The change should be in him, not in the lamp."
+- Story writer, Casual, Streamer, R2 (c): "Phones in daylight lose colour and small screens lose shapes. Use both."
+- Nietzsche, Camus, Indie critic, R2 (d): "Same light, different man. That is the whole ending."
+- Mobile producer, R2 (a): "A tint and an edge is one afternoon. A lamp-headed figure is a new character."
+- Dazai, R3 (b): "He cannot put out other people's eyes on night 1. He can only stop feeding them."
+- Nietzsche, Camus, Indie critic, R3 (b): "If it dies early, the last night has nothing left to overcome."
+- Mobile producer, R3 (a): "It is built and it works. The stranger's problem was the look, not the rule."
+- Dazai, R4: "The gaze never goes out. He stops performing for it."
+- Camus, R4: "He should walk out with it still burning."
+- Indie critic, R4: "This is an explanation scene. Trust the player."
+
+Producer note: the night-1 cast proposal already draws the Light as a figure with barn doors (`art/cast2/PANEL.md`: "Light with two barn doors"); whether the page shows that figure or only the disc and cone was not checked this round. R3 (c) would change the GDD's "learns three times that stopping works" (the Light leaves that list).
