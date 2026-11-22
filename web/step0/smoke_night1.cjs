@@ -76,6 +76,12 @@ const MUTS = {
   // owner 22 Nov (session 19): his three tracks follow the scenes; each mutation must FAIL a music step
   musicmap: ['night1.html', "walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight'", "walk: 'cold', board: 'cold', act: 'cold', back: 'weight'"],
   musicpause: ['night1.html', '  musicHold(true);\n  const sc = bindScene()', '  const sc = bindScene()'],
+  // session 20 batch 2 (owner 22 Nov 23:41, 23:59): each must FAIL its own step
+  gnaw: ['night1.html', 'gnaw: { on: true,', 'gnaw: { on: false,'],
+  lampgag: ['night1.html', "if (f.kind === 'light') { hitLamp(f); return; }", "if (f.kind === 'light') return;"],
+  lightdark: ['night1.html', 'if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt);', 'if (f.sink > 0) mwSink(f, dt);'],
+  hints: ['night1.html', "Gags cost Laughs. Stand still and they gnaw.'", "SLAP, PIE, FALL. Lift your thumbs to stand still.'"],
+  cost: ['night1.html', 'M.spent = n; M.spentT = N1.spendShow;', 'M.spent = n;'],
   musicsoft: ['night1.html', 'N1.musicVol * musicSoft() * M.duck', 'N1.musicVol * M.duck'],
   musicduck: ['night1.html', 'function openCue() {\n  musicDuck(true);', 'function openCue() {'],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
@@ -474,6 +480,19 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     // H1: each fall in the act feeds the Whisper (stand-in act: 1 miss)
     await step('the Whisper is fed by each fall (H1)', async () => { const r = await pg.evaluate(() => { const N = window.__night, w = N.foes.find((f) => f.kind === 'whisper'); return w ? { hp: w.hp, base: N.N1.whisper.hp, per: N.N1.whisperFeed.hp, falls: N.NS.hurt.falls, mul: w.speedMul } : null; }); if (!r) throw new Error('no Whisper after a fall'); if (r.hp !== r.base + r.falls * r.per || !(r.mul > 1)) throw new Error('Whisper not fed ' + JSON.stringify(r)); });
     await step('gags: slap, pie, pratfall', async () => { await pg.keyboard.press('KeyJ'); await sleep(600); await pg.keyboard.press('KeyK'); await sleep(700); await pg.keyboard.press('Space'); await sleep(900); const M = await pg.evaluate(() => { const M = window.__night.M; return { l: M.laughs, p: window.__night.NS.pies }; }); console.log('   laughs', M.l.toFixed(1), 'pies', M.p); });
+    // owner 23 Nov 00:32: "player must know laugh is limited else they will spam"
+    await step('gags show what they cost: buttons, the Laughs count, one tip (owner 23 Nov)', async () => {
+      await pg.waitForFunction(() => window.__night.M.cd <= 0 && window.__night.M.slapT <= 0 && !window.__night.M.fall, null, { timeout: 20000 });
+      const l0 = await pg.evaluate(() => window.__night.M.laughs);
+      await pg.keyboard.press('KeyJ');
+      await pg.waitForFunction(() => /\(-\d+\)/.test(document.getElementById('mwHud').textContent), null, { timeout: 15000 });
+      const r = await pg.evaluate(() => { const N = window.__night, c = N.N1; return { hud: document.getElementById('mwHud').textContent, cost: c.slap.cost, told: N.M.costTold, pads: ['padSlap', 'padPie', 'padFall'].map((id) => document.getElementById(id).textContent), want: [c.slap.cost, c.pie.cost, c.fall.cost], hint: document.getElementById('hint').textContent, touch: N.NS.touch }; });
+      console.log('    HUD after a slap:', r.hud, '| pads', r.pads.join(', '));
+      if (r.hud.indexOf('(-' + r.cost + ')') < 0 || !r.told) throw new Error('spend not shown ' + JSON.stringify(r));
+      if (r.pads.some((x, i) => x.indexOf('-' + r.want[i]) < 0)) throw new Error('button without its cost: ' + r.pads.join(', '));
+      if (!(l0 > 0) || !/Laughs/.test(r.hint)) throw new Error('hint does not name Laughs: ' + r.hint);
+      await pg.waitForFunction(() => !/\(-\d+\)/.test(document.getElementById('mwHud').textContent), null, { timeout: 20000 });
+    });
     // owner 22 Nov 17:58 on his phone: "the ring still unable to avoid the light". Real play: a bot drags the stick to `drag` of its radius (a phone thumb),
     // steering away from the spot and round the ring, for 8 s of game time; it may spend at most 2 s of it inside the spot
     for (const drag of [1, 0.6]) await step(`Light: running from it at ${drag * 100}% stick escapes it (real play)`, async () => {
@@ -489,7 +508,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     });
     // panel B (owner 22 Nov 15:58): he is faster than the Light; leaving it flares it (tell, game time) and grows it
     await step('Light: he outruns it, each escape grows it after a 0.4 s flare (B)', async () => {
-      const r0 = await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); L.r = L.cfg.spotR; L.loseT = 0; L.chaseT = 0; N.M.x = L.spotX; N.M.z = L.spotZ; return { r: L.r, n: L.leaves }; });
+      const r0 = await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.laughs = Math.max(N.M.laughs, 300); L.r = L.cfg.spotR; L.loseT = 0; L.chaseT = 0; N.M.x = L.spotX; N.M.z = L.spotZ; return { r: L.r, n: L.leaves }; });
       await pg.waitForFunction(() => window.__night.foes.find((f) => f.kind === 'light').inPrev, null, { timeout: 10000 });
       await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.x = L.spotX + L.r + 2.5; });
       await pg.waitForFunction((n) => { const L = window.__night.foes.find((f) => f.kind === 'light'); return L.leaves > n && L.moveT >= 0; }, r0.n, { timeout: 20000 });
@@ -499,7 +518,45 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       if (!(r.tell >= 0.38)) throw new Error('chased after ' + r.tell.toFixed(2) + ' s, tell 0.4');
       if (!(Math.abs(r.r - Math.min(r.cap, r0.r + r.grow)) < 1e-6 && r.r > r0.r)) throw new Error('spot did not grow ' + r0.r + ' -> ' + r.r);
     });
-    await step('stand still in the beam beats the Light', async () => { await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.x = L.spotX; N.M.z = L.spotZ; }); await pg.waitForFunction(() => !window.__night.foes.find((f) => f.kind === 'light').alive, null, { timeout: 20000 }); });
+    // owner 22 Nov 23:41 "standing still is not taking action and no action insecure will alway gnaw" (design/PANEL-action-22nov.md P4): game changed on purpose
+    await step('standing still: they gnaw (edge at once, drain after the warning, any action clears it) (P4)', async () => {
+      await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.input.tx = 0; N.input.ty = 0; N.M.laughs = Math.max(N.M.laughs, 300); N.M.x = -L.spotX; N.M.z = 5.5; N.M.still = 0; window.__g0 = N.M.gnawed; });
+      await pg.waitForFunction(() => window.__night.M.gnawLvl === 1, null, { timeout: 20000 });
+      const a = await pg.evaluate(() => { const N = window.__night; return { still: N.M.still, d: N.M.gnawed - window.__g0, cls: document.getElementById('gnaw').className, warn: N.N1.gnaw.warn }; });
+      if (a.d !== 0 || a.still >= a.warn || a.cls !== 'warn') throw new Error('warning stage ' + JSON.stringify(a));
+      await pg.waitForFunction(() => { const N = window.__night; return N.M.gnawLvl === 2 && N.M.still >= N.N1.gnaw.warn + 1; }, null, { timeout: 40000 });
+      const b = await pg.evaluate(() => { const N = window.__night, g = N.N1.gnaw, o = N.M.still - g.warn; return { d: N.M.gnawed - window.__g0, want: g.drain * o + g.climb * o * o / 2, cls: document.getElementById('gnaw').className, over: N.M.over }; });
+      console.log('    gnaw: warning after', a.still.toFixed(2), 's still, then drained', b.d.toFixed(2), 'Laughs (want about', b.want.toFixed(2) + ')');
+      await shot('mw_gnaw');
+      if (b.over || !(b.d > 0.6 * b.want && b.d < 1.4 * b.want) || b.cls !== 'drain') throw new Error('drain stage ' + JSON.stringify(b));
+      await pg.evaluate(() => { window.__night.input.tx = 1; });
+      await pg.waitForFunction(() => window.__night.M.gnawLvl === 0, null, { timeout: 20000 });
+      const c = await pg.evaluate(() => { const N = window.__night; N.input.tx = 0; return document.getElementById('gnaw').className; });
+      if (c !== '') throw new Error('edge still dark after he moved: ' + c);
+    });
+    await step('Light: holding still in its beam no longer puts it out (owner 22 Nov 23:41)', async () => {
+      await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.laughs = Math.max(N.M.laughs, 300); N.M.x = L.spotX; N.M.z = L.spotZ; window.__runT0 = N.M.t; });
+      await pg.waitForFunction(() => window.__night.M.t - window.__runT0 >= 4 || window.__night.M.over, null, { timeout: 90000 });
+      const r = await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); return { alive: L.alive, dark: L.dark, over: N.M.over, hits: L.hits }; });
+      if (!r.alive || r.dark || r.over) throw new Error('after 4 s still in the beam ' + JSON.stringify(r));
+    });
+    await step('Light: three gags on its lamp put it out for the night; the dark lamp stays and follows him (P5, A4)', async () => {
+      const n = await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.laughs = Math.max(N.M.laughs, 300); for (const f of N.foes) if (f !== L) { f.x = 0; f.z = 6; f.cling = false; } N.M.x = L.x; N.M.z = L.z + 0.9; N.M.yaw = Math.PI; return L.cfg.gags; });
+      for (let k = 0; k < n; k++) { await pg.keyboard.press('KeyJ'); await pg.waitForFunction((k) => window.__night.foes.find((f) => f.kind === 'light').hits > k, k, { timeout: 20000 }); await pg.waitForFunction(() => window.__night.M.cd <= 0 && window.__night.M.slapT <= 0, null, { timeout: 20000 }); }
+      const r = await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); return { alive: L.alive, dark: L.dark, inScene: !!L.root.parent, outs: N.NS.lightOuts, r1: N.lightStartR(), r0: N.N1.light.spotR, widen: N.N1.lightWiden, yaw: L.yaw, over: N.M.over }; });
+      if (r.alive || !r.dark || !r.inScene || r.over) throw new Error('after ' + n + ' gags ' + JSON.stringify(r));
+      if (r.outs !== 1 || Math.abs(r.r1 - r.r0 * (1 + r.widen)) > 1e-6) throw new Error('next night beam not ' + r.widen + ' wider ' + JSON.stringify(r));
+      await pg.evaluate(() => { const N = window.__night; N.M.x = 5.5; N.M.z = -2; });
+      await pg.waitForFunction((y) => Math.abs(window.__night.foes.find((f) => f.kind === 'light').yaw - y) > 0.3, r.yaw, { timeout: 40000 });
+      await shot('mw_lamp_dark');
+      console.log('    Light put out after', n, 'gags; dark lamp in the scene and turning; next night beam', r.r0, '->', r.r1.toFixed(3));
+    });
+    await step('hints say act, not stand still (owner 22 Nov 23:41)', async () => {
+      const r = await pg.evaluate(() => ({ hint: document.getElementById('hint').textContent, src: Array.from(document.scripts).map((s) => s.textContent).join('\n') }));
+      if (!/they gnaw/.test(r.hint) || !/Laughs/.test(r.hint)) throw new Error('control hint: ' + r.hint);
+      const old = ['Lift your thumbs to stand still', 'Let go of everything: stand still', 'Hold still in'].filter((x) => r.src.indexOf(x) >= 0);
+      if (old.length) throw new Error('old stillness hints left in the page: ' + old.join(' | '));
+    });
     const lose = sc.n === 'land';
     await step(lose ? 'lost in the Mirror (land screen: loss branch), out' : 'others beaten, shards, out', async () => { await pg.evaluate((lose) => { const N = window.__night; if (lose) { N.endMW('lose'); return; } for (const f of N.foes) if (f.alive) { f.hp = 0; f.alive = false; f.sink = 0.6; } }, lose); await pg.waitForSelector(nAt === 'in' ? '#card_small' : '#card_nietzsche', { timeout: 12000 }); });
     if (nAt !== 'in') await step('Nietzsche line leaving the mirror, then shards kept', async () => { const t = await pg.textContent('#card_nietzsche .quote'); console.log('   out:', t.slice(0, 60)); await shot('nietzsche_out'); await pg.waitForSelector('#toKept', { state: 'visible', timeout: 8000 }); await pg.click('#toKept'); await pg.waitForSelector('#card_small', { timeout: 3000 }); });

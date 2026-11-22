@@ -92,6 +92,10 @@
   .card .parchment button.back { background: #3d332d; color: #f1e5c8; }
   #cracks { position: absolute; left: 0; top: 0; pointer-events: none; }
   #fog { position: fixed; inset: 0; background: radial-gradient(circle at 50% 60%, #c9d5d7, #9db5bb 45%, #44666e); opacity: 0; pointer-events: none; transition: opacity 1.4s linear; z-index: 15; display: flex; align-items: center; justify-content: center; color: #11272b; font: 600 26px Georgia, serif; }
+  #gnaw { position: fixed; inset: 0; pointer-events: none; opacity: 0; z-index: 14; background: radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(4, 10, 14, 0.88)); transition: opacity 0.2s linear; }
+  #gnaw.warn { opacity: 0.55; }
+  #gnaw.drain { opacity: 1; }
+  #mwHud.low { color: #e8735c; }
   #mwHud { position: absolute; right: 120px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
   #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
   /* session 18 batch 2: the act is skipped only by this button (owner 22 Nov 20:27); full screen where the browser allows it */
@@ -141,6 +145,7 @@
 <div id="pauseCard" class="card hidden"><h2>Paused</h2><table id="pauseList"></table><button id="resumeBtn">Resume</button></div>
 <button id="fsBtn" class="hidden" aria-label="Full screen">Full screen</button>
 <div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">FALL</button></div>
+<div id="gnaw"></div>
 <div id="fog">The Mirror</div>
 <div id="curtain"><div class="half hl"></div><div class="half hr"></div><div class="val"></div>
   <div class="plaque"><h1>The Clown and the Mirror</h1><div>Night 1 &middot; prototype</div><button class="btn" id="start" disabled>Loading...</button><small id="loadState"></small></div></div>
@@ -799,10 +804,16 @@ const N1 = Object.freeze({
   // still = no input for this long, s
   stillAfter: 0.25,
   // the insecurities (constructs): height m, hit points, shards dropped, start (x, z)
-  light: { h: 2.9, at: [0, -7.6], spotR: 1.25, follow: 1.2, drain: 6, beatSecs: 3, shards: 3 },
+  light: { h: 2.9, at: [0, -7.6], spotR: 1.25, follow: 1.2, drain: 6, gags: 3, stun: 0.6, shards: 3 },
   // panel B: each time he leaves the spot it grows (m, up to cap) and drains this much more on re-entry (share per escape); it flares tell s before it chases
   // F24 (owner 22 Nov 17:58 "still unable to avoid the light"): growth 0.25 -> 0.15 m, cap 2.5 -> 1.75 m; after chasing lightChase s it loses him for lightLose s and drifts to the middle
   lightGrow: 0.15, lightCap: 1.75, lightDrainGrow: 0.5, lightTell: 0.4, lightChase: 2.5, lightLose: 1.5,
+  // owner 22 Nov 23:41 and 23:59 (design/PANEL-action-22nov.md, P5 and add-on A4): light.gags gags landed on its lamp put the Light out for the night (light.stun s with no drain and no chase after each); the dark lamp stays, turns to follow him at lightDarkTurn deg/s and clicks every lightClick s; each night it was put out its beam starts lightWiden wider (share)
+  lightDarkTurn: 40, lightClick: 1.4, lightWiden: 0.15,
+  // the Light's look (owner 22 Nov 23:28: pale white): disc and cone colour, hard rim colour, rim width m, rim opacity
+  lightCol: '#DCE8EA', lightRimCol: '#F4FAFB', lightRimW: 0.06, lightRimOp: 0.7,
+  // owner 22 Nov 23:41 "standing still is not taking action and no action insecure will alway gnaw" (panel P4). Switch on; while an insecurity is up and he does nothing the edge darkens at once (#gnaw.warn in the style block) and a whisper starts; after warn s Laughs drain at drain per s, rising by climb per s each second up to max per s (#gnaw.drain); any move or gag clears it; vol = whisper level
+  gnaw: { on: true, warn: 1.0, drain: 2, climb: 1, max: 8, vol: 0.05 },
   // F24: a stick drag this share of its radius or more is full speed (a phone thumb rarely drags the whole radius); walk and Mirror World
   stickFull: 0.35,
   whisper: { h: 2.6, hp: 4, shards: 4, at: [-4, 2], speed: 0.8, keep: 2.5, tell: 0.4, strikeR: 1.0, strike: 8, near: 1.6, nearDrain: 1 },
@@ -810,6 +821,8 @@ const N1 = Object.freeze({
   shame: { h: 1.85, hp: 3, shards: 3, at: [0, 4], speed: 0.9, grab: 0.8, tell: 0.4, slow: 0.5, drain: 3, push: 2, stun: 1.0 },
   // a construct's first sighting tip, s on screen
   tipSecs: 4.5,
+  // owner 23 Nov 00:32 "player must know laugh is limited else they will spam": the cost shows on each gag button and in the hint; the Laughs count shows the spend for spendShow s and turns red at lowLaughs or under
+  spendShow: 0.7, lowLaughs: 20,
   // shop (prices are glass pieces on the ledge, never numbers)
   shop: [
     { id: 'sweep', title: 'Spotlight sweep', note: 'Lent tonight. Buy it and it is yours.', price: 6, move: 'slap' },
@@ -977,7 +990,7 @@ const el = {
   laughsN: document.getElementById('laughsN'), maskN: document.getElementById('maskN'), carry: document.getElementById('carry'),
   prep: document.getElementById('prep'), prepBtns: [],
   sit: document.getElementById('sit'), prompt: document.getElementById('prompt'), verb: document.getElementById('verb'), cracks: document.getElementById('cracks'),
-  mwHud: document.getElementById('mwHud'), mwTip: document.getElementById('mwTip'), pads: document.getElementById('pads'), fog: document.getElementById('fog'),
+  mwHud: document.getElementById('mwHud'), mwTip: document.getElementById('mwTip'), pads: document.getElementById('pads'), fog: document.getElementById('fog'), gnaw: document.getElementById('gnaw'),
   curtain: document.getElementById('curtain'), start: document.getElementById('start'), loadState: document.getElementById('loadState'), logo: document.getElementById('logo'),
   boardActs: document.getElementById('boardActs'), boardActBtns: [],
   padSlap: document.getElementById('padSlap'), padPie: document.getElementById('padPie'), padFall: document.getElementById('padFall'),
@@ -1668,7 +1681,7 @@ async function boot() {
 // board, act (the cue page in an overlay), crowd, walk back, room, mirror entry, Mirror World, Nietzsche line, shop, end card.
 const n1 = true;
 const NS = {
-  scene: 'logo', verbs: { fall: false, take: false, honk: false, trip: false }, pies: 0, act: '', actInfo: null, crowd: '',
+  scene: 'logo', verbs: { fall: false, take: false, honk: false, trip: false }, pies: 0, lightOuts: 0, act: '', actInfo: null, crowd: '',
   laughs: 0, mask: 0, shards: 0, bought: [], anim: null, audio: null, verbM: null, unit: 0.03, touch: false, mouse: new THREE.Vector2(),
   // where the Nietzsche line shows this run (from N1.nietzscheAt; checks may set it)
   nAt: N1.nietzscheAt,
@@ -3312,9 +3325,13 @@ function buildMW() {
   for (const o of [floor, curb, seatMesh, ghostMesh]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
   // the Light's beam and spot (one cone, one disc; additive, small)
   const cone = new THREE.ConeGeometry(1, 1, 28, 1, true); cone.translate(0, -0.5, 0);
-  pool.beam = new THREE.Mesh(cone, new THREE.MeshBasicMaterial({ color: '#DCE8EA', transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
-  pool.spot = new THREE.Mesh(new THREE.CircleGeometry(N1.light.spotR, 32), new THREE.MeshBasicMaterial({ color: '#DCE8EA', transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }));
+  pool.beam = new THREE.Mesh(cone, new THREE.MeshBasicMaterial({ color: N1.lightCol, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  pool.spot = new THREE.Mesh(new THREE.CircleGeometry(N1.light.spotR, 32), new THREE.MeshBasicMaterial({ color: N1.lightCol, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }));
   pool.spot.rotation.x = -Math.PI / 2;
+  // hard rim round the spot, and the glint left on the lens once the lamp is dark (A4)
+  pool.rim = new THREE.Mesh(new THREE.RingGeometry(N1.light.spotR - N1.lightRimW, N1.light.spotR, 48), new THREE.MeshBasicMaterial({ color: N1.lightRimCol, transparent: true, opacity: N1.lightRimOp, blending: THREE.AdditiveBlending, depthWrite: false }));
+  pool.rim.rotation.x = -Math.PI / 2;
+  pool.glint = new THREE.Mesh(new THREE.CircleGeometry(0.09, 16), new THREE.MeshBasicMaterial({ color: N1.lightRimCol, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   pool.ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 32), new THREE.MeshBasicMaterial({ color: '#C9604A', transparent: true, opacity: 0.8, depthWrite: false }));
   pool.ring.rotation.x = -Math.PI / 2;
   pool.splash = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.9, 24), new THREE.MeshBasicMaterial({ color: '#F4F4F2', transparent: true, opacity: 0.7, depthWrite: false }));
@@ -3395,11 +3412,13 @@ function buildUnworld() {
   NS.corMesh = panels;
   for (const o of [sky, glass, cfloor, panels, endWall, door]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
 }
+// A4: the Light's beam starts wider for each night it was put out
+function lightStartR() { return N1.light.spotR * (1 + N1.lightWiden * NS.lightOuts); }
 function addFoe(kind) {
   const cfg = N1[kind], root = cast[kind];
-  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, still: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: cfg.spotR || 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0 };
+  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: kind === 'light' ? lightStartR() : 0, hits: 0, stunT: 0, dark: false, clickT: 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0 };
   root.position.set(f.x, 0, f.z); root.rotation.set(0, 0, 0); root.scale.setScalar(1); root.visible = true;
-  if (kind === 'light') { f.spotX = 0; f.spotZ = -3; mwScene.add(pool.beam, pool.spot); pool.beam.material.opacity = 0.14; pool.spot.material.opacity = 0.32; }
+  if (kind === 'light') { f.spotX = 0; f.spotZ = -3; mwScene.remove(pool.glint); mwScene.add(pool.beam, pool.spot, pool.rim); pool.beam.material.opacity = 0.14; pool.spot.material.opacity = 0.32; pool.rim.material.opacity = N1.lightRimOp; }
   mwScene.add(root);
   foes.push(f);
 }
@@ -3408,6 +3427,7 @@ function enterMW() {
   S.room = false; S.mirror = null; S.mode = 'mw'; S.ended = false;
   setScene('mw');
   for (const f of foes) mwScene.remove(f.root);
+  mwScene.remove(pool.rim, pool.glint);
   foes.length = 0;
   mwScene.add(c.root, c.blob);
   c.root.rotation.set(0, Math.PI, 0);
@@ -3420,7 +3440,7 @@ function enterMW() {
   if (!N1.mwRoute) mwRingFoes();
   // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger
   const falls = NS.hurt ? NS.hurt.falls : 0;
-  NS.mw = { x: 0, z: 4.2, yaw: Math.PI, laughs: NS.laughs, shown: '', t: 0, still: 0, moving: false, fall: null, slapT: -1, cd: 0, pieOn: false, pieX: 0, pieZ: 0, pieDX: 0, pieDZ: 0, pieD: 0,
+  NS.mw = { gnawLvl: 0, gnawed: 0, gnawTold: false, spent: 0, spentT: 0, hudSp: 0, costTold: false, x: 0, z: 4.2, yaw: Math.PI, laughs: NS.laughs, shown: '', t: 0, still: 0, moving: false, fall: null, slapT: -1, cd: 0, pieOn: false, pieX: 0, pieZ: 0, pieDX: 0, pieDZ: 0, pieD: 0,
     splashT: -1, hurtT: 0, shards: 0, over: '', winT: 0, tip: '', tipT: 0, tips: [], fovNow: 40, lookX: 0, lookZ: 4, hudL: -1, hudP: -1, hudS: -1,
     space: 'ring', cuts: 0, cutting: false };
   // panel G: night 1 starts in the mirror corridor; the ring (and its constructs) comes after one cut at the door
@@ -3434,7 +3454,8 @@ function enterMW() {
   for (const s of pool.shards) { s.on = false; mwScene.remove(s.m); }
   el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch); el.hint.classList.toggle('padded', NS.touch);
   el.shotName.textContent = '';
-  el.hint.textContent = NS.touch ? 'Stick: move. SLAP, PIE, FALL. Lift your thumbs to stand still.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap. ${keyLabel('pie', true)}: pie. ${keyLabel('fall')}: pratfall. Let go of everything: stand still.`;
+  el.hint.textContent = NS.touch ? 'Stick: move. Gags cost Laughs. Stand still and they gnaw.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap -${N1.slap.cost}. ${keyLabel('pie', true)}: pie -${N1.pie.cost}. ${keyLabel('fall')}: pratfall -${N1.fall.cost}. Laughs are all you have. Stand still and they gnaw.`;
+  el.padSlap.textContent = `SLAP -${N1.slap.cost}`; el.padPie.textContent = `PIE -${N1.pie.cost}`; el.padFall.textContent = `FALL -${N1.fall.cost}`;
   setPrompt('');
   S.running = true; startLoop();
 }
@@ -3504,7 +3525,7 @@ function mwHurt(n) {
 function pratfall() {
   const M = NS.mw;
   if (!M || M.fall || M.over || M.laughs < N1.fall.cost) return;
-  mwDrain(N1.fall.cost);
+  mwDrain(N1.fall.cost); mwSpent(M, N1.fall.cost);
   const ix = input.tx || input.kx, iy = input.ty || input.ky, l = Math.hypot(ix, iy);
   const dx = l > 0.2 ? ix / l : Math.sin(M.yaw), dz = l > 0.2 ? -iy / l : Math.cos(M.yaw);
   M.fall = { t: 0, dx, dz };
@@ -3517,7 +3538,7 @@ function pratfall() {
 }
 function nearestFoe(x, z) {
   let best = null, bd = 1e9;
-  for (const f of foes) { if (!f.alive || f.kind === 'light') continue; const d = Math.hypot(f.x - x, f.z - z); if (d < bd) { bd = d; best = f; } }
+  for (const f of foes) { if (!f.alive) continue; const d = Math.hypot(f.x - x, f.z - z); if (d < bd) { bd = d; best = f; } }
   return best;
 }
 function gag(kind, mouse) {
@@ -3534,7 +3555,7 @@ function gag(kind, mouse) {
   } else { const f = nearestFoe(M.x, M.z); if (f) { ax = f.x; az = f.z; } }
   const dx = ax - M.x, dz = az - M.z, l = Math.hypot(dx, dz) || 1;
   M.yaw = Math.atan2(dx / l, dz / l);
-  mwDrain(g.cost); M.cd = g.cd; M.still = 0;
+  mwDrain(g.cost); mwSpent(M, g.cost); M.cd = g.cd; M.still = 0;
   const c = chars.clown;
   if (kind === 'slap') {
     if (c.slapClip) { const a = c.mixer.clipAction(c.slapClip); a.setLoop(THREE.LoopOnce, 1); a.reset().setEffectiveWeight(1).play(); (M.moving ? c.walk : c.idle).crossFadeTo(a, 0.06, false); M.slapT = c.slapClip.duration * 0.8; }
@@ -3550,9 +3571,11 @@ function gag(kind, mouse) {
     mwScene.add(pool.pie);
   }
 }
+// what a gag just cost shows beside the Laughs count; the first spend explains it once
+function mwSpent(M, n) { M.spent = n; M.spentT = N1.spendShow; if (!M.costTold) { M.costTold = true; tip(TIPS.cost); } }
 function tip(t) { const M = NS.mw; if (M.tips.indexOf(t) < 0 && M.tip !== t) M.tips.push(t); }
 function hitFoe(f, dmg, fromX, fromZ) {
-  if (f.kind === 'light') { tip(`Gags pass through the Light. Hold still in its beam for ${N1.light.beatSecs} s to put it out.`); return; }
+  if (f.kind === 'light') { hitLamp(f); return; }
   if (f.kind === 'stare') {
     const a = Math.atan2(fromX - f.x, fromZ - f.z), d = Math.abs(Math.atan2(Math.sin(a - f.yaw), Math.cos(a - f.yaw)));
     if (d < deg(f.cfg.cone)) { tip('It sees it coming. Hit the Stare from the side.'); f.pop = 0.12; return; }
@@ -3560,8 +3583,17 @@ function hitFoe(f, dmg, fromX, fromZ) {
   f.hp -= dmg; f.pop = 0.18;
   if (f.hp <= 0) killFoe(f);
 }
+// P5: a gag landed on the lamp: it flinches, the beam weakens and holds off for light.stun s; light.gags of them put it out
+function hitLamp(f) {
+  f.hits++; f.pop = 0.18; f.stunT = f.cfg.stun;
+  tone(1300 - f.hits * 250, 500, 0.12, 'square', 0.07);
+  if (f.hits >= f.cfg.gags) killFoe(f);
+}
 function killFoe(f) {
-  f.alive = false; f.sink = 0.6;
+  f.alive = false;
+  // A4: the Light is put out, never beaten: no sinking, the dark lamp stays with a glint on its lens
+  if (f.kind === 'light') { f.dark = true; f.clickT = 0; NS.lightOuts++; mwScene.remove(pool.beam, pool.spot, pool.rim); mwScene.add(pool.glint); }
+  else f.sink = 0.6;
   dropShards(f.kind === 'light' ? f.spotX : f.x, f.kind === 'light' ? f.spotZ : f.z, f.cfg.shards);
   tone(1600, 600, 0.35, 'triangle', 0.07);
 }
@@ -3576,8 +3608,10 @@ function dropShards(x, z, n) {
   }
 }
 const TIPS = {
-  // owner 22 Nov 23:00: "stand still" read as a way to dodge the drain; the tip now says stillness in the beam puts the Light out
-  light: `The Light drains Laughs while you move in its beam. Hold still in it for ${N1.light.beatSecs} s and it goes out.`,
+  // owner 22 Nov 23:41: acting, not standing still; the Light is put out by gags on its lamp
+  light: `The Light drains Laughs while you move in its beam. Go to its lamp and land ${N1.light.gags} gags on it to put it out.`,
+  gnaw: 'Do nothing and they gnaw at your Laughs. Move or throw a gag.',
+  cost: 'Every gag spends Laughs. At 0 Laughs you wake at the mirror.',
   whisper: "The Whisper copies your pratfalls and strikes where you land. Step, don't fall.",
   stare: 'The Stare: in its gaze you are judged. Hit it from the side.',
   shame: 'Shame clings and slows you. A pratfall shakes it off.',
@@ -3588,8 +3622,10 @@ function updateMW(dt) {
   mwU.uTime.value += dt;
   mwClown(M, dt);
   mwPie(M, dt);
-  if (M.space === 'ring') { const alive = mwFoes(M, dt); mwShards(M, dt, alive); }
-  else { mwCorridor(M, dt); if (foes.length) { mwFoes(M, dt); mwShards(M, dt, 1); } }
+  let alive = 0;
+  if (M.space === 'ring') { alive = mwFoes(M, dt); mwShards(M, dt, alive); }
+  else { mwCorridor(M, dt); if (foes.length) { alive = mwFoes(M, dt); mwShards(M, dt, 1); } }
+  mwGnaw(M, dt, alive);
   mwCamera(M, dt);
   mwHud(M, dt);
 }
@@ -3645,7 +3681,7 @@ function mwPie(M, dt) {
     M.pieX += M.pieDX * st; M.pieZ += M.pieDZ * st; M.pieD += st;
     pool.pie.position.set(M.pieX, 1.1 - M.pieD * 0.06, M.pieZ);
     let hit = M.pieD > N1.pie.range;
-    for (const f of foes) if (f.alive && f.kind !== 'light' && Math.hypot(f.x - M.pieX, f.z - M.pieZ) < N1.pie.hitR) { hitFoe(f, N1.pie.dmg, M.x, M.z); hit = true; }
+    for (const f of foes) if (f.alive && Math.hypot(f.x - M.pieX, f.z - M.pieZ) < N1.pie.hitR) { hitFoe(f, N1.pie.dmg, M.x, M.z); hit = true; }
     if (hit) { M.pieOn = false; mwScene.remove(pool.pie); M.splashT = 0.35; pool.splash.position.set(M.pieX, 0.03, M.pieZ); mwScene.add(pool.splash); tone(300, 120, 0.12, 'triangle', 0.08); }
   }
   if (M.splashT > 0) { M.splashT -= dt; pool.splash.scale.setScalar(1 + (0.35 - M.splashT) * 2); if (M.splashT <= 0) mwScene.remove(pool.splash); }
@@ -3656,7 +3692,7 @@ function mwSink(f, dt) {
   if (f.kind === 'light') { pool.beam.material.opacity = 0.14 * Math.max(0, f.sink) / 0.6; pool.spot.material.opacity = 0.32 * Math.max(0, f.sink) / 0.6; }
   if (f.sink > 0) return;
   mwScene.remove(f.root);
-  if (f.kind === 'light') mwScene.remove(pool.beam, pool.spot);
+  if (f.kind === 'light') mwScene.remove(pool.beam, pool.spot, pool.rim);
 }
 function mwLight(M, f, dt) {
   const sx = M.x - f.spotX, sz = M.z - f.spotZ, sd = Math.hypot(sx, sz);
@@ -3664,7 +3700,8 @@ function mwLight(M, f, dt) {
   const out = sd >= f.r;
   if (out && f.inPrev) { f.leaves++; f.r = Math.min(N1.lightCap, f.r + N1.lightGrow); f.tellT = N1.lightTell; f.leftT = M.t; f.moveT = -1; }
   f.inPrev = !out;
-  if (f.tellT > 0) f.tellT -= dt;
+  if (f.stunT > 0) f.stunT -= dt;
+  else if (f.tellT > 0) f.tellT -= dt;
   else if (f.loseT > 0) {
     // F24: it has lost him: it drifts back toward the middle, then flares and looks again
     f.loseT -= dt;
@@ -3679,10 +3716,10 @@ function mwLight(M, f, dt) {
   const inSpot = Math.hypot(M.x - f.spotX, M.z - f.spotZ) < f.r;
   // time inside the spot while moving (game time; read by the real-play check)
   if (inSpot && M.isMoving) f.inT += dt;
-  if (inSpot && M.isStill) { f.still += dt; if (f.still >= f.cfg.beatSecs) killFoe(f); }
-  else { f.still = Math.max(0, f.still - dt * 0.5); if (inSpot && M.isMoving) mwDrain(f.cfg.drain * (1 + N1.lightDrainGrow * f.leaves) * dt); }
-  // beam from the lens to the spot; it dims as he holds still
-  f.root.getWorldPosition(mwTmp.v); mwTmp.v.y += 56 * NS.unit; mwTmp.v.z += 12.6 * NS.unit;
+  if (inSpot && M.isMoving && f.stunT <= 0) mwDrain(f.cfg.drain * (1 + N1.lightDrainGrow * f.leaves) * dt);
+  // the lamp turns to its spot; beam from the lens to the spot; it weakens with each gag landed on the lamp
+  f.yaw = Math.atan2(f.spotX - f.x, f.spotZ - f.z);
+  lampLens(f, mwTmp.v);
   mwTmp.v2.set(f.spotX, 0, f.spotZ).sub(mwTmp.v);
   const len = mwTmp.v2.length();
   pool.beam.position.copy(mwTmp.v); pool.beam.quaternion.setFromUnitVectors(mwTmp.up, mwTmp.v2.divideScalar(len));
@@ -3690,8 +3727,36 @@ function mwLight(M, f, dt) {
   pool.spot.position.set(f.spotX, 0.025, f.spotZ);
   const sk = f.r / f.cfg.spotR;
   pool.spot.scale.set(sk, sk, 1);
-  const dim = (1 - 0.75 * f.still / f.cfg.beatSecs) * (f.tellT > 0 ? 2 : 1);
-  pool.beam.material.opacity = 0.14 * dim; pool.spot.material.opacity = 0.32 * dim;
+  pool.rim.position.set(f.spotX, 0.03, f.spotZ); pool.rim.scale.set(sk, sk, 1);
+  const dim = (1 - 0.2 * f.hits) * (f.stunT > 0 ? 0.5 : f.tellT > 0 ? 2 : 1);
+  pool.beam.material.opacity = 0.14 * dim; pool.spot.material.opacity = 0.32 * dim; pool.rim.material.opacity = N1.lightRimOp * Math.min(1, dim);
+}
+// the lamp's lens in the world (the head faces f.yaw)
+function lampLens(f, v) { f.root.getWorldPosition(v); v.y += 56 * NS.unit; v.x += Math.sin(f.yaw) * 12.6 * NS.unit; v.z += Math.cos(f.yaw) * 12.6 * NS.unit; return v; }
+// A4: the dark lamp keeps turning to follow him, with a click; a glint stays on its lens
+function mwLampDark(M, f, dt) {
+  const want = Math.atan2(M.x - f.x, M.z - f.z), diff = Math.atan2(Math.sin(want - f.yaw), Math.cos(want - f.yaw));
+  f.yaw += Math.sign(diff) * Math.min(Math.abs(diff), deg(N1.lightDarkTurn) * dt);
+  f.root.rotation.y = f.yaw;
+  if (Math.abs(diff) > 0.02) { f.clickT -= dt; if (f.clickT <= 0) { f.clickT = N1.lightClick; tone(2400, 1800, 0.03, 'square', 0.04); } }
+  pool.glint.position.copy(lampLens(f, mwTmp.v));
+}
+// P4: no action, and the insecurities gnaw. Level 0 none, 1 warning (edge darkens, whisper), 2 draining; DOM and sound change only with the level
+function mwGnaw(M, dt, alive) {
+  const on = N1.gnaw.on && alive > 0 && !M.over && !M.cutting && !M.fall && M.isStill, over = on ? M.still - N1.gnaw.warn : -1, lvl = !on ? 0 : over < 0 ? 1 : 2;
+  if (lvl !== M.gnawLvl) { M.gnawLvl = lvl; el.gnaw.className = lvl === 1 ? 'warn' : lvl === 2 ? 'drain' : ''; gnawSound(lvl); if (lvl === 2 && !M.gnawTold) { M.gnawTold = true; tip(TIPS.gnaw); } }
+  if (lvl === 2) { const n = Math.min(N1.gnaw.max, N1.gnaw.drain + N1.gnaw.climb * over) * dt; M.gnawed += n; mwDrain(n); }
+}
+// the gnaw's whisper: the breath buffer looped through a band-pass (1-4 kHz), graph built once on first use; only its gain changes after that
+function gnawSound(lvl) {
+  const a = audio(); if (!a) return;
+  if (!NS.gnawG) {
+    const s = a.createBufferSource(), bp = a.createBiquadFilter();
+    NS.gnawG = a.createGain(); NS.gnawG.gain.value = 0;
+    s.buffer = actObj.breath; s.loop = true; bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 0.8;
+    s.connect(bp).connect(NS.gnawG).connect(a.destination); s.start();
+  }
+  NS.gnawG.gain.setTargetAtTime(lvl ? N1.gnaw.vol * lvl / N1.breathVol : 0, a.currentTime, 0.08);
 }
 function mwWhisper(M, f, dt, dx, dz, d) {
   f.yaw = Math.atan2(dx, dz);
@@ -3726,7 +3791,7 @@ function mwFoes(M, dt) {
   let alive = 0;
   for (let fi = 0; fi < foes.length; fi++) {
     const f = foes[fi];
-    if (!f.alive) { if (f.sink > 0) mwSink(f, dt); continue; }
+    if (!f.alive) { if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt); continue; }
     alive++;
     if (!f.seen) { f.seen = true; tip(TIPS[f.kind]); }
     const dx = M.x - f.x, dz = M.z - f.z, d = Math.hypot(dx, dz) || 0.001;
@@ -3737,7 +3802,7 @@ function mwFoes(M, dt) {
     if (f.pop > 0) f.pop -= dt;
     f.root.scale.setScalar(1 + Math.max(0, f.pop) * 0.9);
     f.root.position.set(f.x, 0, f.z);
-    if (f.kind !== 'light') f.root.rotation.y = f.yaw;
+    f.root.rotation.y = f.yaw;
   }
   return alive;
 }
@@ -3768,10 +3833,12 @@ function mwCamera(M, dt) {
 }
 // HUD and tips: DOM written on change only
 function mwHud(M, dt) {
-  const hl = Math.ceil(M.laughs);
-  if (hl !== M.hudL || NS.pies !== M.hudP || M.shards !== M.hudS) {
-    M.hudL = hl; M.hudP = NS.pies; M.hudS = M.shards;
-    el.mwHud.textContent = `Laughs ${hl} · Pies ${NS.pies} · Shards ${M.shards}`;
+  if (M.spentT > 0) M.spentT -= dt;
+  const hl = Math.ceil(M.laughs), sp = M.spentT > 0 ? M.spent : 0;
+  if (hl !== M.hudL || NS.pies !== M.hudP || M.shards !== M.hudS || sp !== M.hudSp) {
+    M.hudL = hl; M.hudP = NS.pies; M.hudS = M.shards; M.hudSp = sp;
+    el.mwHud.textContent = `Laughs ${hl}${sp ? ' (-' + sp + ')' : ''} · Pies ${NS.pies} · Shards ${M.shards}`;
+    el.mwHud.classList.toggle('low', hl <= N1.lowLaughs);
     el.padPie.disabled = NS.pies <= 0;
   }
   if (M.tipT > 0) M.tipT -= dt;
@@ -3784,7 +3851,8 @@ function endMW(result) {
   NS.result = result;
   const kept = result === 'win' ? M.shards : Math.floor(M.shards / 2);
   NS.shards += kept; NS.mwKept = kept; NS.mwTime = M.t; NS.mwLaughs = Math.ceil(M.laughs);
-  NS.beaten = foes.filter((f) => !f.alive).map((f) => f.kind); NS.met = foes.map((f) => f.kind);
+  NS.beaten = foes.filter((f) => !f.alive && !f.dark).map((f) => f.kind); NS.putOut = foes.some((f) => f.dark); NS.met = foes.map((f) => f.kind);
+  M.gnawLvl = 0; el.gnaw.className = ''; gnawSound(0);
   setTimeout(() => {
     el.fog.style.opacity = 1;
     setTimeout(() => {
@@ -3925,14 +3993,14 @@ function endCard() {
     Corridor: jumped the cable ${v.jump ? 'yes' : 'no'}, took the pie ${v.take ? 'yes' : 'no'}, honked the horn ${v.honk ? 'yes' : 'no'}, tripped for the child ${v.trip ? 'yes' : 'no'}<br>
     Act: ${NS.act === 'fall' ? 'The deliberate fall' : 'Spotlight sweep (lent)'}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
     Crowd: ${NS.crowd}<br>
-    Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
+    Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}${NS.putOut ? '; the Light put out' : ''}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
     Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>${N1.endBrief ? '</details>' : ''}
     <button id="again1">Play night 1 again</button>`);
   d.querySelector('#again1').addEventListener('click', () => location.reload());
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });
