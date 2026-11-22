@@ -59,8 +59,8 @@ jobs:
           python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt || rc=1
           node check-static.cjs step0/night1.html | tee -a step0.txt || rc=1
           node step0/smoke_night1.cjs /tmp/night1 | tee -a step0.txt || rc=1
-          # each mutation must make its own step FAIL (fix 2 off, fix 5 off, old end card heading, fall sound back to the cough, sideways lean, small win off, shop panel over the glass)
-          for m in hurt:'fix 2' learn:'fix 5' endtext:'shame of living' fallsound:'item 1' lean:'item 8' smallwin:'small win' shoplow:'fix 5'; do
+          # each mutation must make its own step FAIL (H1 climb off, H2 old label, H8 tones, H1 Whisper not fed, fix 2 off, fix 5 off, old end card heading, fall sound back to the cough, sideways lean, small win off, shop panel over the glass)
+          for m in hurt:'fix 2' learn:'fix 5' endtext:'shame of living' fallsound:'item 1' lean:'item 8' smallwin:'small win' shoplow:'fix 5' climb:'climb' triplabel:'H2' laughreal:'small win, win' whisperfeed:'Whisper is fed'; do
             k=${m%%:*}; want=${m#*:}
             if MUTATE=$k ONLY=desk node step0/smoke_night1.cjs /tmp/night1m > m_$k.txt 2>&1; then echo "FAIL night1 mutation $k: not caught (smoke passed)" | tee -a step0.txt; rc=1
             elif grep -q "FAIL .*$want" m_$k.txt; then echo "PASS night1 mutation $k: caught ($(grep RESULT m_$k.txt))" | tee -a step0.txt

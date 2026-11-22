@@ -374,6 +374,7 @@ void main() {
   #include <fog_fragment>
 }
 </script>
+<script src="./laugh.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "./lib/build/three.module.js",
@@ -545,7 +546,7 @@ const N1 = Object.freeze({
     { id: 'rigger', title: 'Rigger', at: [-0.6, 7.6], yaw: 90, line: 'Cable going down. Hop it!', verb: 'jump', verbText: 'Jump the cable', anchor: [0.15, 7.95], done: 'Neat.' },
     { id: 'props_girl', title: 'Props', at: [1.5, 9.3], yaw: -120, line: "Your pie. Don't eat it this time.", verb: 'take', verbText: 'Take the pie', done: 'Break a leg.' },
     { id: 'strongman', title: 'Strongman', at: [1.3, 12.7], yaw: -150, line: 'For luck! Give it a honk.', verb: 'honk', verbText: 'Honk the horn', done: 'HA! Now go get them.' },
-    { id: 'child', title: '', at: [-2.25, 17.0], yaw: 90, line: '', verb: 'trip', verbText: 'Trip (on purpose)', done: '...on purpose.' },
+    { id: 'child', title: '', at: [-2.25, 17.0], yaw: 90, line: '', verb: 'trip', verbText: 'Trip', done: '...on purpose.' },
   ],
   // crew collision radius, metres; verb reach from the member (or its anchor), metres; how long the child's words stay, s
   crewR: 0.35, verbDist: 1.5, saidSecs: 3,
@@ -610,6 +611,13 @@ const N1 = Object.freeze({
   hurtPie: 25,
   // Laughs when the front rows saw him trip for the child at the ring entrance
   hurtTrip: 15,
+  // ----- harsh panel H1 (owner 22 Nov: "solve"): the higher he climbs, the harder he falls -----
+  // a fall (and the pie in his face) pays in full only after this many Perfect beats in the act before it (a Good counts half); falling at once pays nothing extra
+  climbBeats: 3,
+  // the second fall in one act pays this share of a full fall (the house tires of the same fall)
+  fallRepeat: 0.5,
+  // each fall feeds the Whisper (the one who sees): it comes to the Mirror even after the sweep act, with these extra hit points and this speed gain per fall
+  whisperFeed: { hp: 2, speed: 0.15 },
   // ----- theme panel fix 5 (owner agreed 22 Nov): the shop turns on him -----
   // switch: the shop is held at the mirror and the reflection performs each bought move back at him (false = the full-screen shop card)
   performerLearns: true,
@@ -623,6 +631,8 @@ const N1 = Object.freeze({
   learnGrin: 'smile', learnGrinPaint: 1,
   // a short laugh (glass in the shop, offstage after the wipe): notes, gap s, first and last pitch Hz, note length s, volume
   laugh: { n: 4, gap: 0.13, f0: 340, f1: 250, dur: 0.1, vol: 0.09 },
+  // harsh panel H8 (owner 22 Nov: "solve"): laughs are real voices rendered once in code (laugh.js, LAUGH_CONFIG); false = the four tones above
+  laughReal: true,
   // panel item 4: small line under the end card list of purchases
   endLearned: 'The Performer learned each one.',
   // ----- small win at the end of the Mirror World (owner pitch 22 Nov, panel 11 of 12: design/PANEL-small-win.md) -----
@@ -1426,6 +1436,8 @@ async function n1Load() {
   scene.add(NS.cable, NS.tape);
   buildReflection();
   buildMW();
+  // H8: the laughs are rendered here, under the loading card (first use is never a render)
+  NS.laughBuf = await window.makeLaughs();
 }
 function n1Warm() {
   const c = chars.clown;
@@ -1450,7 +1462,13 @@ function tone(f0, f1, dur, type, vol, delay) {
   o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
 }
 // a short laugh on the audio clock (N1.laugh), starting after delay s
-function laugh(delay) {
+function laugh(delay, kind) {
+  NS.lastLaugh = N1.laughReal ? kind || 'one' : 'tones';
+  if (N1.laughReal) {
+    const a = audio(); if (!a) return;
+    const s = a.createBufferSource(); s.buffer = NS.laughBuf[kind || 'one']; s.connect(a.destination); s.start(a.currentTime + (delay || 0));
+    return;
+  }
   const L = N1.laugh;
   for (let i = 0; i < L.n; i++) { const f = L.f0 + (L.f1 - L.f0) * i / Math.max(1, L.n - 1); tone(f, f * 0.85, L.dur, 'triangle', L.vol, (delay || 0) + i * L.gap); }
 }
@@ -1531,16 +1549,30 @@ function startAct(id) {
     // panel item 1: tell the cue page that a fall gets the big laugh tonight
     if (!NS.cue.contentWindow.__cueOpts) NS.cue.contentWindow.__cueOpts = { hurt: N1.hurtPays };
     const i = g.info();
-    if (i.scene === 'results' && !NS.actInfo) { NS.actInfo = i; clearInterval(NS.poll); setTimeout(crowdCard, 900); }
+    if (i.scene === 'results' && !NS.actInfo) { NS.actInfo = i; NS.actBeats = g.beats(); clearInterval(NS.poll); setTimeout(crowdCard, 900); }
   }, 250);
 }
 // fix 2: what hurt him pays more than a clean beat (each fall, the pie in his own face, the trip the front rows saw)
+// H1: each fall pays by how high he had climbed before it (Perfect 1, Good 0.5, up to N1.climbBeats); the second fall pays N1.fallRepeat of that
+function fallClimbs(i) {
+  const c = [], bs = NS.actBeats;
+  if (bs && bs.length) {
+    let sc = 0;
+    const order = bs.filter((b) => b.result && b.result !== 'cut').sort((a, b) => a.fit - b.fit);
+    for (const b of order) { if (b.result === 'miss') c.push(Math.min(1, sc / N1.climbBeats)); else sc += b.result === 'perfect' ? 1 : b.result === 'good' ? 0.5 : 0; }
+  } else for (let k = 0; k < i.misses; k++) c.push(Math.min(1, (i.perfects + 0.5 * i.goods) / N1.climbBeats));
+  return c;
+}
 function hurtLaughs(i) {
-  const h = { total: 0, rows: ['the act ' + i.actLaughs], best: '', bestN: 0, pie: false };
+  const h = { total: 0, rows: ['the act ' + i.actLaughs], best: '', bestN: 0, pie: false, falls: 0 };
   if (!N1.hurtPays) return h;
-  const add = (what, n) => { h.total += n; h.rows.push(what + ' ' + n); if (n > h.bestN) { h.bestN = n; h.best = what; } };
-  if (i.misses > 0) add(i.misses > 1 ? 'the falls' : 'the fall', i.misses * N1.hurtFall);
-  if (i.misses > 0 && NS.pies > 0) { NS.pies--; h.pie = true; add('the pie in his face', N1.hurtPie); }
+  const add = (what, n) => { if (n <= 0) return; h.total += n; h.rows.push(what + ' ' + n); if (n > h.bestN) { h.bestN = n; h.best = what; } };
+  const climbs = fallClimbs(i);
+  h.falls = climbs.length;
+  let pay = 0;
+  climbs.forEach((k, j) => { pay += Math.round(N1.hurtFall * k * (j ? N1.fallRepeat : 1)); });
+  add(climbs.length > 1 ? 'the falls' : 'the fall', pay);
+  if (climbs.length && NS.pies > 0) { NS.pies--; h.pie = true; add('the pie in his face', Math.round(N1.hurtPie * climbs[0])); }
   if (NS.verbs.trip) add('the trip', N1.hurtTrip);
   return h;
 }
@@ -1937,7 +1969,9 @@ function enterMW() {
   setFace(c, 'sad');
   // night 1: the Light always; the act's own monster; results add the Stare (a Perfect) and Shame (a miss)
   addFoe('light');
-  if (NS.act === 'fall') addFoe('whisper');
+  // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger
+  const falls = NS.hurt ? NS.hurt.falls : 0;
+  if (NS.act === 'fall' || falls > 0) { addFoe('whisper'); const w = foes[foes.length - 1]; w.hp += falls * N1.whisperFeed.hp; w.speedMul = 1 + falls * N1.whisperFeed.speed; }
   if (NS.actInfo && NS.actInfo.perfects > 0) addFoe('stare');
   if (NS.actInfo && NS.actInfo.misses > 0) addFoe('shame');
   NS.mw = { x: 0, z: 4.2, yaw: Math.PI, laughs: NS.laughs, shown: '', t: 0, still: 0, moving: false, fall: null, slapT: -1, cd: 0, pieOn: false, pieX: 0, pieZ: 0, pieDX: 0, pieDZ: 0, pieD: 0,
@@ -2126,7 +2160,7 @@ function mwLight(M, f, dt) {
 function mwWhisper(M, f, dt, dx, dz, d) {
   f.yaw = Math.atan2(dx, dz);
   if (f.tell <= 0) {
-    const st = f.cfg.speed * dt * (d > f.cfg.keep ? 1 : -0.4);
+    const st = f.cfg.speed * (f.speedMul || 1) * dt * (d > f.cfg.keep ? 1 : -0.4);
     f.x += dx / d * st; f.z += dz / d * st;
     if (d < f.cfg.near) mwDrain(f.cfg.nearDrain * dt);
     return;
@@ -2351,7 +2385,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

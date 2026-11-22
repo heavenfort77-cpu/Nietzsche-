@@ -17,6 +17,10 @@ const MUTS = {
   fallsound: ['night1.html', 'if (!NS.cue.contentWindow.__cueOpts) NS.cue.contentWindow.__cueOpts = { hurt: N1.hurtPays };', ''],
   lean: ['model_layer.js', 'parts.root.rotation.x = -pose.tilt * CFG.leanBack;', 'parts.root.rotation.z = -pose.tilt;'],
   smallwin: ['night1.html', 'smallWin: true,', 'smallWin: false,'],
+  climb: ['night1.html', "if (b.result === 'miss') c.push(Math.min(1, sc / N1.climbBeats));", "if (b.result === 'miss') c.push(1);"],
+  triplabel: ['night1.html', "verbText: 'Trip',", "verbText: 'Trip (on purpose)',"],
+  laughreal: ['night1.html', 'laughReal: true,', 'laughReal: false,'],
+  whisperfeed: ['night1.html', 'w.hp += falls * N1.whisperFeed.hp;', ''],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
@@ -63,6 +67,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await step('jump the cable', () => verb(0.15, 7.4, 'jump'));
     await step('take the pie', () => verb(1.0, 9.0, 'take'));
     await step('honk the horn', () => verb(0.5, 12.2, 'honk'));
+    // harsh panel H2: the button must not tell the player it is on purpose before the child does
+    await step('trip button does not say "on purpose" (H2)', async () => { await tp(-1.3, 17.0); await sleep(500); const t = await pg.textContent('#verb'); if (!/^Trip\b/.test(t) || /purpose/i.test(t)) throw new Error('verb reads "' + t + '"'); });
     await step('trip for the child', async () => { await verb(-1.3, 17.0, 'trip'); await pg.waitForFunction(() => /on purpose/.test(window.__night.crew[4].lab.textContent), null, { timeout: 8000 }); await shot('child'); });
     await step('ring edge: board', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForSelector('#card_board', { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); });
     await step('board: act page opens', async () => { await pg.click('[data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
@@ -101,11 +107,31 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (!/laughed hardest at/.test(r.head)) throw new Error('crowd card does not say it: "' + r.head + '"');
       console.log('   ', r.head, 'laughs', r.laughs);
     });
+    // harsh panel H1: a fall pays by how high he had climbed (falling at once pays nothing extra), the second fall pays fallRepeat, the pie scales with the first
+    await step('falls pay by the climb before them (H1)', async () => {
+      const r = await pg.evaluate(() => {
+        const N = window.__night, n = N.N1, NS = N.NS, keep = { pies: NS.pies, trip: NS.verbs.trip, beats: NS.actBeats };
+        NS.verbs.trip = false;
+        const B = (list) => list.map((res, k) => ({ fit: 1000 + k * 600, result: res }));
+        const run = (list, info) => { NS.pies = 3; NS.actBeats = B(list); return N.hurtLaughs(info); };
+        const early = run(['miss', 'miss'], { actLaughs: 15, misses: 2, perfects: 0, goods: 0 });
+        const late = run(['perfect', 'perfect', 'perfect', 'perfect', 'perfect', 'perfect', 'perfect', 'miss', 'miss'], { actLaughs: 70, misses: 2, perfects: 7, goods: 0 });
+        const clean = run(Array(9).fill('perfect'), { actLaughs: 90, misses: 0, perfects: 9, goods: 0 });
+        Object.assign(NS, { pies: keep.pies, actBeats: keep.beats }); NS.verbs.trip = keep.trip;
+        return { early: early.total, late: late.total, lateFalls: late.falls, clean: clean.total, want: Math.round(n.hurtFall) + Math.round(n.hurtFall * n.fallRepeat) + n.hurtPie };
+      });
+      if (r.early !== 0) throw new Error('falling at once still pays ' + r.early);
+      if (r.late !== r.want || r.lateFalls !== 2) throw new Error(`clean then two falls pays ${r.late}, want ${r.want}`);
+      if (r.clean !== 0) throw new Error('a clean act pays hurt ' + r.clean);
+      console.log('    hurt pay: fall at once', r.early, '| 7 Perfect then 2 falls', r.late, '| clean', r.clean);
+    });
     await step('walk back to the room', async () => { await pg.click('#walkBack'); await sleep(800); await tp(0, 2.8); await pg.evaluate(() => { window.__night.input.ty = -1; }); await pg.waitForFunction(() => window.__night.S.room, null, { timeout: 10000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); await sleep(800); });
     await step('turn to the mirror wall, sit button', async () => { for (let i = 0; i < 4; i++) { const v = await pg.evaluate(() => window.__night.S.roomView); if (v === 'mirror') break; await pg.click('#roomR'); await sleep(500); } await pg.waitForSelector('#sit:not(.hidden)', { timeout: 3000 }); });
     await step('mirror entry: sit, reflection late, cracks', async () => { await pg.click('#sit'); await sleep(700); await pg.mouse.click(sc.w / 2, sc.h / 2); await sleep(420); await shot('entry'); await sleep(900); const n = await pg.evaluate(() => window.__night.NS.cracks); if (n < 1) throw new Error('no crack'); });
     if (nAt === 'in' || nAt === 'both') await step('Nietzsche line at the mirror before he goes in', async () => { await pg.waitForSelector('#card_nietzscheIn', { timeout: 10000 }); const t = await pg.textContent('#card_nietzscheIn .quote'); console.log('   in:', t.slice(0, 60)); await shot('nietzsche_in'); await pg.click('#goIn'); });
     await step('fog into the Mirror World', async () => { await pg.waitForFunction(() => window.__night.S.mode === 'mw', null, { timeout: 8000 }); await sleep(1500); await shot('mw'); const k = await pg.evaluate(() => window.__night.foes.map((f) => f.kind).join(',')); console.log('   foes', k); });
+    // H1: each fall in the act feeds the Whisper (stand-in act: 1 miss)
+    await step('the Whisper is fed by each fall (H1)', async () => { const r = await pg.evaluate(() => { const N = window.__night, w = N.foes.find((f) => f.kind === 'whisper'); return w ? { hp: w.hp, base: N.N1.whisper.hp, per: N.N1.whisperFeed.hp, falls: N.NS.hurt.falls, mul: w.speedMul } : null; }); if (!r) throw new Error('no Whisper after a fall'); if (r.hp !== r.base + r.falls * r.per || !(r.mul > 1)) throw new Error('Whisper not fed ' + JSON.stringify(r)); });
     await step('gags: slap, pie, pratfall', async () => { await pg.keyboard.press('KeyJ'); await sleep(600); await pg.keyboard.press('KeyK'); await sleep(700); await pg.keyboard.press('Space'); await sleep(900); const M = await pg.evaluate(() => { const M = window.__night.M; return { l: M.laughs, p: window.__night.NS.pies }; }); console.log('   laughs', M.l.toFixed(1), 'pies', M.p); });
     await step('stand still in the beam beats the Light', async () => { await pg.evaluate(() => { const N = window.__night, L = N.foes[0]; N.M.x = L.spotX; N.M.z = L.spotZ; }); await pg.waitForFunction(() => !window.__night.foes[0].alive, null, { timeout: 20000 }); });
     const lose = sc.n === 'land';
@@ -121,6 +147,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         const b = await pg.evaluate(() => { const N = window.__night; return { mask: N.NS.mask, paint: N.chars.clown.face.material.uniforms.uPaintAmt.value, done: N.NS.smallDone, want: N.N1.winDone }; });
         if (b.mask !== Math.max(a.start, a.mask - 1)) throw new Error(`Mask ${a.mask} -> ${b.mask}, start ${a.start}`);
         if (!(b.paint < a.paint - 0.01) || b.done !== b.want) throw new Error('paint not wiped ' + JSON.stringify(b));
+        // harsh panel H8: the laugh after the wipe is a rendered voice, not the four tones
+        const L = await pg.evaluate(() => { const N = window.__night, buf = N.NS.laughBuf, d = buf && buf.one.getChannelData(0); let pk = 0; if (d) for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i])); return { last: N.NS.lastLaugh, secs: buf ? buf.one.duration : 0, crowd: buf ? buf.crowd.duration : 0, pk }; });
+        if (L.last !== 'one' || !(L.secs > 0.5) || !(L.crowd > 1) || !(L.pk > 0.05)) throw new Error('laugh not the rendered voice ' + JSON.stringify(L));
       } else {
         await pg.waitForFunction(() => window.__night.NS.sit <= 0, null, { timeout: 30000 });
         const b = await pg.evaluate(() => { const N = window.__night; return { mask: N.NS.mask, laughed: N.NS.laughed, done: N.NS.smallDone, want: N.N1.loseDone }; });
