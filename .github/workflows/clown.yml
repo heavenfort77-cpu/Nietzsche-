@@ -32,8 +32,8 @@ jobs:
   step0:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]')
     runs-on: ubuntu-latest
-    # smoke_walk.cjs took 9.5 min locally with the walk-back and room cases (session 12), 3 min before
-    timeout-minutes: 40
+    # smoke_walk.cjs took 9.5 min locally with the walk-back and room cases (session 12), 3 min before; smoke_night1.cjs plus 3 desktop mutations added session 15
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,6 +56,15 @@ jobs:
           node check-static.cjs step0/walk.html | tee -a step0.txt || rc=1
           node step0/smoke_walk.cjs | tee -a step0.txt || rc=1
           python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt || rc=1
+          node check-static.cjs step0/night1.html | tee -a step0.txt || rc=1
+          node step0/smoke_night1.cjs /tmp/night1 | tee -a step0.txt || rc=1
+          # each mutation must make its own step FAIL (panel fix 2 off, fix 5 off, end card heading back to the old text)
+          for m in hurt:'fix 2' learn:'fix 5' endtext:'shame of living'; do
+            k=${m%%:*}; want=${m#*:}
+            if MUTATE=$k ONLY=desk node step0/smoke_night1.cjs /tmp/night1m > m_$k.txt 2>&1; then echo "FAIL night1 mutation $k: not caught (smoke passed)" | tee -a step0.txt; rc=1
+            elif grep -q "FAIL .*$want" m_$k.txt; then echo "PASS night1 mutation $k: caught ($(grep RESULT m_$k.txt))" | tee -a step0.txt
+            else echo "FAIL night1 mutation $k: failed on another step" | tee -a step0.txt; grep 'FAIL\|RESULT' m_$k.txt | tee -a step0.txt; rc=1; fi
+          done
           ! grep -q '^FAIL\|RESULT FAIL' step0.txt && [ "$rc" = 0 ]
   build:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]') || startsWith(github.event.head_commit.message, '[gpu]')

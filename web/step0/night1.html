@@ -33,6 +33,9 @@
   /* ===== night 1 layer ===== */
   .card { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; box-sizing: border-box; background: #0c0809ee; z-index: 20; }
   .card.see { background: linear-gradient(#0c080900 40%, #0c0809e6 75%); justify-content: flex-end; padding-bottom: 48px; }
+  .card.shopAt { background: linear-gradient(#0c080900 52%, #0c0809e6 80%); gap: 8px; padding-bottom: 20px; }
+  .card.shopAt .opt { padding: 8px 14px; }
+  .card .knows { color: #f0d27a; font: 400 18px/1.5 Georgia, serif; }
   .card h2 { margin: 0; font: 600 22px/1.2 Georgia, serif; color: #f0d27a; }
   .card p { margin: 0; max-width: 560px; }
   .card button, .btn { font: inherit; font-weight: 600; min-height: 44px; padding: 10px 22px; border-radius: 6px; border: 0; background: #cfaa4e; color: #1e1714; cursor: pointer; }
@@ -586,9 +589,27 @@ const N1 = Object.freeze({
   tipSecs: 4.5,
   // shop (prices are glass pieces on the ledge, never numbers)
   shop: [
-    { id: 'sweep', title: 'Spotlight sweep', note: 'Lent tonight. Buy it and it is yours.', price: 6 },
-    { id: 'dash', title: 'Dash (Mirror)', note: 'A dash you buy is a dash the Performer gets.', price: 5 },
+    { id: 'sweep', title: 'Spotlight sweep', note: 'Lent tonight. Buy it and it is yours.', price: 6, move: 'slap' },
+    { id: 'dash', title: 'Dash (Mirror)', note: 'A dash you buy is a dash the Performer gets.', price: 5, move: 'lunge' },
   ],
+  // ----- theme panel fix 2 (owner agreed 22 Nov): the crowd pays most for what hurts him -----
+  // switch: false = the act pays only the cue's own Laughs
+  hurtPays: true,
+  // Laughs per real fall in the act (each timing miss is a fall); a clean Perfect pays 10 (cue_model.html laughsPerfect)
+  hurtFall: 20,
+  // Laughs when his first fall puts the props girl's pie in his own face (he loses that pie for the Mirror)
+  hurtPie: 25,
+  // Laughs when the front rows saw him trip for the child at the ring entrance
+  hurtTrip: 15,
+  // ----- theme panel fix 5 (owner agreed 22 Nov): the shop turns on him -----
+  // switch: the shop is held at the mirror and the reflection performs each bought move back at him (false = the full-screen shop card)
+  performerLearns: true,
+  // per purchase: the reflection stands while he stays seated (s), steps toward him this far (m) over (s), then does the move (s)
+  learnStandSecs: 0.5, learnStep: 1.4, learnStepSecs: 0.7, learnMoveSecs: 1.1,
+  // the dash: lunge distance toward him (m) and the walk clip's speed during it
+  learnLunge: 1.0, learnLungeTempo: 2.6,
+  // end card heading over the list of purchases (owner 22 Nov: "the shame of living", was "The Performer now knows:")
+  endKnows: 'The shame of living:',
 });
 
 // ===== STATE =====
@@ -1298,6 +1319,8 @@ const NS = {
   paintT: -1, painted: false, sitTarget: 0, sit: 0, reflSit: 0, mirT: 0, lastCrack: -9, cracks: 0, crackList: [], fogging: false,
   hist: new Float32Array(256), histT: new Float32Array(256), histI: 0, mrect: [0, 0, 1, 1], mood: { tempo: 1, chest: 6, neck: 2, head: 2 },
   rmood: { tempo: 1, chest: 6, neck: 2, head: 2 }, mw: null, cable: null, tape: null, poll: 0, cue: null, card: null,
+  // fix 2: the hurt Laughs of this act (computed once per act result); fix 5: the reflection's purchase performance
+  hurt: null, hurtFor: null, learn: null, learnOff: 0, reflUp: 0, reflBase: { x: 0, z: 0, fx: 0, fz: 0 }, learnDone: 0,
 };
 const crew = [];
 const cast = {};
@@ -1404,7 +1427,7 @@ function honk() { tone(520, 390, 0.12, 'square', 0.12); setTimeout(() => tone(40
 function show(id, html) {
   hideCard();
   const d = document.createElement('div');
-  d.className = 'card' + (id === 'dazai' ? ' see' : '');
+  d.className = 'card' + (id === 'dazai' ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
   d.id = 'card_' + id;
   d.innerHTML = html;
   document.body.appendChild(d);
@@ -1476,13 +1499,30 @@ function startAct(id) {
     if (i.scene === 'results' && !NS.actInfo) { NS.actInfo = i; clearInterval(NS.poll); setTimeout(crowdCard, 900); }
   }, 250);
 }
+// fix 2: what hurt him pays more than a clean beat (each fall, the pie in his own face, the trip the front rows saw)
+function hurtLaughs(i) {
+  const h = { total: 0, rows: ['the act ' + i.actLaughs], best: '', bestN: 0, pie: false };
+  if (!N1.hurtPays) return h;
+  const add = (what, n) => { h.total += n; h.rows.push(what + ' ' + n); if (n > h.bestN) { h.bestN = n; h.best = what; } };
+  if (i.misses > 0) add(i.misses > 1 ? 'the falls' : 'the fall', i.misses * N1.hurtFall);
+  if (i.misses > 0 && NS.pies > 0) { NS.pies--; h.pie = true; add('the pie in his face', N1.hurtPie); }
+  if (NS.verbs.trip) add('the trip', N1.hurtTrip);
+  return h;
+}
 function crowdCard() {
   const i = NS.actInfo, total = i.perfects + i.goods + i.misses;
-  const r = (i.perfects + 0.5 * i.goods) / Math.max(1, total);
+  if (NS.hurtFor !== i) { NS.hurt = hurtLaughs(i); NS.hurtFor = i; }
+  const h = NS.hurt;
+  let r = (i.perfects + 0.5 * i.goods) / Math.max(1, total);
+  // the house warms to his pain: hurt that out-earns the act lifts a cold room to at least a wave of laughter
+  if (h.total > 0 && h.total >= i.actLaughs) r = Math.max(r, 0.6);
   NS.crowd = r >= 0.85 && !i.misses ? 'Standing ovation: on their feet, applause.' : r >= 0.6 ? 'Wave of laughter: the rows rock together.'
     : r >= 0.35 ? 'A few laughs: scattered heads move.' : r > 0 ? 'Silence: the house is still.' : 'Bad: coughs, a phone glow, someone walks out.';
-  NS.laughs = i.actLaughs; NS.mask = i.mask;
-  const d = show('crowd', `<h2>The crowd</h2><p>${NS.crowd}</p><p>Laughs +${i.actLaughs} &middot; Mask ${i.mask} (his paint thickens)</p>
+  NS.laughs = i.actLaughs + h.total; NS.mask = i.mask;
+  const best = h.best.charAt(0).toUpperCase() + h.best.slice(1);
+  NS.hurtHead = !h.total ? '' : h.total >= i.actLaughs ? `They laughed hardest at ${h.best}.` : `${best} got a bigger laugh than a clean beat.`;
+  const d = show('crowd', `<h2>The crowd</h2>${NS.hurtHead ? `<p class="knows">${NS.hurtHead}</p>` : ''}<p>${NS.crowd}</p>
+    <p>Laughs +${NS.laughs}${h.total ? ` (${h.rows.join(', ')})` : ''} &middot; Mask ${i.mask} (his paint thickens)</p>${h.pie ? '<p><small>One pie fewer for the Mirror.</small></p>' : ''}
     <p><small>Perfect ${i.perfects} &middot; Good ${i.goods} &middot; Miss ${i.misses}</small></p><button id="walkBack">Walk back</button>`);
   d.querySelector('#walkBack').addEventListener('click', () => {
     hideCard();
@@ -1577,7 +1617,10 @@ function buildReflection() {
   refl.root.traverse((o) => o.layers.set(1));
   c.root.traverse((o) => o.layers.enable(1));
   refl.mixer = new THREE.AnimationMixer(refl.root);
-  refl.mixer.clipAction(c.idle.getClip()).play();
+  refl.idle = refl.mixer.clipAction(c.idle.getClip()).play();
+  refl.walk = refl.mixer.clipAction(c.walkClip);
+  refl.slap = c.slapClip ? refl.mixer.clipAction(c.slapClip) : null;
+  if (refl.slap) { refl.slap.setLoop(THREE.LoopOnce, 1); refl.slap.clampWhenFinished = true; }
   findMoodBones(refl);
   for (const b of refl.moodBones) b.saved.copy(b.bone.quaternion);
 }
@@ -1586,7 +1629,7 @@ function mirrorSetup(kind) {
   S.room = true; S.mirror = kind; S.mode = 'room'; S.moving = false;
   crewQuiet();
   roomScene.add(c.root, c.blob, refl.root);
-  c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
+  c.walk.stop(); if (c.slapClip) c.mixer.clipAction(c.slapClip).stop(); c.idle.reset().setEffectiveWeight(1).play();
   setGloom(kind === 'paint' ? 0 : 1);
   room.flakes.visible = kind !== 'paint';
   setRoomView('mirror');
@@ -1596,9 +1639,14 @@ function mirrorSetup(kind) {
   c.root.position.set(fx * d + rx * x, 0, fz * d + rz * x);
   c.root.rotation.set(0, yaw + Math.PI, 0);
   c.blob.position.set(c.root.position.x, 0.02, c.root.position.z);
-  refl.root.position.set(fx * N1.reflDist + rx * N1.reflX, 0, fz * N1.reflDist + rz * N1.reflX);
+  const rb = NS.reflBase;
+  rb.x = fx * N1.reflDist + rx * N1.reflX; rb.z = fz * N1.reflDist + rz * N1.reflX; rb.fx = fx; rb.fz = fz;
+  refl.root.position.set(rb.x, 0, rb.z);
   refl.root.rotation.y = yaw;
-  const seated = kind === 'paint' ? 1 : 0;
+  // the reflection starts seated with him and in its place (the shop moves it; reset here for every mirror scene)
+  NS.learn = null; NS.learnOff = 0; NS.reflUp = 0;
+  refl.walk.stop(); if (refl.slap) refl.slap.stop(); refl.idle.reset().setEffectiveWeight(1).play();
+  const seated = kind === 'entry' ? 0 : 1;
   NS.sit = NS.sitTarget = NS.reflSit = seated;
   NS.mirT = 0; NS.cracks = 0; NS.crackList = []; NS.lastCrack = -9; NS.histI = 0; NS.hist.fill(seated); NS.histT.fill(-1); NS.fogging = false;
   S.mood = NS.mood;
@@ -1606,7 +1654,7 @@ function mirrorSetup(kind) {
   if (kind === 'paint') { NS.paintT = -1; NS.painted = false; c.face.material.uniforms.uPaintAmt.value = N1.paintHalf; }
   else {
     c.face.material.uniforms.uPaintAmt.value = paintFor(NS.mask);
-    setPrompt(NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
+    if (kind === 'entry') setPrompt(NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
   }
   sizeCracks();
 }
@@ -1697,6 +1745,7 @@ function updateMirror(dt) {
     v = NS.hist[(NS.histI + 1) % 256];
     for (let i = 0; i < 256; i++) { const j = (NS.histI - i + 256) % 256; if (NS.histT[j] >= 0 && NS.histT[j] <= want) { v = NS.hist[j]; break; } }
   }
+  if (S.mirror === 'shop') v = learnUpdate(dt, v);
   NS.reflSit = v;
   sitPose(c, NS.mood, NS.sit);
   moodRestore(c); c.mixer.update(dt); moodApply(c, NS.mood);
@@ -2140,30 +2189,74 @@ function keptCard() {
   d.querySelector('#toShop').addEventListener('click', shopCard);
 }
 function shardRow(n, cls) { let h = ''; for (let i = 0; i < n; i++) h += `<span class="shard ${cls || ''}"></span>`; return h; }
+// fix 5: the reflection stands while he stays seated, steps toward him and performs the move he just bought
+function learnStart(it) {
+  NS.learn = { it, t: 0, phase: 0, from: NS.learnOff, to: NS.learnOff + N1.learnStep, lunge: 0, cracked: false };
+}
+function learnUpdate(dt, v) {
+  const L = NS.learn, rb = NS.reflBase;
+  let lunge = 0;
+  if (L) {
+    L.t += dt;
+    const t1 = N1.learnStandSecs, t2 = t1 + N1.learnStepSecs, t3 = t2 + N1.learnMoveSecs;
+    NS.reflUp = Math.min(1, NS.reflUp + dt / N1.learnStandSecs);
+    if (!L.cracked && NS.reflUp >= 0.5) { L.cracked = true; if (NS.cracks < N1.cracksMax) addCrack(); }
+    if (L.phase === 0 && L.t >= t1) { L.phase = 1; refl.walk.timeScale = 1; refl.walk.reset().play(); refl.idle.crossFadeTo(refl.walk, 0.15, false); }
+    if (L.phase === 1) NS.learnOff = L.from + (L.to - L.from) * ease(Math.min(1, (L.t - t1) / N1.learnStepSecs));
+    if (L.phase === 1 && L.t >= t2) {
+      L.phase = 2; NS.learnOff = L.to;
+      if (L.it.move === 'slap' && refl.slap) { refl.slap.reset().play(); refl.walk.crossFadeTo(refl.slap, 0.1, false); }
+      else refl.walk.timeScale = N1.learnLungeTempo;
+    }
+    if (L.phase === 2 && L.it.move !== 'slap') {
+      const k = Math.min(1, (L.t - t2) / N1.learnMoveSecs);
+      lunge = N1.learnLunge * (k < 0.3 ? ease(k / 0.3) : 1 - ease((k - 0.3) / 0.7));
+    }
+    if (L.phase === 2 && L.t >= t3) {
+      const from = L.it.move === 'slap' && refl.slap ? refl.slap : refl.walk;
+      refl.idle.reset().play(); from.crossFadeTo(refl.idle, 0.2, false);
+      NS.learn = null; NS.learnDone++;
+      if (NS.scene === 'shop') shopCard();
+    }
+  }
+  const off = NS.learnOff + lunge;
+  refl.root.position.x = rb.x - rb.fx * off; refl.root.position.z = rb.z - rb.fz * off;
+  return Math.min(v, 1 - NS.reflUp);
+}
 function shopCard() {
+  if (N1.performerLearns && S.mirror !== 'shop') { hideCard(); mirrorSetup('shop'); S.running = true; startLoop(); }
   NS.scene = 'shop';
   const items = N1.shop.map((it) => {
     const owned = NS.bought.indexOf(it.id) >= 0, can = NS.shards >= it.price;
-    return `<button class="opt" data-id="${it.id}" ${owned || !can ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b>${it.note}<div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
+    return `<button class="opt" data-id="${it.id}" ${owned || !can || NS.learn ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b>${it.note}<div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
   }).join('');
   const d = show('shop', `<h2>The mirror shop</h2><p>The reflection keeps the shop. Prices are glass pieces on the ledge.</p>
     <div id="shards">${shardRow(NS.shards)}</div><div class="opts">${items}</div>
     <p id="shopSay"><small>${NS.shopSay || 'Every purchase adds a paint layer, and the Performer learns it.'}</small></p><button id="endNight">End the night</button>`);
   d.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => {
     const it = N1.shop.find((x) => x.id === b.dataset.id);
-    if (!it || NS.shards < it.price || NS.bought.indexOf(it.id) >= 0) return;
+    if (!it || NS.learn || NS.shards < it.price || NS.bought.indexOf(it.id) >= 0) return;
     NS.shards -= it.price; NS.bought.push(it.id); NS.mask += 1;
-    NS.shopSay = 'The reflection does three beats of it by itself, slightly too well. (Mask +1: a paint layer.)';
+    if (N1.performerLearns && S.mirror === 'shop') {
+      chars.clown.face.material.uniforms.uPaintAmt.value = paintFor(NS.mask);
+      learnStart(it);
+      NS.shopSay = `He stays seated. The reflection stands, steps closer and does the ${it.title.toLowerCase()} back at him, slightly too well. (Mask +1: a paint layer.)`;
+    } else NS.shopSay = 'The reflection does three beats of it by itself, slightly too well. (Mask +1: a paint layer.)';
     shopCard();
   }));
   d.querySelector('#endNight').addEventListener('click', endCard);
 }
 function endCard() {
   NS.scene = 'end';
+  // nothing renders behind the opaque end card
+  if (S.mirror === 'shop') { leaveMirror(); NS.learn = null; }
+  S.running = false;
   const v = NS.verbs, i = NS.actInfo || {};
-  const d = show('end', `<h2>End of night 1</h2><div class="sum">
+  const titles = NS.bought.map((id) => (N1.shop.find((x) => x.id === id) || { title: id }).title);
+  const knows = N1.performerLearns ? `<p class="knows">${N1.endKnows}<br>${titles.length ? titles.join('<br>') : 'nothing bought tonight'}</p>` : '';
+  const d = show('end', `<h2>End of night 1</h2>${knows}<div class="sum">
     Corridor: jumped the cable ${v.jump ? 'yes' : 'no'}, took the pie ${v.take ? 'yes' : 'no'}, honked the horn ${v.honk ? 'yes' : 'no'}, tripped for the child ${v.trip ? 'yes' : 'no'}<br>
-    Act: ${NS.act === 'fall' ? 'The deliberate fall' : 'Spotlight sweep (lent)'}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}<br>
+    Act: ${NS.act === 'fall' ? 'The deliberate fall' : 'Spotlight sweep (lent)'}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
     Crowd: ${NS.crowd}<br>
     Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}; Laughs left ${NS.mwLaughs}<br>
     Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>
@@ -2172,7 +2265,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, chars, room, input, mwCam, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, chars, room, input, mwCam, refl, get M() { return NS.mw; }, crowdCard, enterMW, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });
