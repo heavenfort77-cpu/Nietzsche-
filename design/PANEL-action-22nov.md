@@ -155,3 +155,35 @@ P5, the monster Light on the earlier nights: face the lamp and gag into it. Fina
 - P4: the pratfall is also the dodge. Whether its time on the floor is under the 1.0 s warning was not checked against `N1.fall.secs`; if it is longer, every dodge starts the drain.
 - P5 on night 1 changes what the build checks today ("stand still in the beam beats the Light" and the three Light real-play steps): those checks change with the game, on purpose.
 - The final counts are 11-12 of 13 by the same model that argued both sides. No stranger has played any of this.
+
+## Round 3: the owner's fight, and add-ons from the dissenting seats (owner 22 Nov 23:54)
+
+Owner: "my choice is he lose all the act and can only use original 3 skill. Performer to have tell so he need to dodge and strike. the more mask he have, the higher the hp the Performer have." Then, quoting the four round 2 dissents: "let them suggest add on".
+
+Owner decision (replaces the round 2 P3 answer: no paint patches, no two-state buttons): on the last night he has lost every bought act and fights with the original three (slap, pie, fall); the Performer attacks with tells, he dodges and strikes; the Performer's HP rises with his Mask. P4 and P5 stand as the round 2 answers unless he says otherwise.
+
+Subagent a594d875d066ef888, same 13 seats. Numbers are untested starting values. The two objector lines under each add-on are the case against it; no re-vote was run after them. Not built.
+
+| Add-on | From | What it adds | Would add | Would not |
+|---|---|---|---|---|
+| A1 | Mobile producer, P3 | "The three-skill last fight answers my dissent: one button, one meaning." A FALL pressed up to 0.15 s early still fires; every Performer tell lasts at least 0.6 s and has its own sound. | 11 of 13 | Core gamer (softens the last dodge), Chaplin (timing should be earned exactly) |
+| A2 | Dazai, P4 | The warning shrinks: the first stop of a night gives 1.0 s, each later stop 0.2 s less, floor 0.4 s; resets each night. | 6 of 13 | Casual, Mobile producer, Psychologist, Jam judge, Streamer, Indie critic, Core gamer |
+| A3 | Camus, P4 | Any input still stops the drain, but the figures keep facing him until he lands a gag; while they face him the next stop drains after 0.5 s, not 1.0 s. | 9 of 13 | Casual, Mobile producer, Jam judge, Streamer |
+| A4 | Camus, P5 | The Light is put out, never beaten: after 3 gags the dark lamp stays overhead, still turning to follow him, with a click (and a rim glint so a phone shows it); it returns the next night with a beam 15% wider. | 10 of 13 | Core gamer, Mobile producer, Casual |
+| A5 | Dazai, P5 | Gags on the lamp count only when thrown from inside the beam: step in, pay the drain, hit, three times. Dazai's own cap after objections: at most 6 Laughs for the three gags, and the beam holds still while he is in it. | 8 of 13 | Casual, Mobile producer, Psychologist, Core gamer, Streamer |
+
+Objections and replies, word for word:
+- A1. Core gamer: "A buffer makes the last dodge soft." Chaplin: "Timing is the gag; don't forgive it." Mobile producer: "0.15 s covers the glass's delay, not bad timing."
+- A2. Casual: "I stop to move my thumb, and you punish me harder each time." Psychologist: "It reads as punishing rest, not avoidance." Dazai: "That is how it feels, but I accept the floor."
+- A3. Jam judge: "It is one more rule to learn in three nights." Mobile producer: "Players won't know why the drain came faster." Camus: "The figures still facing him is the sign; nothing new to read."
+- A4. Core gamer: "A wider beam punishes me for winning." Mobile producer: "A dark lamp is invisible on a small screen." Camus: "Give it a rim glint and the click; 15% is small."
+- A5. Casual: "At low Laughs, paying to attack kills me." Mobile producer: "Stick into a moving beam plus a button is fiddly." Dazai: "Cap the cost at 6 Laughs for the three gags and hold the beam still while he is in it."
+
+Cautions on the owner's fight, each with an add-on:
+- Fair tells (Core gamer): if the Performer uses every act he learned, a player who bought everything faces too many tells. Add-on: at most 3 attack types, each with a tell of at least 0.6 s and its own sound.
+- Bought everything (Mobile producer): top HP against three skills, with the pie costing Laughs, can become a long grind or an empty tank. Add-on: cap the Performer's HP at twice the base and make the slap free.
+- Bought nothing (Story writer): with no Mask the Performer is thin and the ending arrives unearned. Add-on: a floor HP and the three original moves, so there is always a real fight.
+
+The panel's order: add A1, A4, A3; add A5 only with the 6-Laugh cap and the still beam; drop A2 (failed the count, the shrinking is invisible, A3 covers the same dissent).
+
+Producer check (lead): the "at most 3 attack types" caution cuts against the GDD's "the Performer opens by performing every act you own"; the owner's line gives the Performer tells but does not say which attacks it keeps. The slap's present cost was not looked up this round.
