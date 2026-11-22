@@ -1,0 +1,208 @@
+--- screen 1 ---
+Corridor
+Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.
+The Mirror
+The Clown and the Mirror
+Night 1 · prototype
+Start
+
+--- screen 2 ---
+Cube room: Mirror
+Press any key to finish the paint.
+The Mirror
+
+--- screen 3 ---
+Cube room: Mirror
+The Mirror
+"My clowning was my last courtship of humanity."
+そこで考え出したのは、道化でした。それは、自分の、人間に対する最後の求愛でした。
+Dazai, No Longer Human (our translation)
+Go out to the ring
+
+--- screen 4 ---
+Corridor
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+
+--- screen 5 ---
+Corridor
+Rigger: Cable going down. Hop it!
+Props: Your pie. Don't eat it this time.
+Walk: WASD or arrows. E or Space: the gold prompt.
+Jump the cable (E)
+The Mirror
+
+--- screen 6 ---
+Wings
+Rigger: Neat.
+Props: Your pie. Don't eat it this time.
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+
+--- screen 7 ---
+Wings
+Rigger: Neat.
+Props: Break a leg.
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+
+--- screen 8 ---
+Wings
+Props: Break a leg.
+Strongman: HA! Now go get them.
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+
+--- screen 9 ---
+Ring entrance
+Strongman: HA! Now go get them.
+...on purpose.
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+
+--- screen 10 ---
+Ring entrance
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+Tonight's board
+Choose an act.
+The deliberate fall
+Yours. The classic pratfall; it always pays a little.
+Spotlight sweep
+Lent for tonight, free. Sweep up the spotlight.
+The act is the cue: press when the ring fits the mask on his face.
+
+--- screen 11 ---
+Ring entrance
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+[act screen] Night 1
+Laughs 0
+Mask 0
+The Clown and the Mirror: the cue on the 3D clown
+The approved clown model stands in the ring (3D), in a room rendered in Blender (2D plates with parallax). A thin ring closes in on his face: press when the ring fits the pale circle at his face's edge. The drum plays on every fit.
+Clown model and room loaded (2.5D: 3D clown, 2D room).
+Desktop: Space = hit, K or Shift = take. Phone: right button = hit, left button = take.
+Night 1: hit only. Night 2 and later: the whiteface steps in (a crimson ring under his silver cone hat closes in instead): press take. On the last beat of each chain, take instead of hit turns the grin upside down.
+Night 1
+Night 2
+Night 3
+Timing windows:
+Desktop
+Phone
+Latency
+-
+0 ms
++
+Tap to begin
+Look around the room
+
+--- screen 12 ---
+Ring entrance
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+[act screen] Night 1
+Laughs 0
+Mask 0
+HIT
+
+--- screen 13 ---
+Ring entrance
+Walk: WASD or arrows. E or Space: the gold prompt.
+The Mirror
+The crowd
+They laughed hardest at the pie in his face.
+Wave of laughter: the rows rock together.
+Laughs +105 (the act 45, the fall 20, the pie in his face 25, the trip 15) · Mask 2 (his paint thickens)
+One pie fewer for the Mirror.
+Perfect 2 · Good 4 · Miss 1
+Walk back
+[act screen] Night 1
+Laughs 0
+Mask 0
+HIT
+
+--- screen 14 ---
+Cube room: Tent exit
+Laughs 22 · Mask 2
+Into the Mirror: 105 Laughs
+Look around: A / D or arrow keys, or the buttons. Turn to the Mirror wall and sit.
+◀
+▶
+The Mirror
+
+--- screen 15 ---
+Cube room: Mirror
+Laughs 105 · Mask 2
+Into the Mirror: 105 Laughs
+Look around: A / D or arrow keys, or the buttons. Turn to the Mirror wall and sit.
+◀
+Sit at the mirror
+▶
+The Mirror
+
+--- screen 16 ---
+Cube room: Mirror
+Look around: A / D or arrow keys, or the buttons. Turn to the Mirror wall and sit.
+The Mirror
+
+--- screen 17 ---
+Laughs 104 · Pies 2 · Shards 0
+WASD: move. Click or J: slap. Right click or K: pie. Space: pratfall. Let go of everything: stand still.
+The Light: it drains Laughs while you move in its beam. Stand still in it.
+The Mirror
+
+--- screen 18 ---
+Laughs 95 · Pies 2 · Shards 0
+WASD: move. Click or J: slap. Right click or K: pie. Space: pratfall. Let go of everything: stand still.
+The Light: it drains Laughs while you move in its beam. Stand still in it.
+The Mirror
+
+--- screen 19 ---
+Laughs 84 · Pies 2 · Shards 3
+WASD: move. Click or J: slap. Right click or K: pie. Space: pratfall. Let go of everything: stand still.
+The Whisper copies your pratfalls and strikes where you land. Step, don't fall.
+The Mirror
+
+--- screen 20 ---
+The Mirror
+"In vain was all our labour."
+Nietzsche, Thus Spake Zarathustra II, "The Soothsayer" (Common)
+
+--- screen 21 ---
+Cube room: Mirror
+The Mirror
+Wipe away one line of paint
+
+--- screen 22 ---
+Cube room: Mirror
+The Mirror
+Out of the mirror, with 3 shards.
+To the mirror
+
+--- screen 23 ---
+Cube room: Mirror
+The Mirror
+The mirror shop
+The reflection keeps the shop. Prices are glass pieces on the ledge.
+Spotlight sweep (bought)
+Lent tonight. Buy it and it is yours.
+Dash (Mirror) (bought)
+A dash you buy is a dash the Performer gets.
+He stays seated. The reflection stands, steps closer and does the dash (mirror) back at him, slightly too well. (Mask +1: a paint layer.)
+End the night
+
+--- screen 24 ---
+Cube room: Mirror
+The Mirror
+End of night 1
+The shame of living:
+Spotlight sweep
+Dash (Mirror)
+The Performer learned each one.
+Corridor: jumped the cable yes, took the pie yes, honked the horn yes, tripped for the child yes
+Act: The deliberate fall; Perfect 2, Good 4, Miss 1; Laughs +105 (the act 45, the fall 20, the pie in his face 25, the trip 15)
+Crowd: Wave of laughter: the rows rock together.
+Mirror: came out in 7 s; met light, whisper, stare, shame; beaten light, whisper, stare, shame; Laughs left 84; He wiped away one line.
+Shop: sweep, dash; shards left 0; Mask 3
+Play night 1 again

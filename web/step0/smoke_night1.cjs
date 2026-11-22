@@ -39,7 +39,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const ctx = await b.newContext({ viewport: { width: sc.w, height: sc.h }, isMobile: sc.m, hasTouch: sc.m });
     const pg = await ctx.newPage(); const errs = [];
     pg.on('pageerror', (e) => errs.push('pageerror ' + e.message)); pg.on('console', (m) => { if (m.type() === 'error') errs.push('console ' + m.text()); });
-    const step = async (name, fn) => { nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); } };
+    // TRANSCRIPT=<file>: after each step, append the text a player can see (page and cue frame) for the stranger cold read
+    const seen = async (name) => {
+      if (!process.env.TRANSCRIPT) return;
+      let t = await pg.evaluate(() => document.body.innerText.replace(/\n{2,}/g, '\n').trim());
+      const fr = pg.frames().find((f) => /cue_model/.test(f.url()));
+      if (fr) t += '\n[act screen] ' + await fr.evaluate(() => document.body.innerText.replace(/\n{2,}/g, '\n').trim()).catch(() => '');
+      fs.appendFileSync(process.env.TRANSCRIPT, `\n=== ${sc.n} after: ${name}\n${t}\n`);
+    };
+    const step = async (name, fn) => { nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); } await seen(name).catch(() => {}); };
     const shot = (n) => pg.screenshot({ path: `${OUT}/${sc.n}_${n}.png` });
     await pg.goto(url);
     await step('loads', async () => { await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 120000 }); });

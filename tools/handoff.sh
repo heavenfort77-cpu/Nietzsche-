@@ -55,6 +55,8 @@ case "${1:-check}" in
     if checks_on && [ -n "$fb" ] && ! out=$(bash tools/check_faults.sh "$fb" HEAD); then
       echo "$out" | grep FAIL; echo "FAIL fix FAULTS.md before the next batch (owner requirement 5)"; exit 1
     fi
+    # panel rules gate (design/PANEL-RULES.md): text only, runs every session
+    if ! out=$(bash tools/check_panel.sh); then echo "$out" | grep FAIL; echo "FAIL fix the panel doc (design/PANEL-RULES.md)"; exit 1; fi
     checks_on || echo "checks skipped (requirement 6: session $(session_no))"
     echo "batches this session: $n of $LIMIT (start $(start_commit))"
     if [ "$n" = "?" ]; then banner "session start commit unknown"; exit 1; fi
@@ -75,6 +77,7 @@ case "${1:-check}" in
     if checks_on && [ -n "$s" ] && ! out=$(bash tools/check_handoff.sh "$s" HEAD); then echo "$out" | grep FAIL; fail=1; fi
     fb=$(git merge-base FETCH_HEAD HEAD 2>/dev/null || echo "$s")
     if checks_on && [ -n "$fb" ] && ! out=$(bash tools/check_faults.sh "$fb" HEAD); then echo "$out" | grep FAIL; fail=1; fi
+    if ! out=$(bash tools/check_panel.sh); then echo "$out" | grep FAIL; fail=1; fi
     grep -q '^## Next step' HANDOFF.md || { echo "FAIL HANDOFF.md has no '## Next step'"; fail=1; }
     if [ "$fail" = 0 ]; then
       echo "PASS handoff ready. Also write START-HERE.md to the Project if its rules changed."
