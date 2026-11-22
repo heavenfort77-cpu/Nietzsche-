@@ -234,3 +234,112 @@ Answer: a banner for the nearest awake figure. Stare: "Hit it from the side." Sh
 8. Nearest-figure banner; figure tips off.
 9. "Live this night again" at the board wall; practice offer in the dressing room; rerun walk speed if the owner agrees.
 10. Step 1's measurements again, the bot sweep, and a stranger cold read before any further vote.
+
+## Round 3: the fight (owner 23 Nov 05:54: "get panel to fight it out then i decide")
+
+Subagent a8af7557ff645f515. Each camp answers the other's best blow, then a final vote. Nothing was tested in the build; every value is a starting guess. S1, S2, S3 are the player's three sentences (hard to know what to do / long time before trying again, cannot prepare / in the mirror I also don't know what to do). The owner decides.
+
+### A. What ends the act on night 1
+For (Auguste): a clown who flops cannot walk off; the player sees all 9 rings, hears one cough and must keep tapping into the silence. Answers S2: every run shows 9 rings instead of as few as 2.
+Against (Nietzsche): if the show goes on whatever he does, a miss costs nothing he can feel in his thumb; the cut-off is the only moment the game means it.
+For answers: a cut-off 2-3 s after the first ring reads as "I was thrown out before I understood", which is S2; the stake stays if a flopped chain pays 0 Laughs.
+Against answers: a cough is invisible with the sound off, and falls already pay Laughs, so he may never notice he failed.
+Third way (Jam judge): night 1 no cut; a flopped chain pays 0 Laughs with a visible dimming of the crowd; the cut returns as nights escalate (misses to end: none / 3 / 2 for nights 1 / 2 / 3+).
+Final vote: third way 10; cut from chain 2 on 2 (Core gamer, Indie critic); keep two misses 1 (Nietzsche). Streamer moved ("0 Laughs for a flop is a stake I can show"); Dazai moved ("Yozo never gets to leave the room; finishing is worse").
+Cost of the majority: the night-1 act always runs its full length (about 12 s, computed from the CONFIG timings) even when he has given up; the rule changes on night 2 and must be taught then.
+Cost of the dissent: a first-timer can still be out in 2-3 s, so S2 rests entirely on the rehearsal working.
+
+### B. Slower first chain, count-in, ghost ring
+For (Casual): "the ring closes onto the mask" means nothing until it is seen to happen once; the ghost shows it with no reading (S1).
+Against (Streamer): with a compulsory rehearsal the ghost repeats the lesson inside the act, delays the first real ring, and a slow chain 1 teaches a tempo chain 2 then breaks.
+For answers: the ghost lasts only until his first fit ever, so reruns never see it.
+Against answers: then it belongs in the rehearsal, where dead air costs nothing.
+Third way (Mobile producer): the count-in stays in the act; the ghost ring and slow tempo (1200 / 800 ms, windows 100 / 220) move into the first rehearsal loop only; act chain 1 keeps the real 900 / 600 tempo with the wide windows 100 / 220 on night 1.
+Final vote: third way 8; full B 4 (Casual, Psychologist, Auguste, Chaplin); no count-in 1 (Dazai).
+Cost of the majority: it only works if the rehearsal is built.
+Cost of the dissent: the ghost delays the first real ring on run 1 and the tempo jump at chain 2 may read as unfair.
+
+### C. Mirror World: figures wake one at a time behind a goal card
+For (Psychologist): four figures with four answers while Laughs drain is four rules under a timer; one at a time is one rule per moment (S3).
+Against (Jam judge): the confused player is exactly the one who hits the cap each time, so his room is the longest.
+For answers: a quick player never waits.
+Against answers: the quick player was never the problem.
+Third way (Jam judge): keep the card and the count; wake in two pairs (Stare and Shame, then Whisper and Light when both are down or after 10 s).
+Final vote: one at a time with the cap cut to 10 s 9; pairs 3 (Core gamer, Jam judge, Streamer); staged but no goal card 1 (Nietzsche).
+Cost of the majority: the image of a room full of them from the first second is lost on night 1; the frozen card adds a stop before the action.
+Cost of the dissent: two answers to learn at once (pairs), or he is never told what ends the room (no card).
+
+### D. Rerun speed and the practice offer
+For (Mobile producer): S2 is about the wait; without an offer in the dressing room the next ring after a flop sits beyond the Mirror World, shop, end card and board wall.
+Against (Story writer): the player sees a button where he should see the clown's face, and the board-wall Rehearse button already gives the drill one scene later in a rerun.
+For answers: "one scene later" is only true for a player who chooses to rerun.
+Against answers: dropping the offer does delay the next ring; the price is paid for the one scene where he sits with it.
+Third way (Camus): no offer in the dressing room; after a poor act the board-wall Rehearse button pulses on the rerun; the corridor keeps the approved 0.75 m/s clip with tap-to-skip after 1.0 s instead of 1.6x playback.
+Final vote: restart at the board wall 13 of 13. Corridor: tap-to-skip 7, 1.6x 6. Practice offer: keep 7, drop 6 (Chaplin, Auguste and Nietzsche moved to drop).
+Cost of the majority: the dressing-room mirror gains a menu button at its quietest moment; 1.6x would change how the approved walk clip looks.
+Cost of the dissent: after a flop the next ring is a full Mirror World, shop and end card away, which is what S2 complains about.
+
+### E. Where and how often he rehearses
+For (Casual): "can't prepare" is only answered by a place to press rings at no cost as often as wanted; the compulsory loop means nobody reaches the ring without having pressed one.
+Against (Indie critic): at the face-paint mirror the player does not yet know there is an act; beside the two act cards the rings explain themselves.
+For answers: the mirror shows the same picture as the act, a ring closing on the mask on his own face.
+Against answers: two places is twice the build for one lesson, and the compulsory loop delays the first board wall.
+Third way (Jam judge): one place, the board wall; compulsory once on run 1 before the act cards unlock (one loop of 3 rings, ends on the first fit or after 2 loops), repeatable after that.
+Final vote: mirror compulsory plus board-wall repeatable 7; board wall only 4 (Indie critic, Core gamer, Jam judge, Streamer); rehearse once only 2 (Nietzsche, Dazai).
+Cost of the majority: two placements to build and test, a longer first run, and a button a nervous player can stall on.
+Cost of the dissent: board wall only leaves the face-paint scene with nothing to do with the act; rehearse-once leaves a failing player unable to prepare on run 2.
+
+### F. How each figure's answer is shown
+For (Mobile producer): S3 needs the answer on screen at the moment it is needed.
+Against (Story writer): a HUD label is the game talking in its most private scene; the same five words as his own thought carry the same information.
+For answers: first-person lines drift into mood and a stranger needs the verb.
+Against answers: "From the side. Not its eyes." is his thought and it has the verb.
+Third way (Psychologist): one persistent slot, five words at most, written as his thought; each line must contain the action and a button word (Slap, Pie, Pratfall, Step); scrolling tips removed; reverts to a plain label if a fresh player misreads it.
+Final vote: third way 11; plain label 1 (Mobile producer); no words 1 (Chaplin).
+Cost of the majority: four lines must each be in character and instructive in five words; unproven until a stranger reads them on a phone.
+Cost of the dissent: a plain label breaks the voice; no words depends on figure art readable at phone size.
+
+### G. Feedback after each press
+For (Psychologist): a word shown 320 ms is too short to read, so he cannot tell early from late (S1, S2).
+Against (Indie critic): four signals for one fact, and at the later nights' 500 and 400 ms gaps a 550 ms word and a 300 ms frozen ring sit on top of the next ring.
+For answers: the signals use different channels, so with the sound off or eyes on the ring one still lands.
+Against answers: four channels saying "miss" teach nothing; one saying EARLY or LATE teaches everything.
+Third way (Chaplin): the frozen ring tinted early or late, the body leaning forward for early and back for late, plus sound; a word only on a miss, EARLY or LATE, 450 ms, above his head and off the mask; every duration capped at the beat gap minus 100 ms.
+Final vote: third way 10; all four signals 2 (Casual, Mobile producer); no feedback 1 (Dazai).
+Cost of the majority: a good press gets no word, so perfect against good is carried by sound and tint alone.
+Cost of the dissent: full signals overlap the next ring once the gap drops below 550 ms.
+
+### Where the panel is still split
+
+- B: 8-4-1, ghost and slow tempo in the rehearsal only, or in the act's first chain.
+- D corridor: 7-6, tap-to-skip at the approved speed, or 1.6x playback.
+- D practice offer: 7-6, keep it in the dressing room or drop it.
+- E: 7-4-2, two rehearsal places, board wall only, or once only.
+
+### The smallest change that answers the player (panel)
+
+1. A, night 1 no cut: every run shows 9 rings (S2).
+2. E board-wall version only, compulsory once, with B's count-in: one place to press rings before it counts (S1, S2).
+3. D restart at the board wall only: a shorter road back to a ring, walk clip and mirror scene untouched (S2).
+4. C's entry card with goal and count plus F's persistent slot, no wake staging: what ends the room and what each figure wants (S3).
+
+### Round 3 dissent
+
+- Nietzsche (A): "An act that cannot end is not an act. You have removed the one moment the game was honest."
+- Core gamer, Indie critic (A): "Nine free rings has no stakes. Zero Laughs is a number, not a consequence."
+- Casual phone player, Clinical psychologist, Auguste clown, Chaplin (B): "Moving the ghost out of the act means the first ring that counts is still the first ring he does not understand."
+- Dazai (B): "Nobody counts him in."
+- Core gamer, Jam judge, Streamer (C): "One at a time is a tutorial with a drain on it; judges leave."
+- Nietzsche (C): "No goal card. He does not get told what ends it."
+- Dazai, Camus, Story writer, Chaplin, Auguste clown, Nietzsche (D): "Practice straight after the flop turns his shame into a drill. Let it sit."
+- The 1.6x camp, 6 seats (D): "A skip button teaches him the corridor is worthless; a faster walk keeps it in the game."
+- Indie critic, Core gamer, Jam judge, Streamer (E): "Rehearsal belongs at the board wall only."
+- Nietzsche, Dazai (E): "Rehearse once. A repeatable button is a place to hide."
+- Mobile producer (F): "Copy with two jobs fails one of them; label it." Chaplin (F): "If it needs words, the figure is drawn wrong."
+- Casual phone player, Mobile producer (G): "Take the word off a good press and I don't know I did well." Dazai (G): "Nobody tells him why."
+
+### Producer check on round 3 (lead, not a vote)
+
+- A's third way says a flopped chain pays 0 Laughs. In the build a timing miss is a fall and falls pay, and the deliberate fall has a guaranteed floor (`night1.html` line 834 and the cue's floor value). Paying 0 for a flopped chain changes that act's rule, so it is the owner's choice, separate from removing the cut-off.
+- A tap-to-skip on the corridor is a new control; whether the walk scenes already have one was not checked.
+- The "about 12 s" act length is computed from the CONFIG timings, not measured.
