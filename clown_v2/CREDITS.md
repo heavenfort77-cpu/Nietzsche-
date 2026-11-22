@@ -5,6 +5,7 @@ Add an entry the moment anything third-party goes into the game. All entries bel
 | What | Author | Source | Licence | Used for |
 |---|---|---|---|---|
 | Clown model, textures, scripts | the developer | this project | own work | the character |
+| Music: "Cold Tea and Morning Light", "The Trapeze Waltz", "The Weight of Remaining" | supplied by the developer (22 Nov 2026) | `music_src/` (originals), `web/step0/music/` (web copies, -18 LUFS, 128 kbps) | to confirm by the developer (how they were made and that commercial use is allowed) | night 1 music: backstage, ring, after |
 | three.js 0.187.0 | mrdoob and contributors | https://github.com/mrdoob/three.js | MIT (keep the notice) | runtime, GLTFLoader, KTX2Loader |
 | postprocessing 6.39.6 | Raoul van Rüschen | https://github.com/pmndrs/postprocessing | Zlib | bloom, tone mapping (step 4 on) |
 | N8AO 2.1.0 | N8python | https://github.com/N8python/n8ao | ISC (keep the notice) | ambient occlusion, desktop tier (step 4 on) |

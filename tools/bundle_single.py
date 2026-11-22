@@ -9,9 +9,9 @@ import base64, json, os, re, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'step0')
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'night1_single.html'
-MIME = {'.glb': 'model/gltf-binary', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.js': 'text/javascript'}
+MIME = {'.glb': 'model/gltf-binary', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.js': 'text/javascript', '.mp3': 'audio/mpeg'}
 # packed folders (night1.html and cue_model.html load from these at run time)
-DIRS = ['assets', 'cube25d', 'walk/plates']
+DIRS = ['assets', 'cube25d', 'walk/plates', 'music']
 SKIP = ('.py', '.sh', '.cjs', '.blend')
 
 
@@ -88,6 +88,8 @@ BOOT = r"""<script>
   window.fetch = function (input, init) { var k = key(typeof input === 'string' ? input : input.url); return f0.call(window, k ? P.url[k] : input, init); };
   var d = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
   Object.defineProperty(HTMLImageElement.prototype, 'src', { get: d.get, set: function (v) { var k = key(v); d.set.call(this, k ? P.url[k] : v); }, configurable: true });
+  var md = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src');
+  Object.defineProperty(HTMLMediaElement.prototype, 'src', { get: md.get, set: function (v) { var k = key(v); md.set.call(this, k ? P.url[k] : v); }, configurable: true });
   var fd = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'src');
   Object.defineProperty(HTMLIFrameElement.prototype, 'src', { get: fd.get, set: function (v) {
     var s = String(v), k = s.replace(/^\.\//, '').split('?')[0];

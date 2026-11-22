@@ -10,7 +10,7 @@ function need(names) { for (const n of names) { try { return require(n); } catch
 const pw = need(['playwright-core', path.join(__dirname, '..', 'node_modules', 'playwright-core')]);
 const ROOT = __dirname, OUT = process.argv[2] || '/tmp/night1';
 fs.mkdirSync(OUT, { recursive: true });
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg' };
 const MUTS = {
   hurt: ['night1.html', 'hurtPays: true,', 'hurtPays: false,'],
   learn: ['night1.html', 'performerLearns: true,', 'performerLearns: false,'],
@@ -49,7 +49,7 @@ const MUTS = {
   mwroute: ['night1.html', 'mwRoute: true,', 'mwRoute: false,'],
   unworld: ['night1.html', 'warpMask: 0.32,', 'warpMask: 0,'],
   // owner's phone play 22 Nov 17:58 (panel 22 Nov b)
-  notes: ['night1.html', "  NS.scene = 'note'; NS.noteAct = id;", "  NS.scene = 'note'; NS.noteAct = id; performAct(id); return;"],
+  notes: ['night1.html', "  setScene('note'); NS.noteAct = id;", "  setScene('note'); NS.noteAct = id; performAct(id); return;"],
   bag: ['night1.html', '  bagBlanks: 2, breakTell: 0.4, corRows: 6,', '  bagBlanks: 2, breakTell: 0, corRows: 6,'],
   corwide: ['night1.html', '  mwRoute: true, mwCorX: 2.2,', '  mwRoute: true, mwCorX: 1.2,'],
   stickfull: ['night1.html', '  stickFull: 0.35,', '  stickFull: 1,'],
@@ -73,6 +73,10 @@ const MUTS = {
   fallfloor: ['night1.html', '  fallFloor: true,', '  fallFloor: false,'],
   tripacross: ['night1.html', 'tripAngles: [90, 75, 60, 45],', 'tripAngles: [],'],
   missyaw: ['night1.html', 'missYaw: 1.5708, bowYaw: 0.9,', 'missYaw: 0, bowYaw: 0,'],
+  // owner 22 Nov (session 19): his three tracks follow the scenes; each mutation must FAIL a music step
+  musicmap: ['night1.html', "walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight'", "walk: 'cold', board: 'cold', act: 'cold', back: 'weight'"],
+  musicpause: ['night1.html', '  musicHold(true);\n  const sc = bindScene()', '  const sc = bindScene()'],
+  musicduck: ['night1.html', 'function openCue() {\n  musicDuck(true);', 'function openCue() {'],
   shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
@@ -86,6 +90,9 @@ const srv = http.createServer((q, r) => {
 });
 let nOk = 0, nAll = 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// music state: the scene's track, which elements play, each gain (fades are on the audio clock: read after they settle)
+const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) return null; const o = { key: M.key, want: N.N1.musicScene[N.NS.scene], trail: M.trail.join(' '), duck: M.duck, playing: [], gain: {} };
+  for (const k in M.el) { if (!M.el[k].paused) o.playing.push(k); o.gain[k] = M.g[k] ? +M.g[k].gain.value.toFixed(3) : M.el[k].volume; } return o; };
 (async () => {
   await new Promise((r) => srv.listen(0, r));
   const url = `http://127.0.0.1:${srv.address().port}/night1.html`;
@@ -197,12 +204,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // chart: Esc pauses; the loop stops, held keys are let go, game time stands still, the card lists this scene's controls from the table
     await step('Esc pauses with the controls list, Esc resumes (chart)', async () => {
       await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 });
+      const m0 = await pg.evaluate(musicState);
       await pg.keyboard.down('KeyW'); await sleep(200); await pg.keyboard.press('Escape'); await sleep(150);
+      const mp = await pg.evaluate(musicState);
       const a = await pg.evaluate(() => { const N = window.__night, C = window.__walkTest.CONFIG; return { paused: N.NS.paused, raf: N.S.raf, ky: window.__walkTest.input.ky, y: N.S.y, rows: document.querySelectorAll('#pauseList tr').length, want: C.bindScenes.walk.length, text: document.getElementById('pauseList').textContent, card: !document.getElementById('pauseCard').classList.contains('hidden') }; });
       await sleep(600);
       const y2 = await pg.evaluate(() => window.__night.S.y);
       await pg.keyboard.up('KeyW'); await pg.keyboard.press('Escape'); await sleep(300);
       const b = await pg.evaluate(() => ({ paused: window.__night.NS.paused, card: !document.getElementById('pauseCard').classList.contains('hidden') }));
+      const m1 = await pg.evaluate(musicState);
+      console.log('    music: before', m0 && m0.playing.join(','), '| paused', mp && mp.playing.length, 'playing | after', m1 && m1.playing.join(','));
+      if (!m0 || m0.playing.join() !== m0.want || mp.playing.length || m1.playing.join() !== m1.want) throw new Error('music at pause ' + JSON.stringify({ m0, mp, m1 }));
       console.log('    pause: rows', a.rows, 'of', a.want, '| held W let go', a.ky === 0, '| moved while paused', +(y2 - a.y).toFixed(3), 'm');
       if (!a.paused || a.raf || a.ky !== 0 || !a.card || a.rows !== a.want || !/E \/ Space \/ Enter/.test(a.text) || Math.abs(y2 - a.y) > 1e-6 || b.paused || b.card) throw new Error('pause ' + JSON.stringify({ a, y2, b }));
     });
@@ -257,7 +269,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     if (actShow) {
       await step('act: clown 60-64 px at the spot', async () => { const r = await pg.evaluate(() => { const N = window.__night, s = N.N1.actSpotAt; return { px: N.actPxAt(s[0], s[1]), want: N.N1.actPx }; }); if (!(r.px >= 60 && r.px <= 64)) throw new Error('clown ' + r.px.toFixed(1) + ' px tall'); console.log('    clown', r.px.toFixed(1), 'px'); });
       await step('act: draw calls under 150', async () => { const n = await pg.evaluate(() => window.__walkTest.renderer.info.render.calls); if (!(n > 0 && n < 150)) throw new Error('draw calls ' + n); console.log('    draw calls', n); });
-      await step('act: loop stopped behind the cue page', async () => { await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(1500); const r = await pg.evaluate(() => ({ run: window.__night.S.running, raf: window.__night.S.raf, phase: window.__night.NS.A.phase })); if (r.run || r.raf || r.phase !== 'cue') throw new Error('behind the cue ' + JSON.stringify(r)); await shot('act'); });
+      await step('act: loop stopped behind the cue page', async () => { await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(1500); const r = await pg.evaluate(() => ({ run: window.__night.S.running, raf: window.__night.S.raf, phase: window.__night.NS.A.phase })); if (r.run || r.raf || r.phase !== 'cue') throw new Error('behind the cue ' + JSON.stringify(r)); await shot('act');
+        const m = await pg.evaluate(musicState), want = await pg.evaluate(() => window.__night.N1.musicVol * window.__night.N1.musicCueDuck);
+        console.log('    music under the cue:', m && m.key, 'gain', m && m.gain[m.key], 'want', +want.toFixed(3));
+        if (!m || m.key !== 'waltz' || Math.abs(m.gain[m.key] - want) > 0.02) throw new Error('music not ducked under the cue ' + JSON.stringify(m)); });
     } else await step('board: act page opens', async () => { if (!boardWall) await pg.click('.card [data-act="fall"]'); await pg.waitForFunction(() => { const f = document.getElementById('cueFrame'); return f && f.contentWindow.__game; }, null, { timeout: 60000 }); await sleep(2000); await shot('act'); });
     // owner's item 4 (stranger cold read): hosted, the act screen shows one line and its start button, none of the cue page's own notes or settings
     await step('act screen: one line, no developer notes (item 4)', async () => {
@@ -561,6 +576,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       if (e.n > e.max) throw new Error(`${e.n} continue-only cards, at most ${e.max}`);
       if (!e.facts || !e.log) throw new Error('end card brief ' + JSON.stringify(e));
       console.log('    continue-only cards', e.n, 'of at most', e.max);
+    });
+    await step('music: backstage, ring and after each get their track, one sounds at a time (owner 22 Nov)', async () => {
+      await sleep(2500);
+      const m = await pg.evaluate(musicState), vol = await pg.evaluate(() => window.__night.N1.musicVol);
+      console.log('    music trail', m && m.trail, '| playing', m && m.playing.join(','), '| gains', m && JSON.stringify(m.gain));
+      if (!m || m.trail !== 'cold waltz weight' || m.playing.join() !== m.want || m.key !== m.want) throw new Error('music ' + JSON.stringify(m));
+      for (const k in m.gain) if (Math.abs(m.gain[k] - (k === m.key ? vol : 0)) > 0.02) throw new Error('gain ' + k + ' ' + m.gain[k]);
     });
     console.log(sc.n, errs.length ? 'ERRORS\n  ' + errs.slice(0, 8).join('\n  ') : 'no page errors');
     await ctx.close();

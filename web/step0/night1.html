@@ -846,6 +846,19 @@ const N1 = Object.freeze({
   laugh: { n: 4, gap: 0.13, f0: 340, f1: 250, dur: 0.1, vol: 0.09 },
   // harsh panel H8 (owner 22 Nov: "solve"): laughs are real voices rendered once in code (laugh.js, LAUGH_CONFIG); false = the four tones above
   laughReal: true,
+  // ----- music (owner 22 Nov, session 19: his three tracks; web copies in music/ at -18 LUFS, originals in music_src/) -----
+  // switch: false = no music
+  musicOn: true,
+  // the track files, by key
+  musicFiles: { cold: 'music/cold_tea_and_morning_light.mp3', waltz: 'music/the_trapeze_waltz.mp3', weight: 'music/the_weight_of_remaining.mp3' },
+  // the track each scene plays; a scene not listed keeps the track already playing (backstage: cold tea; walk to the ring and the act: the waltz; walk back, Mirror World, shop and end: the weight)
+  musicScene: { paint: 'cold', bravado: 'cold', boardwall: 'cold', note: 'cold', walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight', mw: 'weight', out: 'weight', small: 'weight', kept: 'weight', shop: 'weight', end: 'weight' },
+  // music volume, 0-1 (laughs, horn and the cue sit on top)
+  musicVol: 0.55,
+  // share of that volume while the timing cue runs, so its drum leads
+  musicCueDuck: 0.3,
+  // crossfade between tracks, s
+  musicFade: 1.5,
   // panel item 4: small line under the end card list of purchases
   endLearned: 'The Performer learned each one.',
   // ----- small win at the end of the Mirror World (owner pitch 22 Nov, panel 11 of 12: design/PANEL-small-win.md) -----
@@ -1558,7 +1571,7 @@ function startLoop() {
   S.lastT = 0;
   S.raf = requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) keys.clear(); else startLoop(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { keys.clear(); musicHold(true); } else { if (!NS.paused) musicHold(false); startLoop(); } });
 window.addEventListener('resize', () => { fit(); if (S.running && !S.raf) renderFrame(); if (n1) placeBoardActs(); });
 el.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); S.lost = true; el.state.textContent = 'Graphics paused (context lost).'; });
 el.canvas.addEventListener('webglcontextrestored', () => { S.lost = false; startLoop(); });
@@ -1944,7 +1957,10 @@ function n1Warm() {
 
 // ----- sound (one-shot WebAudio, made on the first tap) -----
 function audio() {
-  if (!NS.audio) { try { NS.audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { NS.audio = null; } }
+  if (!NS.audio) {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari: silent switch mutes */ }
+    try { NS.audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { NS.audio = null; }
+  }
   if (NS.audio && NS.audio.state === 'suspended') NS.audio.resume();
   return NS.audio;
 }
@@ -1968,6 +1984,45 @@ function laugh(delay, kind) {
 }
 // two-note horn on the audio clock; vol share and delay s (the corridor joke: it honks back late)
 function honk(vol, delay) { tone(520, 390, 0.12, 'square', 0.12 * vol, delay); tone(400, 300, 0.22, 'square', 0.12 * vol, delay + 0.12); }
+// ----- music: each track streams from an audio element through its own gain; fades on the audio clock, nothing per frame -----
+// made on the Start tap: every track is started once inside that tap so later scene changes may play it (iOS)
+function musicSetup() {
+  const a = audio(); if (!a || !N1.musicOn || NS.music) return;
+  const M = NS.music = { key: '', duck: 1, held: false, trail: [], el: {}, g: {} };
+  const first = N1.musicScene.paint;
+  for (const k in N1.musicFiles) {
+    const e = new Audio(); e.loop = true; e.preload = k === first ? 'auto' : 'metadata'; e.src = N1.musicFiles[k];
+    let g = null;
+    try { g = a.createGain(); g.gain.value = 0; a.createMediaElementSource(e).connect(g).connect(a.destination); } catch (err) { g = null; e.volume = 0; }
+    M.el[k] = e; M.g[k] = g;
+    if (k !== first) { const pr = e.play(); if (pr) pr.then(() => { if (M.key !== k) e.pause(); }).catch(() => {}); }
+  }
+}
+function musicLevel(k) { const M = NS.music; return k === M.key ? N1.musicVol * M.duck : 0; }
+function musicApply(fade) {
+  const M = NS.music, a = NS.audio; if (!M || !a) return;
+  for (const k in M.el) {
+    const v = musicLevel(k), e = M.el[k], g = M.g[k];
+    if (g) { g.gain.cancelScheduledValues(a.currentTime); g.gain.setTargetAtTime(v, a.currentTime, Math.max(0.01, fade / 3)); } else e.volume = v;
+    if (v > 0 && !M.held && e.paused) e.play().catch(() => {});
+  }
+}
+// the scene's track (CONFIG musicScene); the old one fades out and stops where it was
+function musicFor(sc) {
+  const M = NS.music; if (!M || !(sc in N1.musicScene)) return;
+  const k = N1.musicScene[sc]; if (k === M.key) return;
+  M.key = k; M.trail.push(k);
+  musicApply(N1.musicFade);
+  setTimeout(() => { for (const j in M.el) if (j !== M.key) M.el[j].pause(); }, N1.musicFade * 1000 + 200);
+}
+// the cue's drum leads: music down while the cue runs
+function musicDuck(on) { const M = NS.music; if (!M) return; M.duck = on ? N1.musicCueDuck : 1; musicApply(0.3); }
+// pause and hidden tab: every track stops; on release only the scene's track plays again
+function musicHold(on) {
+  const M = NS.music; if (!M) return;
+  M.held = on;
+  if (on) { for (const k in M.el) M.el[k].pause(); } else musicApply(0.3);
+}
 
 // ----- flow -----
 function show(id, html) {
@@ -1981,11 +2036,12 @@ function show(id, html) {
   NS.card = d;
   return d;
 }
+function setScene(sc) { NS.scene = sc; musicFor(sc); }
 function hideCard() { if (NS.card) { NS.card.remove(); NS.card = null; } }
 function setPrompt(t) { if (el.prompt.textContent !== t) el.prompt.textContent = t; }
 function logoOut() {
   if (NS.scene !== 'logo') return;
-  NS.scene = 'title';
+  setScene('title');
   el.logo.classList.add('out');
   setTimeout(() => el.logo.classList.add('hidden'), 500);
 }
@@ -1996,8 +2052,8 @@ function n1Ready() {
 }
 el.start.addEventListener('click', () => {
   if (!S.ready || NS.scene !== 'title') return;
-  audio();
-  NS.scene = 'paint';
+  audio(); musicSetup();
+  setScene('paint');
   mirrorSetup('paint');
   S.running = true; startLoop();
   el.curtain.classList.add('open');
@@ -2019,7 +2075,7 @@ function goOut() {
 // panel 22 Nov c fix 2: false bravado at the vanity before the board. He stands, chest out, chin up, the smile; held; the shoulders drop a hair.
 // The vanity image copies him exactly. Played by updateMirror (bravPose); no input skips it (owner 22 Nov 20:27).
 function startBravado() {
-  NS.scene = 'bravado';
+  setScene('bravado');
   hideCard();
   NS.brav = { t: 0, peak: 0, smile: false };
   NS.sitTarget = 0;
@@ -2047,12 +2103,12 @@ function endBravado() {
   NS.bravLast = { peak: NS.brav.peak, t: NS.brav.t, skipped: NS.brav.t < N1.bravRise * 0.6 + N1.bravPuff + N1.bravHold + N1.bravDrop };
   NS.brav = null;
   for (const m of [NS.mood, NS.rmood]) { m.neck = CONFIG.moodRoom.neck; m.head = CONFIG.moodRoom.head; }
-  NS.scene = 'paint';
+  setScene('paint');
   toBoard();
 }
 // panel F: he turns from the mirror to the act board on the room wall; the two acts are buttons over their cards
 function toBoard() {
-  NS.scene = 'boardwall';
+  setScene('boardwall');
   hideCard();
   fadeThen(CONFIG.turnFadeMs, () => {
     leaveMirror();
@@ -2079,13 +2135,13 @@ function placeBoardActs() {
 function pickAct(id) {
   if (NS.scene !== 'boardwall') return;
   const a = N1.acts.find((x) => x.id === id);
-  NS.scene = 'note'; NS.noteAct = id;
+  setScene('note'); NS.noteAct = id;
   S.running = false;
   const d = show('note', `<div class="parchment"><h2>${a.title}</h2><p>${a.line}</p><small>${a.own}</small><div class="row"><button id="perform">Perform it</button><button id="noteBack" class="back">Back</button></div></div>`);
   d.querySelector('#perform').addEventListener('click', () => performAct(id));
   d.querySelector('#noteBack').addEventListener('click', noteBack);
 }
-function noteBack() { if (NS.scene !== 'note') return; hideCard(); NS.scene = 'boardwall'; S.running = true; startLoop(); }
+function noteBack() { if (NS.scene !== 'note') return; hideCard(); setScene('boardwall'); S.running = true; startLoop(); }
 function performAct(id) {
   if (NS.scene !== 'note') return;
   NS.act = id;
@@ -2094,7 +2150,7 @@ function performAct(id) {
   walkOut();
 }
 function walkOut() {
-  NS.scene = 'walk';
+  setScene('walk');
   hideCard();
   fadeThen(CONFIG.fadeMs, () => {
     if (S.mirror) leaveMirror();
@@ -2106,7 +2162,7 @@ function walkOut() {
 function n1Board() {
   // panel F: the act was chosen on the room's board; the act starts at the ring edge with no card
   if (N1.boardWall && NS.act) { startAct(NS.act); return; }
-  NS.scene = 'board';
+  setScene('board');
   S.running = false;
   crewQuiet();
   const d = show('board', `<h2>Tonight's board</h2><p>Choose an act.</p><div class="opts">
@@ -2116,12 +2172,13 @@ function n1Board() {
   d.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => startAct(b.dataset.act)));
 }
 function startAct(id) {
-  NS.act = id; NS.scene = 'act';
+  NS.act = id; setScene('act');
   hideCard();
   if (N1.actShow) { actEnter(); return; }
   openCue();
 }
 function openCue() {
+  musicDuck(true);
   NS.cue = document.createElement('iframe');
   NS.cue.id = 'cueFrame';
   // hosted: the cue page hides its own title, notes and settings and shows one line and its start button (owner's item 4)
@@ -2188,7 +2245,7 @@ function walkBackGo() {
   hideCard();
   actCueClose();
   if (S.mode === 'act') actLeave();
-  NS.scene = 'back';
+  setScene('back');
   S.actPay = { laughs: NS.laughs, mask: NS.mask };
   begin(true, 'good');
   // the price of the laugh: the more the act earned, the lower he walks back (tempo kept)
@@ -2413,7 +2470,7 @@ function actFit() {
 // board -> the walk-on (he steps into the spot, the house quiets), then the cue page
 function actEnter() {
   const c = chars.clown, ch = cast.child;
-  S.mode = 'act'; NS.scene = 'act';
+  S.mode = 'act'; setScene('act');
   NS.A = { phase: 'walkon', t: 0, x: N1.walkOnFrom[0], z: N1.walkOnFrom[1], yaw: 0, rx: 0, y: 0, clip: 'idle', clipNow: 'idle', tempo: 1, face: 'smile',
     mood: { tempo: 1, chest: -6, neck: -3, head: -4 }, excite: N1.exciteHouse, spotR: N1.actSpotR, spotX: N1.actSpotAt[0], spotZ: N1.actSpotAt[1], litNow: -1, lit: 1,
     segs: [], seg: 0, sx: 0, sz: 0, srx: 0, sy: 0, fired: {}, peaks: [], flash: 0, shake: 0, fxN: { roll: 0, crash: 0, flash: 0, burst: 0, shake: 0 }, hat: 'real', hatV: new THREE.Vector3(), hatSpin: 0, hatLift: 0, fitH: 0, hold: null, done: false };
@@ -2480,7 +2537,7 @@ function actRoutine() {
   gpStop(c);
   hatTo('real');
   segStart(A);
-  NS.scene = 'act'; S.mode = 'act';
+  setScene('act'); S.mode = 'act';
   el.actSkip.classList.toggle('hidden', !NS.actSeen);
   if (!c.root.parent || c.root.parent !== actScene) actScene.add(c.root, c.blob);
   S.running = true; startLoop();
@@ -2640,7 +2697,7 @@ function actCueOpen() {
   S.running = false;
   openCue();
 }
-function actCueClose() { if (NS.cue) { NS.cue.src = 'about:blank'; NS.cue.remove(); NS.cue = null; } }
+function actCueClose() { if (NS.cue) { NS.cue.src = 'about:blank'; NS.cue.remove(); NS.cue = null; } musicDuck(false); }
 // one-line caption over the bow (the fix-2 headline and the Laughs), then the walk back
 function actCaption() {
   const A = NS.A;
@@ -3154,6 +3211,7 @@ function pauseGame() {
   if (input.touchId !== -1) { input.touchId = -1; input.tx = 0; input.ty = 0; el.stick.classList.add('hidden'); }
   if (S.raf) { cancelAnimationFrame(S.raf); S.raf = 0; }
   if (NS.audio && NS.audio.state === 'running') NS.audio.suspend().catch(() => {});
+  musicHold(true);
   const sc = bindScene(), rows = CONFIG.bindScenes[sc].filter((a) => a !== 'pause').map((a) => `<tr><td>${CONFIG.binds[a].label}</td><td>${keyLabel(a, true)}</td></tr>`).join('');
   el.pauseList.innerHTML = rows + `<tr><td>${CONFIG.binds.pause.label}</td><td>${keyLabel('pause')}</td></tr>`;
   el.pause.classList.remove('hidden');
@@ -3164,6 +3222,7 @@ function resumeGame() {
   NS.paused = false;
   el.pause.classList.add('hidden');
   if (NS.audio && NS.audio.state === 'suspended') NS.audio.resume().catch(() => {});
+  musicHold(false);
   startLoop();
 }
 function n1Key(e) {
@@ -3344,7 +3403,7 @@ function addFoe(kind) {
 function enterMW() {
   const c = chars.clown;
   S.room = false; S.mirror = null; S.mode = 'mw'; S.ended = false;
-  NS.scene = 'mw';
+  setScene('mw');
   for (const f of foes) mwScene.remove(f.root);
   foes.length = 0;
   mwScene.add(c.root, c.blob);
@@ -3735,7 +3794,7 @@ function endMW(result) {
 }
 // leaving the Mirror World: the Nietzsche line on its own card (nietzscheAt 'out' or 'both'), then the shards he kept
 function nietzscheCard() {
-  NS.scene = 'out';
+  setScene('out');
   const at = NS.nAt;
   if (at !== 'out' && at !== 'both') { afterMirror(); return; }
   const q = N1.nietzsche;
@@ -3758,7 +3817,7 @@ function toShop() {
 function smallWinCard() {
   hideCard();
   mirrorSetup('after'); S.running = true; startLoop();
-  NS.scene = 'small'; NS.smallDone = ''; NS.laughed = false;
+  setScene('small'); NS.smallDone = ''; NS.laughed = false;
   const d = show('small', `<button id="smallGo">${NS.result === 'win' ? N1.winText : N1.loseText}</button>`);
   d.querySelector('#smallGo').addEventListener('click', smallPress);
 }
@@ -3782,7 +3841,7 @@ function smallUpdate(dt) {
 }
 function keptCard() {
   // nothing renders behind the opaque card
-  NS.scene = 'kept';
+  setScene('kept');
   if (S.mirror) leaveMirror();
   S.running = false;
   const lost = NS.result === 'lose';
@@ -3827,7 +3886,7 @@ function learnUpdate(dt, v) {
 }
 function shopCard() {
   if (N1.performerLearns && S.mirror !== 'shop') { hideCard(); mirrorSetup('shop'); S.running = true; startLoop(); }
-  NS.scene = 'shop';
+  setScene('shop');
   const items = N1.shop.map((it) => {
     const owned = NS.bought.indexOf(it.id) >= 0, can = NS.shards >= it.price;
     return `<button class="opt" data-id="${it.id}" ${owned || !can || NS.learn ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b>${it.note}<div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
@@ -3849,7 +3908,7 @@ function shopCard() {
   d.querySelector('#endNight').addEventListener('click', endCard);
 }
 function endCard() {
-  NS.scene = 'end';
+  setScene('end');
   // nothing renders behind the opaque end card
   if (S.mirror === 'shop') { leaveMirror(); NS.learn = null; }
   S.running = false;
