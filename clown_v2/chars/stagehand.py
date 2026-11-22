@@ -44,11 +44,16 @@ CONFIG = dict(
     hand_len=2.4,
     # finger bone length
     finger_len=1.8,
+    # whole figure scaled about the feet after building (owner 22 Nov: approved with the condition he is not shorter
+    # than the clown; clown 1.791 m, stagehand at size 1 was 1.482 m)
+    size=1.22,
     # rope coil: centre over the left shoulder (x, y, z), turn radius, rope radius, number of turns
     coil=(7.4, 0.6, 31.2), coil_R=4.4, coil_r=0.62, coil_turns=3,
 )
-# head centre and radii (cast2: (0, -2.4, 41.0) slouched; upright for the bind pose)
-HC, HR = (0, -0.6, 41.2), (6.2, 5.8, 6.6)
+# head centre and radii as built (cast2: (0, -2.4, 41.0) slouched; upright for the bind pose)
+H0, R0 = (0, -0.6, 41.2), (6.2, 5.8, 6.6)
+# head centre after the size factor (the pipeline's head UV uses it)
+HC = tuple(v * CONFIG['size'] for v in H0)
 # face bake: bare skin, tired lids
 HEAD_RAMPS = ['SKIN', 'SKIN_LID']
 # eyes, grey brows, mouth, eye glint
@@ -59,11 +64,18 @@ PAINT_FLATS = ['#F4F4F2']
 PAINT_MIN = None
 # glints: the brass buckle and the hammer head (ochre rope is matte, but shares the ramp: keep OCHRE off)
 SPEC_RAMPS = ('GOLD',)
-# checks: height range in metres (an old man, shorter than the clowns); idle looks down at the floor
-CHECK = dict(height=(1.35, 1.60), idle_head_down=True)
+# checks: height range in metres; the minimum is above the clown's 1.791 m (owner condition 22 Nov); idle looks down at the floor
+CHECK = dict(height=(1.80, 1.95), idle_head_down=True)
 # walk style: a slow shuffle, arms close
 WALK = dict(thigh=16.0, knee=28.0, arm=9.0, bob=0.3, arm_out=20, sway=2)
 EXPR = ['tired', 'smile', 'startle', 'frown']
+
+def _grow(before):
+    """Scale every object made since `before` about the origin (feet) by CONFIG size: uniform, so rotations hold."""
+    import bpy
+    k = CONFIG['size']
+    for o in set(bpy.data.objects) - before:
+        o.location = o.location * k; o.scale = o.scale * k
 
 def _align(o, d):
     """Turn a torus (axis z) so its axis runs along d."""
@@ -71,6 +83,12 @@ def _align(o, d):
     return o
 
 def body():
+    import bpy
+    before = set(bpy.data.objects)
+    _body()
+    _grow(before)
+
+def _body():
     c = CONFIG
     for s in (-1, 1):
         S = side(s)
@@ -173,11 +191,11 @@ def body():
             t = math.radians(ang)
             tag(ell(T('WARM_WHITE'), (rad * math.sin(t), rad * 0.95 * math.cos(t) - 0.4, z), (1.6, 1.2, 1.3)), 'WARM_WHITE', 'head')
     res(16, 10)
-    tag(ell(T('SKIN'), (0, on_surface(HC, HR, 0, 40.0, 0.9), 40.0), (1.3, 1.3, 1.6)), 'SKIN', 'head')
+    tag(ell(T('SKIN'), (0, on_surface(H0, R0, 0, 40.0, 0.9), 40.0), (1.3, 1.3, 1.6)), 'SKIN', 'head')
     res(10, 6)
     for xx in (-2.3, -1.2, 1.2, 2.3):
-        tag(ell(T('WARM_WHITE'), (xx, on_surface(HC, HR, xx, 38.0, 0.35), 38.0 - 0.12 * abs(xx)), (1.0, 0.6, 0.65)), 'WARM_WHITE', 'head')
-    tag(ell(T('WARM_WHITE'), (0, on_surface(HC, HR, 0, 38.3, 0.4), 38.3), (0.8, 0.55, 0.55)), 'WARM_WHITE', 'head')
+        tag(ell(T('WARM_WHITE'), (xx, on_surface(H0, R0, xx, 38.0, 0.35), 38.0 - 0.12 * abs(xx)), (1.0, 0.6, 0.65)), 'WARM_WHITE', 'head')
+    tag(ell(T('WARM_WHITE'), (0, on_surface(H0, R0, 0, 38.3, 0.4), 38.3), (0.8, 0.55, 0.55)), 'WARM_WHITE', 'head')
     res(28, 10)
     tag(ell(T('HAT_BAND'), (0, -0.6, 46.6), (6.7, 6.4, 2.3)), 'HAT_BAND', 'head')
     tag(ell(T('HAT_BAND'), (0, -5.8, 45.5), (5.0, 2.8, 0.7)), 'HAT_BAND', 'head')
@@ -188,10 +206,16 @@ def body():
     capsule(T('OCHRE'), (-6.0, -1.8, 42.4), (-6.6, 2.0, 41.2), 0.32, 'head', ramp='OCHRE')
     # the head itself: its own object with a face texture
     res(32, 16)
-    tag(ell(T('SKIN'), HC, HR), 'SKIN', 'head', group='head')
+    tag(ell(T('SKIN'), H0, R0), 'SKIN', 'head', group='head')
 
 # ---------------------------------------------------------------- face expressions (baked, not shipped as geometry)
 def face(expr):
+    import bpy
+    before = set(bpy.data.objects)
+    _face(expr)
+    _grow(before)
+
+def _face(expr):
     """Tired: heavy lids, level grey brows, flat mouth. Smile: lids lift, mouth curves (the corridor greeting).
     Startle: round eyes, brows up, small open mouth. Frown: brows down and in, mouth turned down."""
     lid = dict(tired=0.55, smile=0.35, startle=0.0, frown=0.45)[expr]
@@ -200,22 +224,22 @@ def face(expr):
     for s in (-1, 1):
         x = s * 2.5
         ez = 0.95 if expr == 'startle' else 0.72
-        ell(F('#1E1714'), (x, on_surface(HC, HR, x, 41.6, 0.25), 41.6), (0.78, 0.4, ez))
+        ell(F('#1E1714'), (x, on_surface(H0, R0, x, 41.6, 0.25), 41.6), (0.78, 0.4, ez))
         if expr != 'tired':
-            ell(F('#F4F4F2'), (x - s * 0.3, on_surface(HC, HR, x, 42.0, 0.42), 42.0), (0.3, 0.3, 0.3))
+            ell(F('#F4F4F2'), (x - s * 0.3, on_surface(H0, R0, x, 42.0, 0.42), 42.0), (0.3, 0.3, 0.3))
         if lid > 0:
-            ell(T('SKIN_LID'), (x, on_surface(HC, HR, x, 42.25, 0.32), 42.25 - 0.1 * (1 - lid)), (1.35, 0.5, 0.35 + 0.35 * lid))
+            ell(T('SKIN_LID'), (x, on_surface(H0, R0, x, 42.25, 0.32), 42.25 - 0.1 * (1 - lid)), (1.35, 0.5, 0.35 + 0.35 * lid))
         pts = [(1.2, 43.4), (2.2, 43.7), (3.3, 43.6), (4.1, 43.2)]
-        build.arc(F('#8E877C'), [(s * xx, on_surface(HC, HR, s * xx, zz + brow + tilt * (2.6 - xx) * 0.6, 0.3), zz + brow + tilt * (2.6 - xx) * 0.6)
+        build.arc(F('#8E877C'), [(s * xx, on_surface(H0, R0, s * xx, zz + brow + tilt * (2.6 - xx) * 0.6, 0.3), zz + brow + tilt * (2.6 - xx) * 0.6)
                                  for xx, zz in pts], (0.62, 0.4, 0.45))
     if expr == 'startle':
-        ell(F('#4A2A24'), (0, on_surface(HC, HR, 0, 36.7, 0.2), 36.7), (0.9, 0.4, 0.8))
+        ell(F('#4A2A24'), (0, on_surface(H0, R0, 0, 36.7, 0.2), 36.7), (0.9, 0.4, 0.8))
     else:
         bend = dict(tired=0.0, smile=0.45, frown=-0.4)[expr]
-        build.arc(F('#4A2A24'), [(xx, on_surface(HC, HR, xx, 36.9 + bend * (abs(xx) / 1.6) ** 2, 0.15), 36.9 + bend * (abs(xx) / 1.6) ** 2)
+        build.arc(F('#4A2A24'), [(xx, on_surface(H0, R0, xx, 36.9 + bend * (abs(xx) / 1.6) ** 2, 0.15), 36.9 + bend * (abs(xx) / 1.6) ** 2)
                                  for xx in (-1.6, -0.8, 0.0, 0.8, 1.6)], (0.55, 0.3, 0.3))
 
-def bones(U): return humanoid_bones(CONFIG, U)
+def bones(U): return humanoid_bones(CONFIG, U * CONFIG['size'])
 
 def idle(t, length):
     """The cast2 slouch: chest forward, head down to the floor, arms hanging a little in front, slow breath."""
