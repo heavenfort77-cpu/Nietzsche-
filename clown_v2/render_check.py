@@ -26,7 +26,8 @@ if not sc.camera:
 scale = float(os.environ.get('UNIT', '1'))          # model units per approved unit (0.03 after conversion)
 piv.scale = (1 / scale,) * 3
 # which approved light set to use: the character's world (stage or Mirror); CHAR is set by the cast job
-WHO = os.environ.get('CHAR', 'clown')
+# light world of the approved render script; crew without an entry there use WORLD (the clown's warm stage: WORLD=clown)
+WHO = os.environ.get('WORLD', os.environ.get('CHAR', 'clown'))
 render3d.stage(WHO)
 sc.cycles.samples = spp; sc.render.resolution_x = sc.render.resolution_y = res
 sc.cycles.device = 'CPU'

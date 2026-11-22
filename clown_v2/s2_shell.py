@@ -267,7 +267,11 @@ def main():
         pout, _, _ = paint(PC, FA, FE, [], paint_flats)
         cell = np.concatenate([pout, alpha[..., None]], -1)
         patlas[(1 - cy) * Fc:(2 - cy) * Fc, cx * Fc:(cx + 1) * Fc] = cell
-        gate(f'paint layer {e}: paint present, eyes cut it', alpha.mean() > C.PAINT_MIN, f'{alpha.mean() * 100:.1f}% of the cell painted')
+        if C.PAINT_MIN is None:
+            # crew wear no paint: the paint layer must stay empty
+            gate(f'paint layer {e}: empty (no face paint)', alpha.mean() < 0.0005, f'{alpha.mean() * 100:.2f}% of the cell painted')
+        else:
+            gate(f'paint layer {e}: paint present, eyes cut it', alpha.mean() > C.PAINT_MIN, f'{alpha.mean() * 100:.1f}% of the cell painted')
         for o in hs: bpy.data.objects.remove(o)
     save_np(atlas, os.path.join(D, 'face_atlas.png'))
     save_np(patlas[..., :3], os.path.join(D, 'face_paint.png'), patlas[..., 3])

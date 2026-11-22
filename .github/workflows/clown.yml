@@ -280,7 +280,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        char: [whiteface, performer]
+        char: [whiteface, performer, stagehand]
     env:
       CHAR: ${{ matrix.char }}
     steps:
@@ -305,10 +305,13 @@ jobs:
           python -I check_glb.py $O/clown_v2.glb | tee -a log.txt
           python -I s3_check.py $O --sheet | tee -a log.txt
           if [ "$CHAR" = whiteface ]; then python -I mutate_shell.py $O | tee -a log.txt; fi
+          if [ "$CHAR" = stagehand ]; then CHAR=whiteface python -I s2_build.py out_mutpaint > /dev/null; CHAR=whiteface python -I mutate_paint_empty.py out_mutpaint | tee -a log.txt; fi
           mkdir -p ../cast_out/$CHAR
           cp log.txt $O/*.glb $O/*.png $O/*.jpg $O/*.gif $O/gates_*.json ../cast_out/$CHAR/
           ! grep -q '^FAIL' log.txt
       - name: Side-by-side with the approved model (same camera, lights, scale)
+        # crew have no approved 3D model to compare with
+        if: matrix.char != 'stagehand'
         run: |
           python -I art/3_blender_3d/render3d.py $CHAR > /dev/null
           cd clown_v2 && O=out_${CHAR} && mkdir -p sbs
