@@ -143,7 +143,7 @@ Owner, 22 Nov 10:13: "agree to all 3" (panel rounds 2, 3, 4) and hand over. All 
 
 ## Waiting on the owner
 
-- Music (session 19): approve which track plays where (`musicScene`) and the level (`musicVol` 0.55 under laughs); say where the tracks come from and whether commercial use is allowed (CREDITS entry).
+- Music (session 19): approve which track plays where (`musicScene`) and the level (`musicVol` 0.55 under laughs); tracks made with Google Gemini (owner 22 Nov 22:52; CREDITS updated; no written commercial-use licence found, fine for the free jam build).
 - Play night 1 with the batch 2 items and the small win on; agree the small-win Mask rule (-1 per won night, floored at the night's start) for the GDD Meters section.
 - Swap the GDD Dazai rows 1 and 2 and set night 1's Nietzsche line to "In vain was all our labour." in the live doc and the Project GDD copy (with the earlier GDD pass, list item 0).
 - Play the night-1 prototype (`web/step0/night1.html`, artifact "The Clown and the Mirror: night 1 (prototype)") and say whether the loop works.
