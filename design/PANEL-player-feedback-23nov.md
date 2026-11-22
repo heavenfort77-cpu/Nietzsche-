@@ -414,3 +414,38 @@ Y and Z passed 75%. The debate round itself served as the red team: every seat a
 - Gone, because no separate seat asked for it: the dressing-room practice offer, the faster corridor walk, the frozen goal card, body leans and tinted rings, the later-night miss rules, the slower first chain.
 - New, and not in rounds 1-3: an instant "again" on the spot in the ring, which 8 separate seats reached.
 - Still open for the owner: X (6-4-3), whether a restart costs Laughs, W (7-6), and whether the lone figure carries a line or icon.
+
+## Round 5: the owner's decision put to the same thirteen agents (owner 23 Nov 06:29: "let them compare my decision to their and if they agree?")
+
+Same thirteen separate agents, each shown the owner's words, the lead's reading of them (D1-D5) and asked agree / disagree / agree if, whether the lead misread him, and their biggest worry. Judgement by separate agents, not a playtest.
+
+D1 several short acts of 3 rings, two misses end only that act. First vote: 13 of 13
+All agree, 9 with a condition. Condition from 9: the next act starts in the ring within a few seconds, no corridor or board wall between (built: the existing 2.2 s gag between acts). Nietzsche, Dazai, Story writer: a lost act should cost something felt (colder crowd, fewer Laughs); built: a fall pays less than a fit, nothing else added. Camus: number the acts on screen. 6 seats noted that "4 acts" was the lead's number, not the owner's.
+D2 no count in the mirror. First vote: 11 of 13
+Disagree and yield: Casual phone player, Camus. Psychologist and Camus: the shards must be visible or told, or the room's end is hidden.
+D3 one line naming his insecurities on entry. First vote: 13 of 13
+All agree with conditions: cut "Face each one." (Camus, Nietzsche, Indie critic); his own voice, first person (Dazai, Story writer); stays until he acts (Core gamer, Psychologist) against gone in about 3 s (Mobile producer, Jam judge, Casual).
+D4 a fixed hint for the insecurity he faces. First vote: 9 of 13
+Disagree: Camus, Chaplin, Indie critic, Nietzsche ("he wrote hints, the lead wrote answers"; would accept it fading once the right answer lands once). Story writer and Auguste: place it by the figure, not across the top.
+D5 the pratfall skill called "Dodge", animation kept. First vote: 11 of 13
+Disagree as read: Jam judge, Clinical psychologist. 11 seats said the lead may have misread "the first fall": it may mean the first miss in an act is shown as a dodge (the fall animation plays, the miss is forgiven or named as escape), not the mirror skill. 5 seats: the Whisper hint "Step aside. Don't dodge." contradicts the button; reworded in this batch to "Step past it. Stay on your feet." (Jam judge's wording).
+Panel items (one ring closes by itself; insecurities one at a time, the Light first): 13 of 13 agree.
+
+## Red team
+
+D1, D2, D3, D5 and the panel items reached 75%. The thirteen conditions and the two dissents above are the red team: each seat argued its own objection in full in its reply; none was a vote of comfort.
+
+### Round 5 dissent
+
+- Casual phone player (D2): "I voted yes for a count. It's his call."
+- Camus (D2): "What stays hidden is the shards: the last figure falls and the room does not end."
+- Camus (D4): "A fixed line hands him the gesture before he has looked."
+- Chaplin (D4): "A caption held for the whole fight means the picture has failed."
+- Indie critic (D4): "These are answers, not hints. A pinned sentence makes the mirror a reading test."
+- Nietzsche (D4): "A fixed line over the figure turns an enemy into an exercise."
+- Jam judge (D5): "The player presses Dodge and watches a man fall over, which is one confusion."
+- Clinical psychologist (D5): "Falling on purpose is owning the humiliation, which is what loosens shame. Dodge means avoidance."
+
+### Shared worry (7 seats: Core gamer, Camus, Casual, Jam judge, Story writer, Indie critic, Chaplin)
+
+On a phone the player reads the entry line and the hint while the 1.0 s idle warning and the Laughs drain are already running, so his first loss in the mirror is a reading loss. Core gamer: start the drain only after the first input. Not built; owner's call.

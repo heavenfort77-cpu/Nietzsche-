@@ -97,7 +97,7 @@
   #gnaw.drain { opacity: 1; }
   #mwHud.low { color: #e8735c; }
   #mwHud { position: absolute; right: 120px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
-  #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
+  #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; white-space: pre-line; }
   /* session 18 batch 2: the act is skipped only by this button (owner 22 Nov 20:27); full screen where the browser allows it */
   #actSkipBtn { position: fixed; right: 16px; bottom: 24px; min-width: 88px; min-height: 48px; border-radius: 24px; border: 1px solid #cfaa4e; background: #1e1714cc; color: #e9d9b0; font: 600 15px system-ui, sans-serif; z-index: 7; }
   #fsBtn { position: fixed; right: 8px; top: 8px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 22px; border: 0; background: #1e1714b3; color: #e9d9b0; font: 600 13px system-ui, sans-serif; z-index: 12; }
@@ -144,7 +144,7 @@
 <button id="actSkipBtn" class="hidden">Skip</button>
 <div id="pauseCard" class="card hidden"><h2>Paused</h2><table id="pauseList"></table><button id="resumeBtn">Resume</button></div>
 <button id="fsBtn" class="hidden" aria-label="Full screen">Full screen</button>
-<div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">FALL</button></div>
+<div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">DODGE</button></div>
 <div id="gnaw"></div>
 <div id="fog">The Mirror</div>
 <div id="curtain"><div class="half hl"></div><div class="half hr"></div><div class="val"></div>
@@ -604,7 +604,8 @@ const CONFIG = Object.freeze({
     press: { keys: ['KeyE', 'Space', 'Enter'], mouse: [0], label: 'Press his hand to the glass' },
     slap: { keys: ['KeyJ'], mouse: [0], label: 'Slap' },
     pie: { keys: ['KeyK'], mouse: [2], label: 'Throw a pie' },
-    fall: { keys: ['Space'], mouse: [], label: 'Pratfall' },
+    // owner 23 Nov 06:22 item 5 ("the first fall should be name as dodge but keep the animation"): the one name the player reads for the Mirror pratfall (pause card, pad, key hint); 'Pratfall' switches it back; the action id, animation and sound are unchanged
+    fall: { keys: ['Space'], mouse: [], label: 'Dodge' },
   },
   // which actions each scene listens to (the pause card lists these; a check fails if two share a key in one scene)
   bindScenes: {
@@ -819,8 +820,22 @@ const N1 = Object.freeze({
   whisper: { h: 2.6, hp: 4, shards: 4, at: [-4, 2], speed: 0.8, keep: 2.5, tell: 0.4, strikeR: 1.0, strike: 8, near: 1.6, nearDrain: 1 },
   stare: { h: 1.1, hp: 4, shards: 4, at: [4, 1], turn: 35, cone: 22, tell: 0.4, judge: 4, every: 1.0 },
   shame: { h: 1.85, hp: 3, shards: 3, at: [0, 4], speed: 0.9, grab: 0.8, tell: 0.4, slow: 0.5, drain: 3, push: 2, stun: 1.0 },
-  // a construct's first sighting tip, s on screen
+  // a passing tip (cost, gnaw, corridor; a construct's first sighting when mwHints is off), s on screen
   tipSecs: 4.5,
+  // owner 23 Nov 06:22 ("solve 1 and 2", player: "in the mirror I also don't know what to do"): switch, the insecurities come one at a time in the ring; the next enters when the one before is down (the Light: put out); false = all of tonight's from the start, as before
+  mwOneAtATime: true,
+  // the order they enter in (only those tonight's act earned; one that broke out in the corridor and still stands is faced first)
+  mwOrder: ['light', 'stare', 'shame', 'whisper'],
+  // pause between one going down and the next entering, s (no gnaw meanwhile; the gnaw's warning restarts at the entry)
+  mwEnterSecs: 1.0,
+  // owner 23 Nov 06:22 item 4 ("all insecurities have hints"): switch, the insecurity he faces shows its hint as one fixed line from its entry until it is down; false = the first sighting tip for tipSecs, as before
+  mwHints: true,
+  // the hint of each insecurity (the owner edits the wording; "dodge" is the Mirror pratfall, see CONFIG.binds.fall.label)
+  mwHint: { light: 'Three gags on its lamp.', stare: 'Hit it from the side.', shame: 'Dodge to shake it off.', whisper: 'Step past it. Stay on your feet.' },
+  // owner 23 Nov 06:22 item 3 ("should let player know he is fighting insecurities"; a count of figures: no): the line shown on entering the Mirror World ('' = none)
+  mwNameText: 'These are his insecurities. Face each one.',
+  // how long that line stays, s (the action is not paused)
+  mwNameSecs: 3.5,
   // owner 23 Nov 00:32 "player must know laugh is limited else they will spam": the cost shows on each gag button and in the hint; the Laughs count shows the spend for spendShow s and turns red at lowLaughs or under
   spendShow: 0.7, lowLaughs: 20,
   // shop (prices are glass pieces on the ledge, never numbers)
@@ -3437,12 +3452,12 @@ function enterMW() {
   setFace(c, 'sad');
   const un = mwUnworld(NS.mask);
   mwU.uWarp.value = un.warp; mwU.uAmt.value = un.amt; mwU.uGlass.value = un.glass;
-  if (!N1.mwRoute) mwRingFoes();
   // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger
   const falls = NS.hurt ? NS.hurt.falls : 0;
   NS.mw = { gnawLvl: 0, gnawed: 0, gnawTold: false, spent: 0, spentT: 0, hudSp: 0, costTold: false, x: 0, z: 4.2, yaw: Math.PI, laughs: NS.laughs, shown: '', t: 0, still: 0, moving: false, fall: null, slapT: -1, cd: 0, pieOn: false, pieX: 0, pieZ: 0, pieDX: 0, pieDZ: 0, pieD: 0,
     splashT: -1, hurtT: 0, shards: 0, over: '', winT: 0, tip: '', tipT: 0, tips: [], fovNow: 40, lookX: 0, lookZ: 4, hudL: -1, hudP: -1, hudS: -1,
-    space: 'ring', cuts: 0, cutting: false };
+    space: 'ring', cuts: 0, cutting: false, queue: [], enterT: 0, face: null, fixed: '', tipDom: '' };
+  el.mwTip.textContent = '';
   // panel G: night 1 starts in the mirror corridor; the ring (and its constructs) comes after one cut at the door
   if (N1.mwRoute) {
     const M = NS.mw;
@@ -3450,17 +3465,21 @@ function enterMW() {
     mwCam.position.fromArray(N1.mwCorCam);
     tip('The mirror corridor. The way to the ring is the pale door.');
     mwBag();
-  } else mwCam.position.fromArray(N1.mwCamPos);
+  } else { mwCam.position.fromArray(N1.mwCamPos); mwRingFoes(); }
   for (const s of pool.shards) { s.on = false; mwScene.remove(s.m); }
   el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch); el.hint.classList.toggle('padded', NS.touch);
   el.shotName.textContent = '';
-  el.hint.textContent = NS.touch ? 'Stick: move. Gags cost Laughs. Stand still and they gnaw.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap -${N1.slap.cost}. ${keyLabel('pie', true)}: pie -${N1.pie.cost}. ${keyLabel('fall')}: pratfall -${N1.fall.cost}. Laughs are all you have. Stand still and they gnaw.`;
-  el.padSlap.textContent = `SLAP -${N1.slap.cost}`; el.padPie.textContent = `PIE -${N1.pie.cost}`; el.padFall.textContent = `FALL -${N1.fall.cost}`;
+  el.hint.textContent = NS.touch ? 'Stick: move. Gags cost Laughs. Stand still and they gnaw.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap -${N1.slap.cost}. ${keyLabel('pie', true)}: pie -${N1.pie.cost}. ${keyLabel('fall')}: ${CONFIG.binds.fall.label.toLowerCase()} -${N1.fall.cost}. Laughs are all you have. Stand still and they gnaw.`;
+  el.padSlap.textContent = `SLAP -${N1.slap.cost}`; el.padPie.textContent = `PIE -${N1.pie.cost}`; el.padFall.textContent = `${CONFIG.binds.fall.label.toUpperCase()} -${N1.fall.cost}`;
   setPrompt('');
   S.running = true; startLoop();
 }
 // night 1: the Light always; the act's own monster; results add the Stare (a Perfect) and Shame (a miss)
+// owner 23 Nov 06:22 (N1.mwOneAtATime): only the first is here on entry; the rest wait in M.queue in N1.mwOrder and mwEntry brings each when the one before is down
 function mwRingFoes() {
+  const M = NS.mw;
+  M.queue.length = 0; M.enterT = 0;
+  if (N1.mwOneAtATime) { mwQueue(M); return; }
   addFoe('light');
   // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger. One that broke out in the corridor is already here
   for (const k of mwRoster()) {
@@ -3468,6 +3487,30 @@ function mwRingFoes() {
     if (had) { if (had.alive) { had.x = had.cfg.at[0]; had.z = had.cfg.at[1]; } continue; }
     addFoe(k); mwFeed(foes[foes.length - 1]);
   }
+}
+function mwQueue(M) {
+  const roster = mwRoster();
+  let here = false;
+  // one that broke out in the corridor and still stands is already here, at its own start: it is the first he faces
+  for (const f of foes) if (f.alive) { f.x = f.cfg.at[0]; f.z = f.cfg.at[1]; here = true; }
+  const met = (k) => foes.some((f) => f.kind === k);
+  for (const k of N1.mwOrder) if ((k === 'light' || roster.indexOf(k) >= 0) && !met(k)) M.queue.push(k);
+  // a construct of tonight that N1.mwOrder does not name still comes, last
+  for (const k of ['light'].concat(roster)) if (!met(k) && M.queue.indexOf(k) < 0) M.queue.push(k);
+  if (!here) mwNext(M);
+}
+// the next insecurity enters at its own start; the still clock restarts so the gnaw warns again before it drains
+function mwNext(M) {
+  M.enterT = 0;
+  addFoe(M.queue.shift());
+  const f = foes[foes.length - 1];
+  mwFeed(f); f.pop = 0.4; M.still = 0;
+}
+// in the ring, nobody standing and some still to come: the next enters after N1.mwEnterSecs
+function mwEntry(M, dt, alive) {
+  if (alive > 0 || !M.queue.length || M.over) return;
+  M.enterT += dt;
+  if (M.enterT >= N1.mwEnterSecs) mwNext(M);
 }
 // the roster of constructs tonight (the Light apart) and how the Whisper is fed (H1)
 function mwRoster() {
@@ -3511,7 +3554,7 @@ function mwCut() {
   fadeThen(N1.mwCutMs, () => {
     M.space = 'ring'; M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4; M.cuts++; M.cutting = false; M.fall = null;
     // F25: the corridor's tip belongs to the corridor (it stayed on screen in the ring)
-    M.tip = ''; M.tipT = 0; M.tips.length = 0; el.mwTip.textContent = '';
+    M.tip = ''; M.tipT = 0; M.tips.length = 0; mwTipShow(M);
     mwCam.position.fromArray(N1.mwCamPos);
     mwRingFoes();
   });
@@ -3612,9 +3655,9 @@ const TIPS = {
   light: `The Light drains Laughs while you move in its beam. Go to its lamp and land ${N1.light.gags} gags on it to put it out.`,
   gnaw: 'Do nothing and they gnaw at your Laughs. Move or throw a gag.',
   cost: 'Every gag spends Laughs. At 0 Laughs you wake at the mirror.',
-  whisper: "The Whisper copies your pratfalls and strikes where you land. Step, don't fall.",
+  whisper: "The Whisper copies your dodges and strikes where you land. Step, don't dodge.",
   stare: 'The Stare: in its gaze you are judged. Hit it from the side.',
-  shame: 'Shame clings and slows you. A pratfall shakes it off.',
+  shame: 'Shame clings and slows you. A dodge shakes it off.',
 };
 function updateMW(dt) {
   const M = NS.mw;
@@ -3623,7 +3666,8 @@ function updateMW(dt) {
   mwClown(M, dt);
   mwPie(M, dt);
   let alive = 0;
-  if (M.space === 'ring') { alive = mwFoes(M, dt); mwShards(M, dt, alive); }
+  // those still to enter count as left: no win and no shard sweep before the last one is down
+  if (M.space === 'ring') { alive = mwFoes(M, dt); mwEntry(M, dt, alive); mwShards(M, dt, alive + M.queue.length); }
   else { mwCorridor(M, dt); if (foes.length) { alive = mwFoes(M, dt); mwShards(M, dt, 1); } }
   mwGnaw(M, dt, alive);
   mwCamera(M, dt);
@@ -3788,12 +3832,13 @@ function mwShame(M, f, dt, dx, dz, d) {
   f.reach = 0; f.x += dx / d * f.cfg.speed * dt; f.z += dz / d * f.cfg.speed * dt;
 }
 function mwFoes(M, dt) {
-  let alive = 0;
+  let alive = 0, face = null;
   for (let fi = 0; fi < foes.length; fi++) {
     const f = foes[fi];
     if (!f.alive) { if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt); continue; }
     alive++;
-    if (!f.seen) { f.seen = true; tip(TIPS[f.kind]); }
+    if (!face) face = f;
+    if (!f.seen) { f.seen = true; if (!N1.mwHints) tip(TIPS[f.kind]); }
     const dx = M.x - f.x, dz = M.z - f.z, d = Math.hypot(dx, dz) || 0.001;
     if (f.kind === 'light') mwLight(M, f, dt);
     else if (f.kind === 'whisper') mwWhisper(M, f, dt, dx, dz, d);
@@ -3804,6 +3849,8 @@ function mwFoes(M, dt) {
     f.root.position.set(f.x, 0, f.z);
     f.root.rotation.y = f.yaw;
   }
+  // the one he faces (the first standing): its hint shows in mwTipShow
+  M.face = face;
   return alive;
 }
 function mwShards(M, dt, alive) {
@@ -3842,7 +3889,15 @@ function mwHud(M, dt) {
     el.padPie.disabled = NS.pies <= 0;
   }
   if (M.tipT > 0) M.tipT -= dt;
-  if (M.tipT <= 0 && (M.tip || M.tips.length)) { M.tip = M.tips.shift() || ''; M.tipT = M.tip ? N1.tipSecs : 0; el.mwTip.textContent = M.tip; }
+  if (M.tipT <= 0 && (M.tip || M.tips.length)) { M.tip = M.tips.shift() || ''; M.tipT = M.tip ? N1.tipSecs : 0; }
+  mwTipShow(M);
+}
+// the tip element: the fixed line (the fight's name at entry, then the hint of the insecurity he faces) with the passing tip under it; DOM written on change only
+function mwTipShow(M) {
+  const fixed = N1.mwNameText && M.t < N1.mwNameSecs ? N1.mwNameText : N1.mwHints && M.face ? N1.mwHint[M.face.kind] : '';
+  if (fixed === M.fixed && M.tip === M.tipDom) return;
+  M.fixed = fixed; M.tipDom = M.tip;
+  el.mwTip.textContent = fixed && M.tip ? fixed + '\n' + M.tip : fixed || M.tip;
 }
 function endMW(result) {
   const M = NS.mw;
