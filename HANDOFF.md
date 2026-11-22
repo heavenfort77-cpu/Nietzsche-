@@ -149,7 +149,8 @@ Owner, 22 Nov 10:13: "agree to all 3" (panel rounds 2, 3, 4) and hand over. All 
 
 ## Waiting on the owner
 
-- The Light (session 20 panel): (a) the way out every night, (b) hostile until the last night, (c) only on the last night; and Q3 (hold as an act), Q4 (soft dim picture), Q5 (leaving early costs). Say if "softer" meant the picture, not the music (`musicSoft` 0.6).
+- Owner decision 22 Nov 23:22: "last night light is a spotlight on him not by monster". Read as: the last night's spotlight is his own (GDD ending step 2), a different thing from the Light construct; the construct stays one of the insecurities on the earlier nights (the panel's (b) for those nights, and the Q1 worry falls away: two lights, not one image with two meanings). Not built and still open: the two must not look alike (stranger: the construct "looks exactly like the stage spotlight"); Q3-Q5.
+- Superseded by the line above: the Light (session 20 panel): (a) the way out every night, (b) hostile until the last night, (c) only on the last night; and Q3 (hold as an act), Q4 (soft dim picture), Q5 (leaving early costs). Say if "softer" meant the picture, not the music (`musicSoft` 0.6).
 - Music (session 19): approve which track plays where (`musicScene`) and the level (`musicVol` 0.55 under laughs); tracks made with Google Gemini (owner 22 Nov 22:52; CREDITS updated; no written commercial-use licence found, fine for the free jam build).
 - Play night 1 with the batch 2 items and the small win on; agree the small-win Mask rule (-1 per won night, floored at the night's start) for the GDD Meters section.
 - Swap the GDD Dazai rows 1 and 2 and set night 1's Nietzsche line to "In vain was all our labour." in the live doc and the Project GDD copy (with the earlier GDD pass, list item 0).
