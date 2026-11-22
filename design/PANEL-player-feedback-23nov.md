@@ -15,6 +15,15 @@ Kind human, relayed by the owner; which build was played was not said. The words
 - Mirror World: no goal line on entry, no count of figures left. Tips (`TIPS`, line 3610) are queued and each shows `tipSecs` 4.5 s while play continues: one per figure on first sight (line 3796), one after the first spend, one when the idle drain starts.
 - Not checked this session: what the player is shown about the press when the cue runs inside night 1 (`cue_model.html?host=night1`); what ends the Mirror World in code.
 
+### Correction (lead, 23 Nov 04:40, after the owner asked "do you actually understand the comment")
+
+The facts above were incomplete when the panel voted; the cue's own values were not read. From `web/step0/cue_model.html` CONFIG (lines 97-121, 150-153) and its hosted line (line 85):
+- Night 1's act is 3 chains of 3 beats, beats 600 ms apart (`gapMs`), ring close time 900 ms, first ring 1.2 s after the start (`leadInMs`), 2.2 s gag between chains.
+- `missesToEnd: 2`: two timing misses end the act. A first-time player who misses the first two rings has the whole challenge over about 2-3 s after it appears (worked out from these values, not measured in a run), and the next ring is a full new run away. "The cue comes once per run" above should read: one act of up to 9 presses, which can end after 2.
+- A line is already shown before the cue: "Tap HIT when the ring closes onto the mask on his face." (Q5 option a exists.)
+- A result word already shows under the mask, for 320 ms (`feedbackMs`). Q6 voted to add what exists; the open point is whether 320 ms is seen.
+- The panel was not asked about `missesToEnd`, the 600 ms gap or the lead-in. Its votes on Q5 and Q6 rest on wrong facts and need retaking; Q1-Q4 and Q7-Q9 do not depend on them.
+
 ## Blind round
 
 Scores a/b/c, 1-5: a = knows what to do before and during the act; b = can prepare for and retry the challenge; c = knows what to do in the Mirror World. Means: a 1.9, b 1.6, c 1.5. Written before the lead's proposal was shown.
