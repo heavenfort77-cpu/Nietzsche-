@@ -135,3 +135,102 @@ Yes: Casual, Psychologist, Indie critic. No 10 (the owner's no-cut rule). After 
 5. Q7 entry freeze, goal line, count.
 6. Q8 nearest-figure banner in his voice; timed tips off.
 7. Stranger cold read of the result before any further vote.
+
+## Round 2: solutions on the corrected facts (owner 23 Nov 04:35: "so now run the panel and seek solutions")
+
+Subagent a728bc353456ee21e, shown the corrected cue values, the Mirror World's end rule (`night1.html` line 3817: every figure down and every shard picked up; line 3519: 0 Laughs loses) and that all four figures stand in the room from the first second (CONFIG lines 807-821). Round 1's Q5 and Q6 are void. Every value below is a starting value, not measured. Nothing is built.
+
+### P1. What ends the act
+Argument: Casual: "It was over before I knew it had started; let me finish the act badly." / Core gamer: "Chain 1 can be safe, but a clown who keeps missing should get pulled from chain 2 on." / Dazai: "Two misses and the lights go down is the truest thing in the game; fix the teaching, not the rule."
+First vote: 8 of 13
+All 9 rings always run, misses pay less 8 (Casual, Mobile producer, Psychologist, Chaplin, Auguste, Jam judge, Story writer, Camus); misses end it only from chain 2 on 3 (Core gamer, Indie critic, Streamer); keep two misses 2 (Nietzsche, Dazai).
+Answer: on night 1 no miss ends the act. A chain with 2 or 3 misses swaps its 2.2 s gag for a flop gag (silence, one cough): the tell that the crowd is going cold. `missesToEnd` night 1: never; later nights keep 2.
+
+### P2. Announcing the first ring
+Argument: Psychologist: "A written rule read beforehand is not learning; show one ring fit by itself, on the beat." / Core gamer: "Count-in yes, slower rings no, or chain 2 teaches a different game." / Dazai: "Nobody counts him in."
+First vote: 10 of 13
+Count-in plus ghost ring plus slower chain 1: 10; count-in only 2 (Core gamer, Nietzsche); nothing 1 (Dazai). After red team: 9 of 13.
+Answer: the 1.2 s wait becomes 3 drum beats 800 ms apart. A ghost ring appears at 400 ms and fits by itself on beat 3, with "NOW" and the HIT button pulsing (scale 1.15, 120 ms). Real ring 1 appears at 2000 ms and fits at 3200 ms on the same beat grid. Night 1 chain 1: close 1200 ms, gap 800 ms, perfect 100 ms, good 220 ms; chains 2 and 3 stay 900 / 600 / 80 / 160. The line "HIT when the ring fits the mask" stays through chain 1. The ghost plays only until the player has landed a first fit.
+
+### P3. Feedback after each press
+Argument: Core gamer: "320 ms of text while the next ring is already closing is unreadable; freeze the ring where I pressed." / Chaplin: "The body must say it: he goes too soon, or he is left behind." / Dazai: "He never finds out why they did not laugh."
+First vote: 12 of 13
+All but Dazai. After red team: 11 of 13.
+Answer: the word stays 550 ms (replaced early by the next result): EARLY, LATE, FITS, MISSED (no press). The pressed ring freezes at its size for 300 ms: outside the mask is early, inside is late. Body: early he lurches forward, late he sags back, a fit snaps the pose. Sound: early a high tick, late a low thud, a fit the drum plus a laugh; each with a 1-4 kHz layer.
+
+### P4. The rehearsal
+Argument: Mobile producer: "Compulsory once at the mirror, then a button at the board wall forever." / Indie critic: "Board wall only; the mirror scene is about the face, not drills." / Nietzsche: "Once. A man who rehearses forever never walks out."
+First vote: 9 of 13
+Mirror (compulsory first time) plus repeatable board-wall button 9; board wall only 2 (Core gamer, Indie critic); mirror once, no repeat 2 (Nietzsche, Dazai).
+Answer: the same ring code at chain-1 values. It loops 3 rings with a 1.0 s pause; no miss ends it. First run: one loop is compulsory (about 4 s); the "To the ring" button (56 px high) shows after loop 1, at once on later runs. After 3 fits in a row "That will do." shows and the button pulses. Fixed banner "REHEARSAL - nothing counts", no Laughs meter, no crowd, the same drum. The board wall gets a third button, "Rehearse", using the same module.
+
+### P5. Retry distance
+Argument: Mobile producer: "The error is fresh in the dressing room; offer practice there." / Dazai: "After a flop he sits with it; a drill is a lie." / Nietzsche: "Live this night again is the only honest retry."
+First vote: 11 of 13
+No offer after the act: Dazai, Camus. After red team: 10 of 13.
+Answer: "Live this night again" on the end card, restarting at the board wall (no title, no face paint). On reruns the corridor walk runs at 1.6x. After an act with 3 or fewer fits of 9 the dressing-room mirror shows "Practise in the mirror" and "Step through"; the practice is unscored. Target board wall to first ring 15 s or less: a guess until measured.
+
+### P6. Mirror World, first 10 seconds
+Argument: Psychologist: "Four threats plus scrolling text is overload; freeze, state the goal, wake them one by one." / Core gamer: "After the card, all four at once; that is the room." / Jam judge: "One at a time is fine only if a clock forces the next one in."
+First vote: 11 of 13
+All four after the card: Core gamer; no card: Nietzsche. After red team: 10 of 13.
+Answer: at 0.0 s everything is frozen (figures, drain, idle timer); all four stand at their spots as dim, dormant shapes. Card: "Bring every figure down. Put out the Light. Pick up every shard. At 0 Laughs you wake at the mirror." with a "Begin" button and no timer. On Begin the Stare wakes with a 0.8 s tell (glow plus sound). The idle timer starts on the first input or 3 s after Begin. Wake order Stare, Shame, Whisper, Light: the next wakes when the last is down and its shards are picked up, or 15 s after the last wake, whichever is first. Count, fixed top left: "Figures left 4 · Shards to pick up 0".
+
+### P7. Banner or the clown's own line
+Argument: Mobile producer: "One fixed place, five words, always there." / Story writer: "A HUD label is the game talking; it should be his thought." / Chaplin: "No words; show it."
+First vote: 8 of 13
+Banner 8; the clown's line 4 (Story writer, Dazai, Camus, Nietzsche); no words 1 (Chaplin).
+Answer: a banner for the nearest awake figure. Stare: "Hit it from the side." Shame: "Fall to shake it off." Whisper: "Step aside. Don't fall." Light: "Three gags on its lamp." (with 3 pips). Portrait: top centre under the Laughs meter, 36 px high, 16 px text, 90% max width, not tappable, never in the bottom 40%. The four figure tips are switched off; the spend and idle tips stay.
+
+### Round 2 red team
+
+- P2 (Streamer argues no): "The ghost repeats what the rehearsal just taught and adds dead air to every run; the slower chain 1 also makes chain 2 feel like a speed-up trap." Second vote: 9 of 13; Streamer moved to count-in only.
+- P3 (Indie critic argues no): "Word, frozen ring, lean and sound inside 600 ms is four signals for one fact; on a phone that is noise." Second vote: 11 of 13; Indie critic moved (wants the word dropped after chain 1).
+- P5 (Story writer argues no): "Practice straight after the flop turns his shame into a drill and cheapens the mirror scene that follows." Second vote: 10 of 13; Story writer moved to no offer.
+- P6 (Jam judge argues no): "One at a time with a 15 s cap can make the room over a minute long; judges leave." Second vote: 10 of 13; Jam judge moved to all four after the card.
+
+### Round 2 dissent
+
+- Dazai: "An act that cannot end is not an act. You have removed the one moment the game was honest."
+- Nietzsche: "Keep two misses. With a rehearsal he has had his look; now let him fall."
+- Core gamer, Indie critic, Streamer: "From chain 2 on, misses should end it. Nine free rings has no stakes."
+- Core gamer, Nietzsche: "Slowing chain 1 teaches the wrong tempo."
+- Dazai: "No count-in, no result word. Nobody tells him why."
+- Indie critic, Core gamer: "Rehearsal belongs at the board wall only."
+- Nietzsche, Dazai: "Rehearse once. A repeatable button is a place to hide."
+- Dazai, Camus, Story writer: "No practice offer after the act. Let it sit."
+- Core gamer, Jam judge: "All four figures at once after the card."
+- Nietzsche: "No goal card. He does not get told what ends it."
+- Story writer, Dazai, Camus, Nietzsche: "The answer should be his own line, not a label."
+- Chaplin: "If it needs words, the figure is drawn wrong."
+
+### What this breaks or needs (panel)
+
+- P1 and the wider chain-1 windows raise the Laughs that reach the Mirror World for weak players, so its balance shifts: log Laughs at entry before and after, then rerun the bot sweep.
+- The one-chance rule needs stating: "This night comes once." on the act's start card (round 1, 8 votes).
+- Tells: the flop gag is the act's tell; each figure wake is 0.8 s; the 1.0 s idle warning must not start under the frozen card.
+- With the 15 s cap figures can still stack to four; the count and the win check must treat dormant figures as "left".
+- Phone portrait top stack (Laughs, count, banner) must fit in about 130 px; HIT button 72 px or more; every new button 44 px or more.
+- Open risk from the P2 red team: chain 2 speeding up from 1200 to 900 ms; watch it in the fresh-player test.
+
+### Producer check (lead, not a vote)
+
+- P1: the panel wrote "a missed ring pays 0 Laughs". The build already pays per fall in the act (`night1.html` line 834: each timing miss is a fall) and the deliberate fall has a floor. Default: the existing pay stays; only the two-miss ending goes on night 1. Not checked: whether the cue page or `night1.html` owns that pay.
+- P2: the slower first chain changes the GDD's night-1 tempo (600 ms). It changes the feel, so it is the owner's choice, behind a CONFIG switch. The count-in alone had 12 of 13 behind it (everyone but Dazai).
+- P5: the 1.6x rerun walk changes how the approved walk clip looks; owner's choice. The dressing-room practice offer passed 10 of 13 with the three story seats against.
+- P6: one at a time changes night 1's fight (asked in round 1 as well); owner's choice. The card and the count do not depend on it.
+- P7: banner 8 against his own line 4. Default: the banner's place and persistence, worded as his thought where it costs nothing ("Three gags on its lamp." already reads either way).
+- The values are the panel's guesses. The batch measures the board-wall-to-first-ring time and the Laughs at Mirror World entry before and after.
+
+### Build list (one batch, each item behind a CONFIG switch, after the owner's answers)
+
+1. Measure only: board wall to first ring; Laughs at Mirror World entry.
+2. Night 1: no miss ends the act; flop gag at 2 misses in a chain.
+3. Result word 550 ms, frozen ring 300 ms, early/late body and sound.
+4. Count-in of 3 beats at 800 ms, ghost ring until the first fit, HIT pulse; chain-1 values 1200 / 800 / 100 / 220 if the owner agrees.
+5. Rehearsal at the mirror (one loop compulsory on the first run) and "Rehearse" on the board wall; "This night comes once." on the act's start card.
+6. Mirror World entry card with the goal text, the count, 3 s idle grace.
+7. Wake order with 0.8 s tells and the 15 s cap, if the owner agrees.
+8. Nearest-figure banner; figure tips off.
+9. "Live this night again" at the board wall; practice offer in the dressing room; rerun walk speed if the owner agrees.
+10. Step 1's measurements again, the bot sweep, and a stranger cold read before any further vote.
