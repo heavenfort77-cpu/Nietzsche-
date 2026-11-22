@@ -32,7 +32,8 @@ jobs:
   step0:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]')
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # smoke_walk.cjs took 9.5 min locally with the walk-back and room cases (session 12), 3 min before
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,14 +47,16 @@ jobs:
           python -m pip install -q numpy pillow
           bash web/step0/cube25d/setup.sh
           cd web
-          node check-static.cjs step0/cue.html | tee step0.txt
-          node step0/test_cue.cjs | tee -a step0.txt
-          node step0/smoke_cue.cjs | tee -a step0.txt
-          node check_input_loop.cjs game/index.html | tee -a step0.txt
-          node check-static.cjs step0/walk.html | tee -a step0.txt
-          node step0/smoke_walk.cjs | tee -a step0.txt
-          python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt
-          ! grep -q '^FAIL\|RESULT FAIL' step0.txt
+          # every check runs even after one fails (a check that did not run is not a pass); the step fails on any failed exit or FAIL line
+          rc=0
+          node check-static.cjs step0/cue.html | tee step0.txt || rc=1
+          node step0/test_cue.cjs | tee -a step0.txt || rc=1
+          node step0/smoke_cue.cjs | tee -a step0.txt || rc=1
+          node check_input_loop.cjs game/index.html | tee -a step0.txt || rc=1
+          node check-static.cjs step0/walk.html | tee -a step0.txt || rc=1
+          node step0/smoke_walk.cjs | tee -a step0.txt || rc=1
+          python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt || rc=1
+          ! grep -q '^FAIL\|RESULT FAIL' step0.txt && [ "$rc" = 0 ]
   build:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]') || startsWith(github.event.head_commit.message, '[gpu]')
     runs-on: ubuntu-latest

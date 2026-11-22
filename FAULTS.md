@@ -174,3 +174,47 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Sweep: `walk.html` (fault, fixed). `cue_model.html` and the game page have no stick-driven walk.
 - Fix: he stops only after the input has stayed under the dead zone for `stopDelay` 0.12 s (coasting on the last direction meanwhile); a walk still fading out carries on instead of restarting; clip speed = stick strength exactly.
 - Proof: `node web/step0/smoke_walk.cjs`: `PASS stick wobbling at the dead zone for 60 frames: walk restarts 1 (max 1)`, `RESULT walk smoke 23 of 23 pass` (with the rebuilt GLBs: speed 0.748 m/s from planted feet).
+
+## F19: camera cut count carried over between walks (panel shows cuts the player never saw)
+- Found: session 12 (owner: "test it out first"), `node web/step0/smoke_walk.cjs` on `9e1d597`.
+- Probe: `smoke_walk.cjs` new case right after "Walk out": `FAIL desktop 1280x720: walk out starts with its first shot only (cuts 2, want 1)`; old case `FAIL desktop 1280x720: shots corridor > wings > entrance, cuts 4` (same on phone portrait and landscape); walk back `cuts 7`, walk out from the room `cuts 11`.
+- Cause: session 11 batch 1 made `begin()` call `placeStart()` on every start (before: only after a walk ended); `placeStart()` clears `S.shot` and calls `cutTo()`, which counts a cut, and `S.cuts` was never reset, so the load's first shot and every earlier walk were added in.
+- Class: per-walk state carried from one walk into the next.
+- Sweep: `walk.html` `placeStart()` and `enterRoom()`/`leaveRoom()`: cut count (fault); gloom, face, mood, face paint, held input, moving, ended, room, gains HUD, bought items and carry, performer tags (reset; now checked by "'Walk back again' leaves the room clean" and "walk out from the room" on every screen). `S.walkStarts` is a test counter, cumulative by design. Cue pages: per-act state already covered by `test_cue.cjs` (unchanged pages).
+- Fix: `placeStart()` resets `S.cuts` to 0 before the first shot, so each walk counts its own shots.
+- Proof: `node web/step0/smoke_walk.cjs`: `PASS desktop 1280x720: walk out starts with its first shot only (cuts 1, want 1)`, `PASS desktop 1280x720: shots corridor > wings > entrance, cuts 3`, `PASS walk out from the room: walk scene, gloom 0, face smile, tempo 1.18, HUD false, paint 0.400, cuts 1`.
+
+## F20: touch stick pops up under the finger in the cube room
+- Found: session 12 sweep of the room on touch screens.
+- Probe: `smoke_walk.cjs` (MutationObserver on `#stick` while in the room, taps on the dressing table): `FAIL phone portrait 390x844: touch stick never shown in the room (shown 3 times)` (landscape the same).
+- Cause: the `pointerdown` handler shows the stick whenever the loop runs (`S.running`); in the room the loop runs but there is nothing to walk, so every tap on a table or turn button showed the stick.
+- Class: the touch stick shown where he cannot walk.
+- Sweep: the room (fault), the fade into the room and the end-of-walk panel at the ring edge (same handler, `S.running` still true: fault), the start panel (`S.running` false: no fault). Cue pages use fixed pads, no floating stick.
+- Fix: the stick starts only when he can walk: not in the room and not after the walk has ended (`S.room`, `S.ended`).
+- Proof: `PASS phone portrait 390x844: touch stick never shown in the room (shown 0 times)`, `PASS phone landscape 844x390: touch stick never shown in the room (shown 0 times)`.
+
+## F21: feet leave the frame at the entrance-to-wings cut on the walk back
+- Found: session 12, new walk-back case in `smoke_walk.cjs`.
+- Probe: `FAIL phone portrait 390x844: walk back, clown feet and head in frame every tick (2 of 601 out) entrance -1.30,13.80 feet false head true; entrance -1.30,13.77 feet false head true` (desktop and landscape the same count).
+- Cause: `pickShot()` keeps the held shot until he is `zoneHyst` 0.25 m inside the next zone, but each shot's field of view is fitted to its own zone only (`build_walk.py` `fit_shot`), so in that 0.25 m band past the edge he can be outside the held shot's frame. The walk out never hit it; walking back toward the entrance camera does.
+- Class: a held shot (cut hysteresis) framing him outside the area it was fitted for.
+- Sweep: all cut lines, both ways, on 3 screens: corridor/wings and wings/entrance on the walk out (0 out before and after) and the walk back (entrance to wings: fault; wings to corridor: in frame). No other page cuts between shots.
+- Fix: `inShotFrame()` projects his feet and a point at `frameH` 1.9 m through the held camera; once he is past the held zone and either leaves `frameEdge` 0.98 of the frame, the cut happens as soon as he is inside the next zone (no hysteresis). While he stays framed the 0.25 m hysteresis still stops flicker at the line. No plate re-render, shots unchanged.
+- Proof: `PASS desktop 1280x720: walk back, clown feet and head in frame every tick (0 of 601 out)`, `PASS desktop 1280x720: walk back shots entrance > wings > corridor, cuts 3`; walk out unchanged `PASS desktop 1280x720: shots corridor > wings > entrance, cuts 3`, `(0 of 411 out)`.
+
+## F22: dressing table runs 4 px off the right edge in phone portrait
+- Found: session 12, layout case in `smoke_walk.cjs`.
+- Probe: `FAIL phone portrait 390x844: dressing table on screen, buttons at least 44 px (44, 44, 44), clear of the clown and the room buttons | table {"l":16,"t":566,"r":394,...} ... screen 390x844`.
+- Cause: `#prep` width 92% plus 10 px padding each side in content-box sizing: 359 + 20 px from a 16 px left edge ends at 394.
+- Class: fixed panels sized in % or viewport units plus padding without border-box.
+- Sweep: `walk.html` `#prep` (fault, landscape too: within the screen only because of its 340 px cap), `#panel` (inset 0, no width), `#roomBar` (left/right 0); `cue.html` and `cue_model.html` `.pad` (buttons, border-box by default; covered by the cue layout gate); `web/game/index.html` sets border-box on everything.
+- Fix: `#prep` uses `box-sizing: border-box`.
+- Proof: `PASS phone portrait 390x844: dressing table on screen, buttons at least 44 px (44, 44, 44), clear of the clown and the room buttons | table {"l":16,"t":566,"r":374,...} ... screen 390x844`.
+
+## F23: room HUD writes "0" over "0" when he comes in
+- Found: session 12, HUD case in `smoke_walk.cjs` (MutationObserver on the Laughs, Mask and carry text).
+- Probe: `FAIL desktop 1280x720: room HUD written only on change (66 writes, 1 repeats laughsN '0')` (same on phone portrait and landscape).
+- Cause: `enterRoom()` sets the shown-value caches `S.shownLaughs`/`S.shownMask` to -1, so the first `updateGains()` writes the count-up start 0 into `#laughsN`, which already shows 0 on the first visit.
+- Class: HUD caches reset instead of mirroring what the DOM shows.
+- Where: `web/step0/walk.html`
+- Deferred: prototype code (owner requirement 5 scope): one write per room visit, nothing the player sees, does not change the playtest answer. Fix when the room is kept: keep the caches equal to the DOM text instead of resetting them (also the `p.off = null` reset of the table buttons). Its check stays and prints FAIL until then.

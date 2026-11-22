@@ -23,7 +23,7 @@
   #roomBar { position: fixed; left: 0; right: 0; bottom: 34px; display: flex; justify-content: center; gap: 10px; }
   #gains { position: absolute; right: 10px; top: 8px; text-align: right; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; }
   #carry { font-size: 12px; font-weight: 400; opacity: .85; }
-  #prep { position: fixed; left: 10px; top: 40px; width: min(40%, 340px); display: flex; flex-direction: column; gap: 6px; background: #14181fcc; padding: 10px; border-radius: 8px; }
+  #prep { position: fixed; left: 10px; top: 40px; width: min(40%, 340px); box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; background: #14181fcc; padding: 10px; border-radius: 8px; }
   #prep .t { font-weight: 600; font-size: 13px; }
   #prep button { font: inherit; min-height: 44px; text-align: left; padding: 4px 10px; border-radius: 6px; border: 0; background: #2a2f38; color: #d6dbe4; }
   #prep button:disabled { opacity: .45; }
@@ -315,8 +315,12 @@ const CONFIG = Object.freeze({
   stopDelay: 0.12,
   // input held across a camera cut keeps the old camera's directions until it turns more than this, degrees
   holdAngle: 50,
-  // the clown must be this far inside a new zone before the camera cuts to it, metres
+  // the clown must be this far inside a new zone before the camera cuts to it, metres (unless he would leave the held shot's frame)
   zoneHyst: 0.25,
+  // a held shot cuts at once when his feet (floor) or a point this high leave its frame, metres
+  frameH: 1.9,
+  // share of the half-frame his feet and head must stay inside before that cut (1 = the frame edge)
+  frameEdge: 0.98,
   // touch stick radius, CSS px
   stickR: 48,
   // idle and walk blend time, s
@@ -804,7 +808,8 @@ function readKeys() {
 }
 // touch stick: appears where the finger lands; one pointer owns it
 window.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'mouse' || input.touchId !== -1 || !S.running) return;
+  // no stick where he cannot walk: the room, the panel and the walk's end
+  if (e.pointerType === 'mouse' || input.touchId !== -1 || !S.running || S.room || S.ended) return;
   input.touchId = e.pointerId; input.ox = e.clientX; input.oy = e.clientY; input.tx = 0; input.ty = 0;
   el.stick.style.setProperty('--sx', e.clientX); el.stick.style.setProperty('--sy', e.clientY);
   el.knob.style.setProperty('--kx', 0); el.knob.style.setProperty('--ky', 0);
@@ -865,10 +870,18 @@ function turnToward(cur, want, rate, dt) {
   const d = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
   return cur + Math.sign(d) * Math.min(Math.abs(d), rate * dt);
 }
+// the held shot is framed for its own zone only: past its edge it is kept (no flicker at the line) while he stays in its frame
+function inShotFrame(x, y) {
+  for (const h of [0, CONFIG.frameH]) {
+    tmp.set(x, h, -y).project(camera);
+    if (Math.abs(tmp.x) > CONFIG.frameEdge || Math.abs(tmp.y) > CONFIG.frameEdge || tmp.z >= 1) return false;
+  }
+  return true;
+}
 function pickShot() {
   if (inRect(S.data.shots[S.shot].zone, S.x, S.y, 0)) return;
-  const list = S.shotList;
-  for (let i = 0; i < list.length; i++) if (inRect(list[i].zone, S.x, S.y, CONFIG.zoneHyst)) { cutTo(list[i].name); return; }
+  const list = S.shotList, m = inShotFrame(S.x, S.y) ? CONFIG.zoneHyst : 0;
+  for (let i = 0; i < list.length; i++) if (inRect(list[i].zone, S.x, S.y, m)) { cutTo(list[i].name); return; }
 }
 function updateClown(dt) {
   const c = chars.clown;
@@ -995,7 +1008,7 @@ function placeStart(back) {
   S.mood = back ? CONFIG.moodBack : CONFIG.moodOut;
   if (back) { S.x = CONFIG.backStart[0]; S.y = CONFIG.backStart[1]; S.yaw = 0; }
   else { S.x = d.start.at[0]; S.y = d.start.at[1]; S.yaw = THREE.MathUtils.degToRad(d.start.yaw) + Math.PI; }
-  S.ended = false; S.hold = false; S.shot = ''; S.moving = false;
+  S.ended = false; S.hold = false; S.shot = ''; S.moving = false; S.cuts = 0;
   const c = chars.clown;
   c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
   c.root.position.set(S.x, 0, -S.y); c.root.rotation.y = S.yaw; c.blob.position.set(S.x, 0.02, -S.y);
@@ -1067,7 +1080,7 @@ async function boot() {
   el.backFlop.classList.remove('hidden');
 }
 // test hook for smoke_walk.cjs (read-only use outside the checks)
-window.__walkTest = { renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
+window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; console.error(e); });
 </script>
 </body>
