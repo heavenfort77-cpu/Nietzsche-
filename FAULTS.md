@@ -282,3 +282,23 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Where: `tools/bundle_single.py` BOOT.
 - Fix: the read is wrapped in try/catch; a parent from another site counts as no parent and the page unpacks its own files.
 - Proof: PASS owner on itch 22 Nov 22:57 with `clown-mirror-night1-itch.html` (rebuilt, music in, 27,720 KB): "work". Local: the rebuilt file opens alone from file://, ready, 0 page errors.
+
+## F31: the cost check read the pratfall's spend as the slap's
+- Found: CI run 83 (cbe7d0d), job `step0`, desktop only; phone and landscape passed, and all three passed locally.
+- Probe: FAIL run 83: `desk FAIL gags show what they cost ... spend not shown {"hud":"Laughs 95 (-1) · Pies 2 · Shards 0","cost":2,...}`. The count showed `(-1)`, the pratfall's cost, where the check wanted the slap's `(-2)`.
+- Cause: the step before ends with a pratfall; its spend stays on the count for `spendShow` 0.7 s of game time. The check pressed J and then waited for any `(-n)` text, so on a slow runner it read the pratfall's figure, still on screen, before the slap's replaced it.
+- Class: a check that waits for a pattern an earlier step can already satisfy.
+- Sweep: every `waitForFunction` added in session 20 batches 1-2 (gnaw level, lamp hits, lamp yaw, spend text, music level): the other waits are on values this step itself changes from a reset start (`M.still = 0`, `hits > k`, yaw against the value just read). One site.
+- Where: `web/step0/smoke_night1.cjs`, step "gags show what they cost".
+- Fix: the step first waits until no spend is shown, presses J, then waits for the text `(-<slap cost>)`. The game is unchanged.
+- Proof: local desk run after the change, `gags show what they cost` OK; mutation `cost` still caught in the same run set (see HANDOFF.md, session 20 batch 3). CI: the run of the batch 3 commit.
+
+## F32: the Light real-play check started from whatever size the Light had grown to
+- Found: CI run 83 (cbe7d0d), job `step0`, desktop only.
+- Probe: FAIL run 83: `desk FAIL Light: running from it at 100% stick escapes it (real play) caught by the Light {"inT":2.1167,"t":8.0331,"r":1.75,"over":"","loses":0}` and the 60% run `{"inT":3.0501,...,"r":1.75,...}`. `r` 1.75 is the Light's cap (`lightCap`); it starts at 1.25. With `loses` 0 in the run, the growth happened before the step.
+- Cause: the run step reset `inT` and `loses` but not the Light's radius or escape count, so its start depended on how often earlier steps' teleports had pulled him out of the beam. Batch 2 added a step with waits before it; on the slower runner the spot reached him more often between teleports, the Light reached its cap, and the check then measured a capped Light against a limit set for the start size. The step two below ("he outruns it") already resets `L.r`.
+- Class: a real-play check that does not set the state it measures from.
+- Sweep: the other real-play steps in the smoke (Whisper trip, Stare pose, Shame cling, bag breaks, the Light's "outruns" step): each sets its foe's position and timers first. One site, used for both stick settings.
+- Where: `web/step0/smoke_night1.cjs`, the `Light: running from it at ...% stick` loop.
+- Fix: the step sets `L.r = lightStartR()`, `L.leaves = 0`, `L.loseT = 0`, `L.tellT = 0` before the run. The 2 s limit and the 8 s run are unchanged. Not covered by this check, as before: running from a Light already grown to its cap.
+- Proof: local desk run after the change, both runs OK (see HANDOFF.md, session 20 batch 3). CI: the run of the batch 3 commit.

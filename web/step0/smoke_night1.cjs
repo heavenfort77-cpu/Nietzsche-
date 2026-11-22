@@ -118,7 +118,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       fs.appendFileSync(process.env.TRANSCRIPT, `\n=== ${sc.n} after: ${name}\n${t}\n`);
     };
     let until = false;
-    const step = async (name, fn) => { if (until) return; if (process.env.UNTIL && name.indexOf(process.env.UNTIL) >= 0) until = true; nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); } await seen(name).catch(() => {}); };
+    const step = async (name, fn) => { if (until) return; if (process.env.UNTIL && name.indexOf(process.env.UNTIL) >= 0) until = true; nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); if (/Timeout/.test(e.message)) console.log('    why: ' + String(e.message).split('\n').slice(1, 9).join(' | ').slice(0, 700)); } await seen(name).catch(() => {}); };
     const shot = (n) => pg.screenshot({ path: `${OUT}/${sc.n}_${n}.png` });
     await pg.goto(url);
     await step('loads', async () => { await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 120000 }); });
@@ -484,8 +484,10 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     await step('gags show what they cost: buttons, the Laughs count, one tip (owner 23 Nov)', async () => {
       await pg.waitForFunction(() => window.__night.M.cd <= 0 && window.__night.M.slapT <= 0 && !window.__night.M.fall, null, { timeout: 20000 });
       const l0 = await pg.evaluate(() => window.__night.M.laughs);
+      // F31: the count may still show the pratfall's spend from the step before; wait until that is gone, then for this slap's own figure
+      await pg.waitForFunction(() => !/\(-\d+\)/.test(document.getElementById('mwHud').textContent), null, { timeout: 20000 });
       await pg.keyboard.press('KeyJ');
-      await pg.waitForFunction(() => /\(-\d+\)/.test(document.getElementById('mwHud').textContent), null, { timeout: 15000 });
+      await pg.waitForFunction(() => document.getElementById('mwHud').textContent.indexOf('(-' + window.__night.N1.slap.cost + ')') >= 0, null, { timeout: 15000 });
       const r = await pg.evaluate(() => { const N = window.__night, c = N.N1; return { hud: document.getElementById('mwHud').textContent, cost: c.slap.cost, told: N.M.costTold, pads: ['padSlap', 'padPie', 'padFall'].map((id) => document.getElementById(id).textContent), want: [c.slap.cost, c.pie.cost, c.fall.cost], hint: document.getElementById('hint').textContent, touch: N.NS.touch }; });
       console.log('    HUD after a slap:', r.hud, '| pads', r.pads.join(', '));
       if (r.hud.indexOf('(-' + r.cost + ')') < 0 || !r.told) throw new Error('spend not shown ' + JSON.stringify(r));
@@ -496,7 +498,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     // owner 22 Nov 17:58 on his phone: "the ring still unable to avoid the light". Real play: a bot drags the stick to `drag` of its radius (a phone thumb),
     // steering away from the spot and round the ring, for 8 s of game time; it may spend at most 2 s of it inside the spot
     for (const drag of [1, 0.6]) await step(`Light: running from it at ${drag * 100}% stick escapes it (real play)`, async () => {
-      await pg.evaluate((drag) => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.x = L.spotX; N.M.z = L.spotZ + 0.3; L.inT = 0; L.loses = 0; window.__runT0 = N.M.t; N.M.laughs = Math.max(N.M.laughs, 300);
+      await pg.evaluate((drag) => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.x = L.spotX; N.M.z = L.spotZ + 0.3; L.r = N.lightStartR(); L.leaves = 0; L.loseT = 0; L.tellT = 0; L.inT = 0; L.loses = 0; window.__runT0 = N.M.t; N.M.laughs = Math.max(N.M.laughs, 300);
         window.__runBot = setInterval(() => { const M = N.M, dx = M.x - L.spotX, dz = M.z - L.spotZ, d = Math.hypot(dx, dz) || 1, r = Math.hypot(M.x, M.z) || 1;
           let ax = dx / d * 0.6 - M.z / r * 0.8, az = dz / d * 0.6 + M.x / r * 0.8; const n = Math.hypot(ax, az) || 1; N.input.tx = ax / n * drag; N.input.ty = -az / n * drag; }, 30); }, drag);
       await pg.waitForFunction(() => window.__night.M.t - window.__runT0 >= 8 || window.__night.M.over, null, { timeout: 120000 });

@@ -70,7 +70,7 @@ jobs:
             k=${m%%:*}; want=${m#*:}
             if MUTATE=$k UNTIL="$want" ONLY=desk node step0/smoke_night1.cjs /tmp/night1m > m_$k.txt 2>&1; then echo "FAIL night1 mutation $k: not caught (smoke passed)" | tee -a step0.txt; rc=1
             elif grep -q "FAIL .*$want" m_$k.txt; then echo "PASS night1 mutation $k: caught ($(grep RESULT m_$k.txt))" | tee -a step0.txt
-            else echo "FAIL night1 mutation $k: failed on another step" | tee -a step0.txt; grep 'FAIL\|RESULT' m_$k.txt | tee -a step0.txt; rc=1; fi
+            else echo "FAIL night1 mutation $k: failed on another step" | tee -a step0.txt; { grep 'FAIL\|RESULT' m_$k.txt || tail -c 600 m_$k.txt; } | tee -a step0.txt; rc=1; fi
           done
           ! grep -q '^FAIL\|RESULT FAIL' step0.txt && [ "$rc" = 0 ]
   build:
