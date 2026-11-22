@@ -79,3 +79,79 @@ What it would build first: the Light with an active answer (turn, face it, gag i
 - The owner's rule reverses the GDD's core line and three places in the build and docs: `mwLight()` (hold still 3 s kills the Light), the tips of session 19 batch 3, the GDD monster table (Light, Neighbour, Double "beaten by not acting"), the GDD final night, START-HERE's summary. None changed yet.
 - The blind round, before his view was shown, already had 12 of 13 seats wanting the player to do something in the final. The agreement afterwards is not only deference.
 - Two points the panel says the rule needs to hold: the fight must cost him (acts or paint), or "I quit" has no cause (P6 red team); and the theme then rests on the crowd laughing at real hurt and the shop arming the double (P7 red team).
+
+## Round 2: the panel argues P3, P4, P5 to one answer each (owner 22 Nov 23:47: "let panel argue and give me answer")
+
+Subagent ad9c153a4a9bcef85, same 13 seats. The owner's rule (acting, not standing still; Performer beaten by gags) was not reopened. All numbers are starting values. No separate red-team re-vote was run: the argument below is where each leading option took its strongest objection before the count. Not built.
+
+### The argument
+
+P3
+- Core gamer: (b) falls. "Badly, off the cue" means mashing wins, and it reverses what the stage taught: press when it fits.
+- Nietzsche: (d) falls harder. The cue is the bought, polished way, which is exactly what the double knows.
+- Jam judge: (b) has no tell. A phone player cannot see "his own". (c) has one: paint is on him or it is not.
+- Chaplin: (c) alone is a checklist. Three presses and nobody was hurt.
+- Auguste clown: Then keep (b) for the end. Once the paint is gone, the clumsy bare gag is all he has, and it hurts him.
+- Mobile producer: Two states per button is one too many for a thumb.
+- Story writer: The button shows it: painted or bare. Nothing to read.
+
+P4
+- Dazai: The breath (c) is a hiding place. The stranger already called stillness "playing dead".
+- Casual phone player: Punishing at once (b) hits me for lifting my thumb or getting up from a fall.
+- Camus: The owner said "always gnaw". A safe second is not always.
+- Clinical psychologist: Our own fairness rule needs a tell of at least 0.4 s before any loss. Without it this is the "random" the judge warned about.
+- Core gamer: Then the breath is not safe; it is the tell. They turn on him at once, the drain follows.
+- Streamer: Fine, if standing and gagging counts as acting.
+
+P5
+- Dazai: Keep (a). He never faced anything.
+- Jam judge: (a) breaks the owner's rule and teaches hiding on night 1. It falls.
+- Camus: (b) lets him beat the Light early, so his own warm light at the end means nothing. Only outrun it (c).
+- Chaplin: Running is not a gag. The owner said gags.
+- Indie critic: Strongest objection to (b): the stranger read the Light as the friendly stage spotlight, and performing into a lamp is what he does on stage.
+- Story writer: Then it must look hostile first, and it only goes dark for the night. It comes back. That keeps Camus's ending.
+
+### The answers
+
+P3, the Performer: hit what he still wears, once; then bare. Final count 12 of 13 (cannot: Mobile producer).
+- The Performer wears one paint patch per bought act, in the colour of that act's button.
+- Tell: the stage ring closes onto one patch on his face and the matching button lights (window 0.6 s). Press it in the ring: the gag lands, that paint flakes off both faces, and the button turns bare.
+- Press a painted button outside the ring: he copies the gag back (minus 10 Laughs).
+- Bare buttons still work: slower, cost 5 Laughs each because they really hurt, and he cannot copy them. 3 bare hits finish him.
+- Winning: both faces bare, he drops, the first audience member appears. Cost: stripped acts stay gone for that night.
+
+P4, standing still: no safe stillness; the breath is the warning. Final count 11 of 13 (cannot: Dazai, Camus).
+- Acting means stick movement or any gag. Standing and gagging is acting.
+- The moment he stops, every figure turns to him, the screen edge darkens and a whisper rises.
+- After 1.0 s Laughs drain at 2 per second, climbing, and the figures close in.
+- Any input clears it at once. Lying on the floor after a pratfall counts as still.
+
+P5, the monster Light on the earlier nights: face the lamp and gag into it. Final count 11 of 13 (cannot: Camus, Dazai).
+- Cold white with a hard edge; a thin line sweeps the floor 0.6 s before the beam lands. It must never look like the stage spotlight.
+- Moving in the beam drains Laughs, as built.
+- Push the stick toward the lamp and land any gag: it flinches and cracks, and the drain pauses during that gag.
+- 3 gags and it goes dark for that night only. It returns the next night. The last night's warm light is his own and is never attacked.
+
+### Round 2 dissent
+
+- Mobile producer, P3: "Two states per button is one too many for a thumb."
+- Dazai, P4: "The breath is a hiding place."
+- Camus, P4: "A safe second is not always."
+- Camus, P5: "If he can beat the Light early, his own light at the end means nothing."
+- Dazai, P5: "He never faced anything."
+- Kept though it lost: Core gamer's (d), "press when it fits is what the stage taught", survives only as the ring tell. Chaplin's "(c) alone is a checklist" is answered by the bare finish, not refuted.
+
+### What this breaks or needs (panel)
+
+- Remove the hold-still 3 s Light win and any safe standing in the Mirror World.
+- Redraw the monster Light so it differs from the stage spotlight (colour, hard edge, sweep line, sound).
+- New: paint patches on the Performer matched to button colours, the bare button state, the copy-back animation, the ring cue on his face, lamp crack states, the stillness tell.
+- Not solved here: the stranger's "I watch the clown fall with nothing to do" and what the figures are.
+
+### Producer check (lead, not a vote)
+
+- P3 assumes every bought act has its own button. The GDD has bought acts feeding gags (slap, pie, seltzer, horn, spotlight) and Mirror abilities (a dash); the build has three buttons (SLAP, PIE, FALL). Which purchases become patches has to be set before a prototype.
+- P3 with nothing bought: no patches, 3 bare hits. That keeps the GDD's "more acts owned, longer fight".
+- P4: the pratfall is also the dodge. Whether its time on the floor is under the 1.0 s warning was not checked against `N1.fall.secs`; if it is longer, every dodge starts the drain.
+- P5 on night 1 changes what the build checks today ("stand still in the beam beats the Light" and the three Light real-play steps): those checks change with the game, on purpose.
+- The final counts are 11-12 of 13 by the same model that argued both sides. No stranger has played any of this.
