@@ -509,6 +509,8 @@ const CONFIG = Object.freeze({
 const N1 = Object.freeze({
   // night-1 cast GLBs (art/cast2, proposal): material names are palette ramps
   castDir: './assets/cast2/',
+  // per-figure GLB urls that override castDir (empty in the repo; the published artifact fills it with its asset urls)
+  castUrls: {},
   // clown height in the Blender style units (build.py clown, bowler top); sets metres per unit for the whole cast
   clownUnits: 59.7,
   // palette ramps [light, base, shadow, deep] (art/3_blender_3d/palette.py plus build_cast2.py extras)
@@ -1319,7 +1321,7 @@ function rampMat(raw) {
   return m;
 }
 async function loadCast(id) {
-  const g = await new GLTFLoader().loadAsync(N1.castDir + id + '.glb');
+  const g = await new GLTFLoader().loadAsync(N1.castUrls[id] || N1.castDir + id + '.glb');
   const inner = g.scene;
   inner.traverse((o) => { if (o.isMesh) o.material = rampMat(o.material && o.material.name); });
   const box = new THREE.Box3().setFromObject(inner);
