@@ -334,6 +334,10 @@ const CONFIG = Object.freeze({
   backEndY: 2.5,
   // his face on the way out and on the way back
   faceOut: 'smile', faceBack: 'sad',
+  // posture and tempo on top of the walk and idle clips (the approved clips are unchanged).
+  // tempo scales clip speed and ground speed together (no foot slide); chest, neck, head: forward tilt in degrees, negative lifts him upright
+  moodOut: { tempo: 1.18, chest: -9, neck: -5, head: -8 },
+  moodBack: { tempo: 0.78, chest: 11, neck: 7, head: 14 },
   // cube room plates (box-and-shape, from cube25d/build_cube.py) and the view he comes in by
   room: './cube25d/views.json', roomPlates: './cube25d/', roomStart: 'exit',
   // room views in turning order (yaw grows to the left)
@@ -376,7 +380,7 @@ const S = {
   shot: '', x: 0, y: 0, yaw: 0, speed: CONFIG.speedFallback, moving: false, still: 0, lastMag: 1, dirX: 0, dirZ: -1,
   hold: false, holdAng: 0, basisX: 0, basisZ: -1,
   dprI: 0, slowT: 0, lastT: 0, raf: 0, w: 0, h: 0, cuts: 0, walkStarts: 0,
-  back: false, room: false, roomView: '', roomT: 0, turning: false, gloom: -1,
+  back: false, room: false, roomView: '', roomT: 0, turning: false, gloom: -1, mood: CONFIG.moodOut,
 };
 // test hook: read by the headless checks
 window.__walk = S;
@@ -451,6 +455,31 @@ function setFace(c, name) {
   if (c.faceNow === name) return;
   c.faceNow = name;
   c.face.material.uniforms.uCell.value.fromArray(CONFIG.faces[name]);
+}
+// posture layer: tilts chest, neck and head about his own sideways axis after the clips are applied.
+// Each frame the bones go back to the clip's value first, so nothing adds up across frames.
+const MOOD_BONES = ['chest', 'neck', 'head'];
+const moodQ = { p: new THREE.Quaternion(), pi: new THREE.Quaternion(), r: new THREE.Quaternion(), ax: new THREE.Vector3() };
+function findMoodBones(c) {
+  c.moodBones = MOOD_BONES.map((key) => {
+    let bone = null;
+    c.root.traverse((o) => { if (o.isBone && o.name === key) bone = o; });
+    return { key, bone, saved: new THREE.Quaternion() };
+  });
+}
+function moodRestore(c) { for (const b of c.moodBones) b.bone.quaternion.copy(b.saved); }
+function moodApply(c, mood) {
+  moodQ.ax.set(1, 0, 0).applyQuaternion(c.root.quaternion);
+  for (const b of c.moodBones) {
+    b.saved.copy(b.bone.quaternion);
+    const deg = mood[b.key];
+    if (!deg) continue;
+    b.bone.parent.getWorldQuaternion(moodQ.p);
+    moodQ.pi.copy(moodQ.p).invert();
+    moodQ.r.setFromAxisAngle(moodQ.ax, THREE.MathUtils.degToRad(deg));
+    // world-axis tilt turned into the bone's local space: P^-1 R P
+    b.bone.quaternion.premultiply(moodQ.r.premultiply(moodQ.pi).multiply(moodQ.p));
+  }
 }
 async function loadChar(name, tl) {
   const src = CONFIG.chars[name];
@@ -746,7 +775,7 @@ function moveInput(dt) {
 }
 // one step along the last input direction at stick strength m; slides along walls
 function stepMove(m, dt) {
-  const step = S.speed * m * dt;
+  const step = S.speed * S.mood.tempo * m * dt;
   const nx = S.x + S.dirX * step, ny = S.y - S.dirZ * step;
   if (free(nx, ny)) { S.x = nx; S.y = ny; } else if (free(nx, S.y)) S.x = nx; else if (free(S.x, ny)) S.y = ny;
 }
@@ -776,12 +805,14 @@ function updateClown(dt) {
       c.walk.play(); c.idle.crossFadeTo(c.walk, CONFIG.blend, false);
     } else { c.idle.reset().play(); c.walk.crossFadeTo(c.idle, CONFIG.blend, false); }
   }
-  // clip speed follows the stick exactly, so the feet match the ground speed at any tilt
-  c.walk.timeScale = m;
+  // clip speed follows the stick and the mood tempo exactly, so the feet match the ground speed
+  c.walk.timeScale = m * S.mood.tempo;
   c.root.position.set(S.x, 0, -S.y);
   c.root.rotation.y = S.yaw;
   c.blob.position.set(S.x, 0.02, -S.y);
+  moodRestore(c);
   c.mixer.update(dt);
+  moodApply(c, S.mood);
   pickShot();
   if (S.ended) return;
   if (!S.back && S.y >= S.data.endY) endWalk();
@@ -795,7 +826,9 @@ function updateClown(dt) {
 function updateRoom(dt) {
   S.roomT += dt;
   room.flakeMat.uniforms.uTime.value = S.roomT;
+  moodRestore(chars.clown);
   chars.clown.mixer.update(dt);
+  moodApply(chars.clown, S.mood);
 }
 function updatePerformers(dt) {
   for (let i = 0; i < performers.length; i++) {
@@ -876,6 +909,7 @@ function placeStart(back) {
   const d = S.data;
   if (S.room) leaveRoom();
   S.back = back;
+  S.mood = back ? CONFIG.moodBack : CONFIG.moodOut;
   if (back) { S.x = CONFIG.backStart[0]; S.y = CONFIG.backStart[1]; S.yaw = 0; }
   else { S.x = d.start.at[0]; S.y = d.start.at[1]; S.yaw = THREE.MathUtils.degToRad(d.start.yaw) + Math.PI; }
   S.ended = false; S.hold = false; S.shot = ''; S.moving = false;
@@ -914,6 +948,8 @@ async function boot() {
   await Promise.all([loadPlates(tl, S.data), loadRoom(tl)]);
   const [clown, whiteface, performer] = await Promise.all(['clown', 'whiteface', 'performer'].map((n) => loadChar(n, tl)));
   Object.assign(chars, { clown, whiteface, performer });
+  findMoodBones(clown);
+  for (const b of clown.moodBones) b.saved.copy(b.bone.quaternion);
   S.walkMeasure = measureSpeed(clown);
   S.speed = S.walkMeasure.speed;
   for (const pd of S.data.performers) {
