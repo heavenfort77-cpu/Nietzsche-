@@ -12,9 +12,9 @@ Reference: `references/controls-reference.jpg` (third-party, never ships). It sh
 
 | Probe | Pages | Gate now |
 | --- | --- | --- |
-| Every action in the design has a binding on each input the build supports (keyboard, mouse, touch; gamepad once the owner decides it) | G, S | none yet |
-| One table of bindings in CONFIG is the only source; the help or controls screen is drawn from it, so they can never disagree | G, S | none yet |
-| No two actions share a key in the same scene; modifier keys and key repeat are ignored for menus and cues | G, S | S: key repeat and modifiers ignored (code), no gate |
+| Every action in the design has a binding on each input the build supports (keyboard, mouse, touch; gamepad not asked for, owner 22 Nov 21:30) | G, S | night1: smoke "controls: one bindings table" (every action in `CONFIG.bindScenes` bound), mutation `bindclash`; G, S: none yet |
+| One table of bindings in CONFIG is the only source; the help or controls screen is drawn from it, so they can never disagree | G, S | night1: `CONFIG.binds`, hints and the Esc pause card written from it; smoke counts `e.code === '` literals (1 allowed: preventDefault) and the pause card rows; G, S: none yet |
+| No two actions share a key in the same scene; modifier keys and key repeat are ignored for menus and cues | G, S | night1: smoke clash check per scene, mutation `bindclash`. S: key repeat and modifiers ignored (code), no gate |
 | Held input is released on pointerup, pointercancel, lostpointercapture, blur, tab hidden and pause | G, S | S: browser probe `pad-cancel` (F7). G: `check_input_loop.cjs` (F8) |
 | Multi-touch: each finger tracked by pointerId; a second finger never moves the first one's control | G, S | G: `check_input_loop.cjs` (F8). S: two pads at once is intended, no probe |
 | Keyboard and gamepad (or touch and mouse) used at the same time do not fight | G, S | none yet |

@@ -97,6 +97,10 @@
   /* session 18 batch 2: the act is skipped only by this button (owner 22 Nov 20:27); full screen where the browser allows it */
   #actSkipBtn { position: fixed; right: 16px; bottom: 24px; min-width: 88px; min-height: 48px; border-radius: 24px; border: 1px solid #cfaa4e; background: #1e1714cc; color: #e9d9b0; font: 600 15px system-ui, sans-serif; z-index: 7; }
   #fsBtn { position: fixed; right: 8px; top: 8px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 22px; border: 0; background: #1e1714b3; color: #e9d9b0; font: 600 13px system-ui, sans-serif; z-index: 12; }
+  #pauseCard { z-index: 30; }
+  #pauseList { border-collapse: collapse; font: 15px system-ui, sans-serif; color: #e9d9b0; }
+  #pauseList td { padding: 5px 14px; text-align: left; border-bottom: 1px solid #3a2e28; }
+  #pauseList td:last-child { color: #cfaa4e; font-weight: 600; }
   #pads { position: fixed; right: 12px; bottom: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 6; }
   #pads button { width: 72px; height: 64px; border-radius: 32px; border: 0; font: 600 14px system-ui, sans-serif; background: #44666e; color: #e2e3e3; }
   #pads button:disabled { opacity: .4; }
@@ -134,6 +138,7 @@
 <button id="verb" class="hidden"></button>
 <div id="mwTip"></div>
 <button id="actSkipBtn" class="hidden">Skip</button>
+<div id="pauseCard" class="card hidden"><h2>Paused</h2><table id="pauseList"></table><button id="resumeBtn">Resume</button></div>
 <button id="fsBtn" class="hidden" aria-label="Full screen">Full screen</button>
 <div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">FALL</button></div>
 <div id="fog">The Mirror</div>
@@ -574,6 +579,34 @@ const CONFIG = Object.freeze({
   frameEdge: 0.98,
   // touch stick radius, CSS px
   stickR: 48,
+  // session 18 batch 3 (owner 22 Nov 21:30, references/controls-reference.jpg, CHECK-AREAS.md 1): the ONLY table of key and mouse bindings.
+  // Every handler, hint and the controls list on the pause card read it. Chart conventions: WASD move, E interact, Space the jump slot,
+  // Esc pause, left click right hand (slap), right click left hand (pie). Each action: keys (KeyboardEvent.code), mouse buttons, the label shown.
+  binds: {
+    up: { keys: ['KeyW', 'ArrowUp'], mouse: [], label: 'Walk forward' },
+    down: { keys: ['KeyS', 'ArrowDown'], mouse: [], label: 'Walk back' },
+    left: { keys: ['KeyA', 'ArrowLeft'], mouse: [], label: 'Walk left' },
+    right: { keys: ['KeyD', 'ArrowRight'], mouse: [], label: 'Walk right' },
+    interact: { keys: ['KeyE', 'Space', 'Enter'], mouse: [], label: 'The gold button' },
+    confirm: { keys: ['Enter', 'Space'], mouse: [], label: 'Press the card\'s button' },
+    back: { keys: ['Escape'], mouse: [], label: 'Back' },
+    pause: { keys: ['Escape'], mouse: [], label: 'Pause and controls' },
+    turnL: { keys: ['KeyA', 'ArrowLeft'], mouse: [], label: 'Turn to the next wall (left)' },
+    turnR: { keys: ['KeyD', 'ArrowRight'], mouse: [], label: 'Turn to the next wall (right)' },
+    sit: { keys: ['Enter'], mouse: [], label: 'Sit at the mirror' },
+    act1: { keys: ['Digit1'], mouse: [], label: 'First act on the board' },
+    act2: { keys: ['Digit2'], mouse: [], label: 'Second act on the board' },
+    press: { keys: ['KeyE', 'Space', 'Enter'], mouse: [0], label: 'Press his hand to the glass' },
+    slap: { keys: ['KeyJ'], mouse: [0], label: 'Slap' },
+    pie: { keys: ['KeyK'], mouse: [2], label: 'Throw a pie' },
+    fall: { keys: ['Space'], mouse: [], label: 'Pratfall' },
+  },
+  // which actions each scene listens to (the pause card lists these; a check fails if two share a key in one scene)
+  bindScenes: {
+    title: ['confirm'], paint: ['confirm', 'pause'], walk: ['up', 'down', 'left', 'right', 'interact', 'pause'], room: ['turnL', 'turnR', 'sit', 'pause'],
+    board: ['act1', 'act2', 'pause'], note: ['confirm', 'back'], mirror: ['press', 'pause'], act: ['pause'], small: ['confirm', 'pause'],
+    mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'],
+  },
   // idle and walk blend time, s
   blend: 0.2,
   // a performer turns to the clown and shows a name tag within this distance, metres
@@ -918,6 +951,7 @@ const S = {
 window.__walk = S;
 const el = {
   actSkip: document.getElementById('actSkipBtn'), fs: document.getElementById('fsBtn'),
+  pause: document.getElementById('pauseCard'), pauseList: document.getElementById('pauseList'), resume: document.getElementById('resumeBtn'),
   canvas: document.getElementById('gl'), frame: document.getElementById('frame'), shotName: document.getElementById('shotName'),
   panel: document.getElementById('panel'), panelText: document.getElementById('panelText'), state: document.getElementById('state'),
   go: document.getElementById('go'), stick: document.getElementById('stick'), knob: document.getElementById('knob'),
@@ -1280,7 +1314,7 @@ function enterRoom() {
   for (const l of el.labels) l.classList.add('hidden');
   for (const p of performers) p.shown = false;
   el.roomBar.classList.remove('hidden');
-  el.hint.textContent = 'Look around: A / D or arrow keys, or the buttons.';
+  el.hint.textContent = `Look around: ${keyLabel('turnL')} and ${keyLabel('turnR')}, or the buttons. ${keyLabel('pause')}: pause and controls.`;
   if (n1) { el.hint.textContent += ' Turn to the Mirror wall and sit.'; crewQuiet(); }
   // the act pays out: Laughs count up from 0 and the paint thickens by the Mask it added
   const r = S.actPay || CONFIG.actResults[S.result];
@@ -1299,18 +1333,19 @@ function leaveRoom() {
   el.gains.classList.add('hidden');
   showPrep(false);
   chars.clown.face.material.uniforms.uPaintAmt.value = CONFIG.paint;
-  el.hint.textContent = 'Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.';
+  el.hint.textContent = `Walk: ${moveLabel()}. Phone: drag anywhere below or beside the picture.`;
 }
 
 // ===== INPUT =====
 window.addEventListener('keydown', (e) => {
   if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+  if (n1 && NS.paused) { n1Key(e); return; }
   if (n1 && n1Key(e)) return;
   // in the room the side keys turn between walls (key repeat and modifiers ignored)
   if (S.room) {
     if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.code === 'KeyA' || e.code === 'ArrowLeft') turnRoom(1);
-    else if (e.code === 'KeyD' || e.code === 'ArrowRight') turnRoom(-1);
+    if (bound('turnL', e.code)) turnRoom(1);
+    else if (bound('turnR', e.code)) turnRoom(-1);
     return;
   }
   keys.add(e.code); readKeys();
@@ -1318,9 +1353,9 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => { keys.delete(e.code); readKeys(); });
 window.addEventListener('blur', () => { keys.clear(); readKeys(); });
 function readKeys() {
-  const k = (a, b) => (keys.has(a) || keys.has(b) ? 1 : 0);
-  input.kx = k('KeyD', 'ArrowRight') - k('KeyA', 'ArrowLeft');
-  input.ky = k('KeyW', 'ArrowUp') - k('KeyS', 'ArrowDown');
+  const k = (action) => { const ks = CONFIG.binds[action].keys; for (let i = 0; i < ks.length; i++) if (keys.has(ks[i])) return 1; return 0; };
+  input.kx = k('right') - k('left');
+  input.ky = k('up') - k('down');
 }
 // touch stick: appears where the finger lands; one pointer owns it
 window.addEventListener('pointerdown', (e) => {
@@ -1519,7 +1554,7 @@ function frame(t) {
   S.raf = requestAnimationFrame(frame);
 }
 function startLoop() {
-  if (S.raf || !S.running || S.lost || document.hidden) return;
+  if (S.raf || !S.running || S.lost || document.hidden || NS.paused) return;
   S.lastT = 0;
   S.raf = requestAnimationFrame(frame);
 }
@@ -2026,7 +2061,7 @@ function toBoard() {
     setFace(chars.clown, 'smile');
     el.boardActs.classList.remove('hidden');
     placeBoardActs();
-    el.hint.textContent = NS.touch ? 'Tap tonight\'s act on the board.' : 'Click tonight\'s act on the board (or press 1 or 2).';
+    el.hint.textContent = NS.touch ? 'Tap tonight\'s act on the board.' : `Click tonight's act on the board (or press ${keyLabel('act1')} or ${keyLabel('act2')}).`;
   });
 }
 // buttons over the cards: placed when shown and on resize (not per frame)
@@ -2065,7 +2100,7 @@ function walkOut() {
     if (S.mirror) leaveMirror();
     begin(false);
     NS.cable.visible = NS.tape.visible = true;
-    el.hint.textContent = NS.touch ? 'Drag to walk. Tap the gold button when it shows.' : 'Walk: WASD or arrows. E or Space: the gold prompt.';
+    el.hint.textContent = NS.touch ? 'Drag to walk. Tap the gold button when it shows.' : `Walk: ${moveLabel()}. ${keyLabel('interact')}: the gold button. ${keyLabel('pause')}: pause and controls.`;
   });
 }
 function n1Board() {
@@ -2697,7 +2732,7 @@ function crewQuiet() { for (let i = 0; i < crew.length; i++) { crew[i].saidT = 0
 function setVerb(m) {
   if (NS.verbM === m) return;
   NS.verbM = m;
-  if (m) el.verb.textContent = m.cd.verbText + (NS.touch ? '' : m.cd.verb === 'fall' ? '  (Space)' : '  (E)');
+  if (m) el.verb.textContent = m.cd.verbText + (NS.touch ? '' : '  (' + keyName(CONFIG.binds.interact.keys[0]) + ')');
   el.verb.classList.toggle('hidden', !m);
 }
 function doVerb() {
@@ -2717,7 +2752,7 @@ function doVerb() {
 }
 el.verb.addEventListener('click', doVerb);
 el.actSkip.addEventListener('click', () => { if (actSkip() !== false) el.actSkip.classList.add('hidden'); });
-// full screen (owner 22 Nov 20:30 "can be full screen?"): the button, or F on a keyboard; shown only where the browser allows it (not iPhone Safari)
+// full screen (owner 22 Nov 20:30 "can be full screen?"): the button (no key: F is the controls chart's switch-view key); shown only where the browser allows it (not iPhone Safari)
 function toggleFs() {
   try {
     if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
@@ -2726,6 +2761,7 @@ function toggleFs() {
 }
 if (document.fullscreenEnabled) el.fs.classList.remove('hidden');
 el.fs.addEventListener('click', toggleFs);
+el.resume.addEventListener('click', resumeGame);
 document.addEventListener('fullscreenchange', () => { el.fs.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
 // the notes are made once from N1.acts (projected onto the board when shown)
 for (const a of N1.acts) {
@@ -2848,7 +2884,7 @@ function mirrorSetup(kind) {
   if (kind === 'paint') { NS.paintT = -1; NS.painted = false; c.face.material.uniforms.uPaintAmt.value = N1.paintHalf; }
   else {
     c.face.material.uniforms.uPaintAmt.value = paintFor(NS.mask);
-    if (kind === 'entry') setPrompt(N1.pressHand ? (NS.touch ? 'A pale form of him in the glass. Tap: press his hand to it.' : 'A pale form of him in the glass. Any key: press his hand to it.') : NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
+    if (kind === 'entry') setPrompt(N1.pressHand ? (NS.touch ? 'A pale form of him in the glass. Tap: press his hand to it.' : `A pale form of him in the glass. ${keyLabel('press', true)}: press his hand to it.`) : NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
   }
   sizeCracks();
 }
@@ -3086,43 +3122,89 @@ function fogIn() {
 }
 
 // ----- input for the night layer -----
+// bindings (CONFIG.binds is the only source)
+function bound(action, code) { return CONFIG.binds[action].keys.indexOf(code) >= 0; }
+const KEY_NAMES = { Space: 'Space', Enter: 'Enter', Escape: 'Esc', ArrowUp: '\u2191', ArrowDown: '\u2193', ArrowLeft: '\u2190', ArrowRight: '\u2192' };
+function keyName(code) { return KEY_NAMES[code] || code.replace(/^Key|^Digit/, ''); }
+// e.g. "E / Space / Enter"; with the mouse buttons when asked ("Click", "Right click")
+function keyLabel(action, withMouse) {
+  const b = CONFIG.binds[action], k = b.keys.map(keyName);
+  if (withMouse) for (const m of b.mouse) k.push(m === 0 ? 'Click' : m === 2 ? 'Right click' : 'Mouse ' + m);
+  return k.join(' / ');
+}
+function moveLabel() { return ['up', 'left', 'down', 'right'].map((a) => keyName(CONFIG.binds[a].keys[0])).join('') + ' or arrows'; }
+// the scene whose bindings apply now (CONFIG.bindScenes)
+function bindScene() {
+  if (NS.scene === 'title' || NS.scene === 'logo') return 'title';
+  if (NS.scene === 'paint' || NS.scene === 'bravado') return 'paint';
+  if (NS.scene === 'note') return 'note';
+  if (NS.scene === 'boardwall') return 'board';
+  if (NS.scene === 'small') return 'small';
+  if (S.mode === 'act') return 'act';
+  if (S.mode === 'mw') return 'mw';
+  if (S.mirror === 'entry') return 'mirror';
+  if (S.room) return 'room';
+  return 'walk';
+}
+// ----- pause (Esc): the loop stops, held input is let go, sound waits; the card lists this scene's controls from CONFIG.binds -----
+function pauseGame() {
+  if (NS.paused || NS.scene === 'logo' || NS.scene === 'title') return;
+  NS.paused = true;
+  keys.clear(); readKeys();
+  if (input.touchId !== -1) { input.touchId = -1; input.tx = 0; input.ty = 0; el.stick.classList.add('hidden'); }
+  if (S.raf) { cancelAnimationFrame(S.raf); S.raf = 0; }
+  if (NS.audio && NS.audio.state === 'running') NS.audio.suspend().catch(() => {});
+  const sc = bindScene(), rows = CONFIG.bindScenes[sc].filter((a) => a !== 'pause').map((a) => `<tr><td>${CONFIG.binds[a].label}</td><td>${keyLabel(a, true)}</td></tr>`).join('');
+  el.pauseList.innerHTML = rows + `<tr><td>${CONFIG.binds.pause.label}</td><td>${keyLabel('pause')}</td></tr>`;
+  el.pause.classList.remove('hidden');
+  NS.pauseShown = sc;
+}
+function resumeGame() {
+  if (!NS.paused) return;
+  NS.paused = false;
+  el.pause.classList.add('hidden');
+  if (NS.audio && NS.audio.state === 'suspended') NS.audio.resume().catch(() => {});
+  startLoop();
+}
 function n1Key(e) {
-  if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { toggleFs(); return true; }
+  if (NS.paused) { if (!e.repeat && (bound('pause', e.code) || bound('confirm', e.code))) resumeGame(); return true; }
+  if (bound('pause', e.code) && !e.repeat && NS.scene !== 'note' && NS.scene !== 'logo' && NS.scene !== 'title') { pauseGame(); return true; }
   if (e.repeat) return NS.scene !== 'walk' && NS.scene !== 'back' && NS.scene !== 'room' && NS.scene !== 'mw';
   if (NS.scene === 'logo') { logoOut(); return true; }
-  if (NS.scene === 'title') { if (e.code === 'Enter' || e.code === 'Space') el.start.click(); return true; }
-  if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
+  if (NS.scene === 'title') { if (bound('confirm', e.code)) el.start.click(); return true; }
+  if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && bound('confirm', e.code)) goOut(); return true; }
   if (NS.scene === 'bravado') return true;
-  if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
-  if (NS.scene === 'small') { if (e.code === 'Enter' || e.code === 'Space') smallPress(); return true; }
-  if (NS.scene === 'boardwall') { const i = Number(e.code.replace('Digit', '')) - 1; if (N1.acts[i]) pickAct(N1.acts[i].id); return true; }
-  if (NS.scene === 'note') { if (e.code === 'Enter' || e.code === 'Space') performAct(NS.noteAct); else if (e.code === 'Escape') noteBack(); return true; }
+  if (NS.scene === 'walk') { if (bound('interact', e.code)) { doVerb(); return true; } return false; }
+  if (NS.scene === 'small') { if (bound('confirm', e.code)) smallPress(); return true; }
+  if (NS.scene === 'boardwall') { const i = bound('act1', e.code) ? 0 : bound('act2', e.code) ? 1 : -1; if (N1.acts[i]) pickAct(N1.acts[i].id); return true; }
+  if (NS.scene === 'note') { if (bound('confirm', e.code)) performAct(NS.noteAct); else if (bound('back', e.code)) noteBack(); return true; }
   if (S.mode === 'act') return true;
   if (S.mirror === 'entry') {
-    if (NS.card && NS.card.id === 'card_nietzscheIn') { if (e.code === 'Enter' || e.code === 'Space') NS.card.querySelector('#goIn').click(); return true; }
-    if (NS.sitTarget === 0 && !NS.pressing) pressStart();
+    if (NS.card && NS.card.id === 'card_nietzscheIn') { if (bound('confirm', e.code)) NS.card.querySelector('#goIn').click(); return true; }
+    if (bound('press', e.code) && NS.sitTarget === 0 && !NS.pressing) pressStart();
     return true;
   }
   if (S.mode === 'mw') {
-    if (e.code === 'KeyJ') { gag('slap', null); return true; }
-    if (e.code === 'KeyK') { gag('pie', null); return true; }
-    if (e.code === 'Space') { pratfall(); return true; }
+    if (bound('slap', e.code)) { gag('slap', null); return true; }
+    if (bound('pie', e.code)) { gag('pie', null); return true; }
+    if (bound('fall', e.code)) { pratfall(); return true; }
     return false;
   }
-  if (S.room && S.roomView === 'mirror' && e.code === 'Enter') { el.sit.click(); return true; }
+  if (S.room && S.roomView === 'mirror' && bound('sit', e.code)) { el.sit.click(); return true; }
   return !!NS.card;
 }
 function n1Pointer(e) {
+  if (NS.paused) return true;
   if (e.target.closest && e.target.closest('button, .card, iframe')) return true;
   if (NS.scene === 'logo') { logoOut(); return true; }
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } return true; }
   if (NS.scene === 'bravado') return true;
-  if (S.mirror === 'entry') { if (NS.sitTarget === 0 && !NS.pressing) pressStart(); return true; }
+  if (S.mirror === 'entry') { if ((e.pointerType !== 'mouse' || CONFIG.binds.press.mouse.indexOf(e.button) >= 0) && NS.sitTarget === 0 && !NS.pressing) pressStart(); return true; }
   if (NS.scene === 'small') { smallPress(); return true; }
   if (S.mode === 'act') return true;
   if (S.mode === 'mw' && e.pointerType === 'mouse') {
     aimMouse(e);
-    if (e.button === 0) gag('slap', NS.mouse); else if (e.button === 2) gag('pie', NS.mouse);
+    if (CONFIG.binds.slap.mouse.indexOf(e.button) >= 0) gag('slap', NS.mouse); else if (CONFIG.binds.pie.mouse.indexOf(e.button) >= 0) gag('pie', NS.mouse);
     return true;
   }
   return false;
@@ -3290,7 +3372,7 @@ function enterMW() {
   for (const s of pool.shards) { s.on = false; mwScene.remove(s.m); }
   el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch); el.hint.classList.toggle('padded', NS.touch);
   el.shotName.textContent = '';
-  el.hint.textContent = NS.touch ? 'Stick: move. SLAP, PIE, FALL. Lift your thumbs to stand still.' : 'WASD: move. Click or J: slap. Right click or K: pie. Space: pratfall. Let go of everything: stand still.';
+  el.hint.textContent = NS.touch ? 'Stick: move. SLAP, PIE, FALL. Lift your thumbs to stand still.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap. ${keyLabel('pie', true)}: pie. ${keyLabel('fall')}: pratfall. Let go of everything: stand still.`;
   setPrompt('');
   S.running = true; startLoop();
 }

@@ -65,6 +65,9 @@ const MUTS = {
   bravrefl: ['night1.html', "  const lag = S.mirror === 'entry' ? N1.reflLag : 0, want", '  const lag = N1.reflLag, want'],
   // owner 22 Nov 20:27 (session 18 batch 2): the big mirror is a true mirror, the press a close shot where the palms meet
   pressshot: ['night1.html', 'pressShot: true,', 'pressShot: false,'],
+  // owner 22 Nov 21:30 (session 18 batch 3): the controls chart in references/ is the standard
+  bindclash: ['night1.html', "    pie: { keys: ['KeyK'], mouse: [2], label: 'Throw a pie' },", "    pie: { keys: ['KeyJ'], mouse: [2], label: 'Throw a pie' },"],
+  pause: ['night1.html', "  if (bound('pause', e.code) && !e.repeat && NS.scene !== 'note' && NS.scene !== 'logo' && NS.scene !== 'title') { pauseGame(); return true; }", ''],
   truemirror: ['night1.html', '    rb.x = fx * dm + rx * x; rb.z = fz * dm + rz * x;', '    rb.x = fx * 7.2 + rx * -0.15; rb.z = fz * 7.2 + rz * -0.15;'],
   gprestore: ['night1.html', 'function moodRestore(c) { gpRestore(c);', 'function moodRestore(c) {'],
   fallfloor: ['night1.html', '  fallFloor: true,', '  fallFloor: false,'],
@@ -115,6 +118,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const bad = r.filter((x) => !x.same || x.low < -0.03 || x.h0 < 1.65);
       console.log('    lowest point per pose', r.map((x) => x.k + (x.m ? '/' + x.m : '') + ' ' + x.low.toFixed(3)).join(', '));
       if (bad.length) throw new Error('poses ' + JSON.stringify(bad));
+    });
+    // owner 22 Nov 21:30 (references/controls-reference.jpg, CHECK-AREAS.md 1): one bindings table, every action bound, no clash in a scene,
+    // no key literal outside it, hints written from it
+    await step('controls: one bindings table, every action bound, no clash in a scene (chart)', async () => {
+      const src = fs.readFileSync(path.join(ROOT, 'night1.html'), 'utf8'), lit = (src.match(/e\.code === '/g) || []).length;
+      const r = await pg.evaluate(() => { const C = window.__walkTest.CONFIG, out = { missing: [], clash: [] };
+        for (const [sc, acts] of Object.entries(C.bindScenes)) { const seen = {}; for (const a of acts) { const b = C.binds[a]; if (!b || (!b.keys.length && !b.mouse.length)) out.missing.push(sc + ':' + a); else for (const k of b.keys) { if (seen[k] && seen[k] !== a) out.clash.push(sc + ':' + k + ' ' + seen[k] + '/' + a); seen[k] = a; } } }
+        return out; });
+      console.log('    bindings: missing', r.missing.length, '| clashes', r.clash.length, '| key literals outside the table', lit - 1);
+      if (r.missing.length || r.clash.length || lit !== 1) throw new Error('bindings ' + JSON.stringify(r) + ' literals ' + lit);
     });
     await step('logo then title', async () => { await sleep(3400); await pg.waitForSelector('#logo.hidden', { state: 'attached', timeout: 2000 }); });
     await step('start: at the mirror', async () => { await pg.click('#start'); await sleep(1500); });
@@ -181,6 +194,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const tp = (x, y) => pg.evaluate(([x, y]) => { const S = window.__night.S; S.x = x; S.y = y; }, [x, y]);
     const verb = async (x, y, v) => { await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 }); await tp(x, y); await sleep(500); const vis = await pg.isVisible('#verb'); if (!vis) throw new Error('no verb button for ' + v); await pg.click('#verb'); await sleep(1100); const done = await pg.evaluate((v) => window.__night.NS.verbs[v], v); if (!done) throw new Error(v + ' not done'); };
     await step('take the pie', () => verb(1.0, 9.0, 'take'));
+    // chart: Esc pauses; the loop stops, held keys are let go, game time stands still, the card lists this scene's controls from the table
+    await step('Esc pauses with the controls list, Esc resumes (chart)', async () => {
+      await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 });
+      await pg.keyboard.down('KeyW'); await sleep(200); await pg.keyboard.press('Escape'); await sleep(150);
+      const a = await pg.evaluate(() => { const N = window.__night, C = window.__walkTest.CONFIG; return { paused: N.NS.paused, raf: N.S.raf, ky: window.__walkTest.input.ky, y: N.S.y, rows: document.querySelectorAll('#pauseList tr').length, want: C.bindScenes.walk.length, text: document.getElementById('pauseList').textContent, card: !document.getElementById('pauseCard').classList.contains('hidden') }; });
+      await sleep(600);
+      const y2 = await pg.evaluate(() => window.__night.S.y);
+      await pg.keyboard.up('KeyW'); await pg.keyboard.press('Escape'); await sleep(300);
+      const b = await pg.evaluate(() => ({ paused: window.__night.NS.paused, card: !document.getElementById('pauseCard').classList.contains('hidden') }));
+      console.log('    pause: rows', a.rows, 'of', a.want, '| held W let go', a.ky === 0, '| moved while paused', +(y2 - a.y).toFixed(3), 'm');
+      if (!a.paused || a.raf || a.ky !== 0 || !a.card || a.rows !== a.want || !/E \/ Space \/ Enter/.test(a.text) || Math.abs(y2 - a.y) > 1e-6 || b.paused || b.card) throw new Error('pause ' + JSON.stringify({ a, y2, b }));
+    });
     // panel D (owner 22 Nov 15:58: in the corridor shot "the player sees nothing"): the cable lies across the wings, filmed side-on
     await step('cable: blocks before the pratfall (D)', async () => {
       await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 }); await tp(0.4, 10.6);
