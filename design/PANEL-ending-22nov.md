@@ -92,3 +92,4 @@ What it would change first: offer the choice through the old controls with a cle
 - Not asked back, put to the panel as E4: "clapping to sound off" has two readings (silent clapping, or heard and then cut). Owner to say which.
 - GDD lines this idea would change if agreed: "The ending (unchanged)" steps 1-6 (one ending, unseen clapping, no text), "wins only by standing still" (START-HERE), and the Performer fight if E7 is not (a) or (c).
 - The owner's own blind-round match: Nietzsche's blind change (one fall bare-faced before walking out) is close to his ending 2, written before his idea was shown.
+- Owner decisions 22 Nov 23:41: E4 (b) heard, then cut to silence "like evangelion"; E2 (a) worded buttons; E5 (b) one last act with no judgement; E7: "performer is himself, must be beaten by gag and not by standing still" (panel on that rule: `design/PANEL-action-22nov.md`).
