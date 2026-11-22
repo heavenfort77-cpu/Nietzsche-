@@ -291,7 +291,7 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Sweep: every `waitForFunction` added in session 20 batches 1-2 (gnaw level, lamp hits, lamp yaw, spend text, music level): the other waits are on values this step itself changes from a reset start (`M.still = 0`, `hits > k`, yaw against the value just read). One site.
 - Where: `web/step0/smoke_night1.cjs`, step "gags show what they cost".
 - Fix: the step first waits until no spend is shown, presses J, then waits for the text `(-<slap cost>)`. The game is unchanged.
-- Proof: local desk run after the change, `gags show what they cost` OK; mutation `cost` still caught in the same run set (see HANDOFF.md, session 20 batch 3). CI: the run of the batch 3 commit.
+- Proof: PASS local desk run 23 Nov after the change: `desk OK gags show what they cost`, `RESULT night1 smoke 52 of 52 pass` (to the Light steps). PASS mutation `cost` against the corrected check: caught, `RESULT night1 smoke 49 of 50 pass (MUTATE=cost)`. Not yet seen on CI: the run of the batch 3 commit (run 84).
 
 ## F32: the Light real-play check started from whatever size the Light had grown to
 - Found: CI run 83 (cbe7d0d), job `step0`, desktop only.
@@ -301,4 +301,4 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Sweep: the other real-play steps in the smoke (Whisper trip, Stare pose, Shame cling, bag breaks, the Light's "outruns" step): each sets its foe's position and timers first. One site, used for both stick settings.
 - Where: `web/step0/smoke_night1.cjs`, the `Light: running from it at ...% stick` loop.
 - Fix: the step sets `L.r = lightStartR()`, `L.leaves = 0`, `L.loseT = 0`, `L.tellT = 0` before the run. The 2 s limit and the 8 s run are unchanged. Not covered by this check, as before: running from a Light already grown to its cap.
-- Proof: local desk run after the change, both runs OK (see HANDOFF.md, session 20 batch 3). CI: the run of the batch 3 commit.
+- Proof: PASS local desk run 23 Nov after the change: `desk OK Light: running from it at 100% stick escapes it (real play)` and the 60% run, `RESULT night1 smoke 52 of 52 pass`. Not yet seen on CI: the run of the batch 3 commit (run 84).
