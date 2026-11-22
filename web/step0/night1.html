@@ -3549,7 +3549,7 @@ function gag(kind, mouse) {
 }
 function tip(t) { const M = NS.mw; if (M.tips.indexOf(t) < 0 && M.tip !== t) M.tips.push(t); }
 function hitFoe(f, dmg, fromX, fromZ) {
-  if (f.kind === 'light') { tip('Gags pass through the Light. Stand still in its beam.'); return; }
+  if (f.kind === 'light') { tip(`Gags pass through the Light. Hold still in its beam for ${N1.light.beatSecs} s to put it out.`); return; }
   if (f.kind === 'stare') {
     const a = Math.atan2(fromX - f.x, fromZ - f.z), d = Math.abs(Math.atan2(Math.sin(a - f.yaw), Math.cos(a - f.yaw)));
     if (d < deg(f.cfg.cone)) { tip('It sees it coming. Hit the Stare from the side.'); f.pop = 0.12; return; }
@@ -3573,7 +3573,8 @@ function dropShards(x, z, n) {
   }
 }
 const TIPS = {
-  light: 'The Light: it drains Laughs while you move in its beam. Stand still in it.',
+  // owner 22 Nov 23:00: "stand still" read as a way to dodge the drain; the tip now says stillness in the beam puts the Light out
+  light: `The Light drains Laughs while you move in its beam. Hold still in it for ${N1.light.beatSecs} s and it goes out.`,
   whisper: "The Whisper copies your pratfalls and strikes where you land. Step, don't fall.",
   stare: 'The Stare: in its gaze you are judged. Hit it from the side.',
   shame: 'Shame clings and slows you. A pratfall shakes it off.',
