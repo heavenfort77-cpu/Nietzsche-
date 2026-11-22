@@ -218,3 +218,30 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Class: HUD caches reset instead of mirroring what the DOM shows.
 - Where: `web/step0/walk.html`
 - Deferred: prototype code (owner requirement 5 scope): one write per room visit, nothing the player sees, does not change the playtest answer. Fix when the room is kept: keep the caches equal to the DOM text instead of resetting them (also the `p.off = null` reset of the table buttons). Its check stays and prints FAIL until then.
+
+## F24: the Light cannot be escaped on a phone
+- Found: owner's phone play, 22 Nov 17:58 ("the ring still unable to avoid the light"), session 17.
+- Probe: real-play bot in `smoke_night1.cjs` (phone portrait, 8 s game time, steering away from the spot and round the ring): `FAIL Light: running from it at 100% stick escapes it (real play) caught by the Light {"inT":3.45,...,"r":2.5}` and `FAIL Light: running from it at 60% stick ... {"inT":1.55,"t":1.65,...,"over":"lose"}`. Batch 2's check teleported him out of the spot and never ran from it.
+- Cause: (1) run speed = speed x stick length (radius 48 px), so a normal thumb drag (60%) made him 1.03 m/s, slower than the Light's 1.2; (2) the spot re-centred on him while he was inside it, so from its middle he escaped at only the speed difference (1.75 m / 0.52 m/s = 3.4 s, the measured 3.45 s); (3) it grew 0.25 m per escape up to 2.5 m in a 6.8 m ring and chased forever.
+- Class: stick length scaling speed (walk and Mirror World); a pursuer that never loses its target.
+- Where: `web/step0/night1.html` (`stickCurve()` in `moveInput()` and `mwClown()`, `mwLight()`).
+- Fix: drags past `stickFull` 0.35 of the radius are full speed (night 1 only); the spot holds while he is in it and chases only once he is out; growth 0.15 m, cap 1.75 m; after `lightChase` 2.5 s of chasing it loses him for `lightLose` 1.5 s and drifts to the middle, then flares and looks again. Standing still 3 s in it still beats it.
+- Proof: desk `run 1 : inside the spot 1.30 s of 8.0 s`, `run 0.6 : inside the spot 0.90 s of 8.0 s` (gate: at most 2 s); full 3-screen pass in the batch 3 commit.
+
+## F25: the corridor tip stays on screen in the ring
+- Found: stranger cold read 22 Nov (`design/STRANGER-night1-full-cold-read.md` finding 2).
+- Probe: `Mirror World: the cut at the door ...` step reads `#mwTip` in the ring; before the fix it read "The mirror corridor. The way to the ring is the pale door." (stranger screenshot phone_mw.png).
+- Cause: `tip()` holds a tip for `tipSecs` 4.5 s; `mwCut()` moved him to the ring without clearing it.
+- Class: scene-owned UI not cleared when the space changes.
+- Where: `web/step0/night1.html` `mwCut()`.
+- Fix: the cut clears the tip, its timer and its queue.
+- Proof: the step checks the ring's tip text (batch 3 commit).
+
+## F26: the Mirror pads cover the hint on a phone
+- Found: stranger cold read finding 3 ("the FALL button sits on top of the bottom hint").
+- Probe: the corridor step checks the hint box against the pads box on touch screens.
+- Cause: `#hint` spans the full width at the bottom; `#pads` sits bottom right over it.
+- Class: fixed overlays that share a screen edge.
+- Where: `web/step0/night1.html` CSS `#hint`, `enterMW()`, `endMW()`.
+- Fix: `#hint.padded` keeps 100 px clear on the right while the pads show.
+- Proof: phone screens in the batch 3 full pass.

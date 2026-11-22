@@ -12,6 +12,8 @@
   #gl { display: block; }
   .hud { position: absolute; left: 10px; top: 8px; font-weight: 600; letter-spacing: .04em; text-shadow: 0 1px 2px #000; pointer-events: none; }
   #hint { position: fixed; left: 0; right: 0; bottom: 10px; text-align: center; opacity: .75; font-size: 12px; pointer-events: none; }
+  /* F26: beside the Mirror pads (they take the bottom right), the hint keeps clear of them */
+  #hint.padded { right: 100px; padding-left: 12px; text-align: left; }
   .label { position: absolute; left: 0; top: 0; transform: translate(calc(var(--x, 0) * 1px - 50%), calc(var(--y, 0) * 1px - 100%)); background: #1e1714cc; padding: 2px 8px; border-radius: 4px; font-size: 13px; white-space: nowrap; pointer-events: none; }
   .hidden { display: none !important; }
   #stick { position: fixed; left: 0; top: 0; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; border: 2px solid #eadfcf55; transform: translate(calc(var(--sx, 0) * 1px), calc(var(--sy, 0) * 1px)); pointer-events: none; }
@@ -78,12 +80,16 @@
   #prompt { position: fixed; left: 0; right: 0; bottom: 64px; text-align: center; font-weight: 600; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
   #verb { position: fixed; right: 16px; bottom: 96px; min-width: 120px; min-height: 64px; border-radius: 32px; border: 0; background: #cfaa4e; color: #1e1714; font: 600 15px system-ui, sans-serif; padding: 0 18px; z-index: 6; }
   #sit { display: inline-block; }
-  /* panel F: the act board on the room wall; each act is a 44 px button over its card */
+  /* panel F and 22 Nov b item 1: one note per act on the board (the card's own size, at least 44 px); a tap opens it as a parchment */
   #boardActs { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
-  #boardActs .act { position: absolute; left: calc(var(--x, 0) * 1px); top: calc(var(--y, 0) * 1px); transform: translate(-50%, -50%); pointer-events: auto; min-height: 44px; min-width: 44px; max-width: 30vw; padding: 8px 12px; border-radius: 6px; border: 1px solid #cfaa4e; background: #1e1714e6; color: #f0d27a; font: 600 15px/1.25 system-ui, sans-serif; cursor: pointer; }
-  #boardActs .act small { display: block; font-weight: 400; color: #eadfcf; }
-  /* phone portrait: the picture is about 220 px tall, so each act is one line on its card */
-  @media (orientation: portrait) { #boardActs .act { max-width: 40vw; padding: 6px 10px; font-size: 14px; white-space: nowrap; } #boardActs .act small { display: none; } }
+  #boardActs .note { position: absolute; left: calc(var(--x, 0) * 1px); top: calc(var(--y, 0) * 1px); width: calc(max(44, var(--w, 44)) * 1px); height: calc(max(44, var(--h, 44)) * 1px); transform: translate(-50%, -50%); pointer-events: auto; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; padding: 3px; border: 2px solid transparent; border-radius: 3px; background: none; color: #3a2a1a; font: 600 11px/1.1 Georgia, serif; text-align: center; cursor: pointer; }
+  #boardActs .note:hover, #boardActs .note:focus-visible { border-color: #f0d27a; }
+  .card .parchment { background: linear-gradient(#f1e5c8, #e0cda2); color: #2a1d12; border-radius: 4px; padding: 18px 22px; max-width: min(420px, 88vw); box-sizing: border-box; box-shadow: 0 6px 24px #000a; text-align: left; display: flex; flex-direction: column; gap: 10px; }
+  .card .parchment h2 { color: #6a1d29; }
+  .card .parchment p { font: 16px/1.4 Georgia, serif; }
+  .card .parchment small { color: #5a4a3a; font-size: 14px; }
+  .card .parchment .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .card .parchment button.back { background: #3d332d; color: #f1e5c8; }
   #cracks { position: absolute; left: 0; top: 0; pointer-events: none; }
   #fog { position: fixed; inset: 0; background: radial-gradient(circle at 50% 60%, #c9d5d7, #9db5bb 45%, #44666e); opacity: 0; pointer-events: none; transition: opacity 1.4s linear; z-index: 15; display: flex; align-items: center; justify-content: center; color: #11272b; font: 600 26px Georgia, serif; }
   #mwHud { position: absolute; right: 10px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
@@ -113,7 +119,7 @@
 <div id="prep" class="hidden"><div class="t">Dressing table: spend Laughs before the Mirror</div></div>
 <div id="stick" class="hidden"><div id="knob"></div></div>
 <div id="hint">Walk: WASD or arrow keys. Phone: drag anywhere below or beside the picture.</div>
-<div id="roomBar" class="hidden"><button id="roomL" aria-label="Turn left">&#9664;</button><button id="again" class="hidden">Walk back again</button><button id="sit" class="hidden">Sit at the mirror</button><button id="roomR" aria-label="Turn right">&#9654;</button></div>
+<div id="roomBar" class="hidden"><button id="roomL" aria-label="Turn left">&#9664;</button><button id="again" class="hidden">Walk back again</button><button id="sit" class="hidden">Face the mirror</button><button id="roomR" aria-label="Turn right">&#9654;</button></div>
 <div id="panel" class="hidden">
   <div id="panelText">Walk out: cube room to the ring (corridor, wings, ring entrance). Walk back: after the act, ring to the cube room.</div>
   <div id="state">Loading the clown, two performers, three shots and the cube room...</div>
@@ -121,7 +127,7 @@
 </div>
 <div id="fade"></div>
 <div id="prompt"></div>
-<div id="boardActs" class="hidden"><button class="act" data-act="fall" data-card="-0.95">The deliberate fall<small>Yours. It always pays a little.</small></button><button class="act" data-act="sweep" data-card="0.95">Spotlight sweep<small>Lent tonight, free.</small></button></div>
+<div id="boardActs" class="hidden"></div>
 <button id="verb" class="hidden"></button>
 <div id="mwTip"></div>
 <div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">FALL</button></div>
@@ -406,6 +412,24 @@ uniform float uGlass;
 varying float vK;
 void main() { gl_FragColor = vec4(vec3(0.55, 0.68, 0.70) * uGlass * (0.4 + vK), 1.0); }
 </script>
+<!-- the act's popcorn (panel 22 Nov b item 5): one instanced burst thrown from the rows to the ring at each peak -->
+<script type="x-shader/x-vertex" id="popVert">
+attribute vec3 aEnd;
+uniform float uBurstT;
+uniform vec3 uTarget;
+void main() {
+  vec3 a = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  float k = clamp(uBurstT / 1.1, 0.0, 1.0);
+  vec3 b = uTarget + aEnd;
+  vec3 p = mix(a, b, k);
+  p.y += sin(k * 3.14159) * (2.0 + aEnd.y * 4.0);
+  p.y = max(p.y, 0.03);
+  gl_Position = projectionMatrix * viewMatrix * vec4(p + position * (1.0 - 0.3 * k), 1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="popFrag">
+void main() { gl_FragColor = vec4(0.95, 0.88, 0.62, 1.0); }
+</script>
 <!-- the act's crowd: head-and-shoulders cards, one instanced draw; they face the camera about the vertical and bob from one excitement value -->
 <script type="x-shader/x-vertex" id="crowdVert">
 attribute float aSeed;
@@ -669,6 +693,8 @@ const N1 = Object.freeze({
   pratLand: 0.7,
   // deliberate trip for the child: time, forward pitch radians
   tripSecs: 0.8, tripPitch: 0.5,
+  // the deliberate trip for the child carries him this far forward, m (panel 22 Nov b item 4: the clown trip pose)
+  tripStep: 0.6,
   // pies from the props girl (Mirror World throws)
   pies: 3,
   // opening at the mirror: paint before the first input (half painted) and after, and the time it takes
@@ -679,6 +705,12 @@ const N1 = Object.freeze({
   reflDist: 7.2, reflX: -0.15,
   // mirror glass in the mirror wall plate, fractions of the plate (x0, y0 from top, x1, y1); plate fov and play fov from views.json and CONFIG
   mirrorRect: [0.40, 0.0, 0.605, 0.675],
+  // 22 Nov b item 6: the opening at the dressing table: chair (Blender x, y), vanity glass centre (x, y, z) and size (width, height) m, his reflection's side offset (Blender y) and depth past the glass
+  vanityChair: [3.5, 0.2], vanityGlass: [4.83, 0, 1.55], vanitySize: [1.3, 1.1], vanityReflY: -0.35, vanityReflPast: 1.35,
+  // 22 Nov b item 7: the big mirror shows a pale form of him, darker every night (tint per night 1-7, times his shading's grey); grade amount
+  reflShade: [1.45, 1.25, 1.05, 0.85, 0.65, 0.5, 0.35], reflPale: 0.85, night: 1,
+  // he presses his right hand to the glass instead of sitting; the reflection presses back (its left), late; hands must meet within this share of the picture height
+  pressHand: true, handMeet: 0.06,
   // reflection lag behind him (night 1), s; sitting: drop of the hips metres, chest tilt degrees, time s
   reflLag: 0.35, sitDrop: 0.32, sitChest: 12, sitSecs: 0.6,
   // cracks where his pose and the reflection's disagree (night 1 at most), and the disagreement that makes one
@@ -709,7 +741,10 @@ const N1 = Object.freeze({
   // the insecurities (constructs): height m, hit points, shards dropped, start (x, z)
   light: { h: 2.9, at: [0, -7.6], spotR: 1.25, follow: 1.2, drain: 6, beatSecs: 3, shards: 3 },
   // panel B: each time he leaves the spot it grows (m, up to cap) and drains this much more on re-entry (share per escape); it flares tell s before it chases
-  lightGrow: 0.25, lightCap: 2.5, lightDrainGrow: 0.5, lightTell: 0.4,
+  // F24 (owner 22 Nov 17:58 "still unable to avoid the light"): growth 0.25 -> 0.15 m, cap 2.5 -> 1.75 m; after chasing lightChase s it loses him for lightLose s and drifts to the middle
+  lightGrow: 0.15, lightCap: 1.75, lightDrainGrow: 0.5, lightTell: 0.4, lightChase: 2.5, lightLose: 1.5,
+  // F24: a stick drag this share of its radius or more is full speed (a phone thumb rarely drags the whole radius); walk and Mirror World
+  stickFull: 0.35,
   whisper: { h: 2.6, hp: 4, shards: 4, at: [-4, 2], speed: 0.8, keep: 2.5, tell: 0.4, strikeR: 1.0, strike: 8, near: 1.6, nearDrain: 1 },
   stare: { h: 1.1, hp: 4, shards: 4, at: [4, 1], turn: 35, cone: 22, tell: 0.4, judge: 4, every: 1.0 },
   shame: { h: 1.85, hp: 3, shards: 3, at: [0, 4], speed: 0.9, grab: 0.8, tell: 0.4, slow: 0.5, drain: 3, push: 2, stun: 1.0 },
@@ -782,13 +817,23 @@ const N1 = Object.freeze({
   // ----- panel F (owner agreed 22 Nov 15:58): the act board is the room's +Y wall; no board card at the ring edge -----
   // switch; the cards' height and wall depth (Blender z and y, m) where the two act buttons sit (card x is in each button's data-card)
   boardWall: true, boardCardZ: 1.85, boardCardY: 4.77,
+  // the acts on the board (22 Nov b item 1: a note each, a tap opens it as a parchment; more acts add notes): card centre x on the board (Blender), its size m
+  acts: [
+    { id: 'fall', title: 'The deliberate fall', short: 'The fall', line: 'Miss the bar on purpose, land on your backside, bow.', own: 'Yours. It always pays a little.', x: -0.95 },
+    { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Lent tonight, free.', x: 0.95 },
+  ],
+  noteW: 0.86, noteH: 1.12,
   // ----- panel G (owner 22 Nov 11:22 items 2 and 4, agreed 15:58): Mirror World night 1 = the mirror corridor, then the ring; unworldly by Mask -----
   // switch (false = straight into the ring); corridor half width m, z from its start to its door end, fixed camera spot, his start (x, z)
-  mwRoute: true, mwCorX: 1.2, mwCorZ: [36.5, 22.4], mwCorCam: [0, 2.8, 40.5], mwCorStart: [0, 35.6],
+  // 22 Nov b item 2: corridor half width 1.2 -> 2.2 m
+  mwRoute: true, mwCorX: 2.2, mwCorZ: [36.5, 22.4], mwCorCam: [0, 2.8, 40.5], mwCorStart: [0, 35.6],
   // corridor framing: fixed vertical field of view (degrees), aimed halfway between him and the door at this height (m), so the door stays in view
   mwCorFov: 50, mwCorLookH: 0.9,
   // the one cut: when he reaches this z at the door, fade this long, then the ring (constructs appear there)
   mwCorDoor: 22.9, mwCutMs: 450,
+  // 22 Nov b item 2, bag of marbles: tonight's constructs (not the Light) plus blanks; one marble drawn without putting back at each mirror row he passes
+  // from the second on; the first construct drawn breaks that mirror (tell s: flash and crack, then it bursts) and attacks; if none was earned the Whisper goes in
+  bagBlanks: 2, breakTell: 0.4, corRows: 6,
   // unworldly backdrop: tiers and reflections warp by warp0 + warpMask x (Mask / maskFull, at most 1); sky swirl and floating glass brighten the same way
   unworld: { warp0: 0.06, warpMask: 0.32, maskFull: 6, amt0: 0.25, amtMask: 0.75, glass0: 0.06, glassMask: 0.22, glassN: 140 },
   // ----- the act after the cue (owner 22 Nov 13:45, design/PANEL-act-price.md 11 of 12; session 17 order A) -----
@@ -815,7 +860,10 @@ const N1 = Object.freeze({
   // props (x, z m): the bar for the deliberate fall, the rug and dustpan for the sweep; the child watches from the ring entrance
   actBar: [1.6, 0], actRug: [-1.5, 0.5], actPan: [-0.9, 1.0], actChild: [1.1, -6.9],
   // one routine segment per cue chain, s; Good plays it at this share of the full moves
-  segSecs: 2.0, goodAmt: 0.55,
+  // panel 22 Nov b item 5 (intensity): 2.0 -> 1.6 s
+  segSecs: 1.6, goodAmt: 0.55,
+  // intensity: drum roll length s and bus volume; camera shake m on a fall; popcorn pieces per burst
+  rollSecs: 1.0, drumVol: 0.5, shakeM: 0.09, actPopN: 120,
   // the fall backwards about his feet, radians (a miss, the bar miss, the bow that tips him over); the knees in the sweep sink him this far, m
   fallBack: 1.25, kneelDrop: 0.38,
   // the beat after: laughter stops, he is alone in the spot with the sad face, s; then the smile and the bow with the hat back on, dented, s
@@ -852,7 +900,7 @@ const el = {
   sit: document.getElementById('sit'), prompt: document.getElementById('prompt'), verb: document.getElementById('verb'), cracks: document.getElementById('cracks'),
   mwHud: document.getElementById('mwHud'), mwTip: document.getElementById('mwTip'), pads: document.getElementById('pads'), fog: document.getElementById('fog'),
   curtain: document.getElementById('curtain'), start: document.getElementById('start'), loadState: document.getElementById('loadState'), logo: document.getElementById('logo'),
-  boardActs: document.getElementById('boardActs'), boardActBtns: Array.from(document.querySelectorAll('#boardActs .act')),
+  boardActs: document.getElementById('boardActs'), boardActBtns: [],
   padSlap: document.getElementById('padSlap'), padPie: document.getElementById('padPie'), padFall: document.getElementById('padFall'),
 };
 const renderer = new THREE.WebGLRenderer({ canvas: el.canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
@@ -1284,10 +1332,13 @@ function free(x, y) {
   return true;
 }
 // camera-relative input; the basis stays with the old camera across a cut until the input is let go or turns past holdAngle
+// F24: stick length -> speed share: full speed from N1.stickFull of the radius (night 1 only; the walk sample keeps the linear stick)
+function stickCurve(m) { return n1 ? Math.min(1, m / N1.stickFull) : m; }
 function moveInput(dt) {
   const ix = input.tx || input.kx, iy = input.ty || input.ky;
-  const mag = Math.min(1, Math.hypot(ix, iy));
-  if (mag < CONFIG.deadzone || S.ended) { S.hold = false; return 0; }
+  const raw = Math.min(1, Math.hypot(ix, iy));
+  if (raw < CONFIG.deadzone || S.ended) { S.hold = false; return 0; }
+  const mag = stickCurve(raw);
   const ang = Math.atan2(iy, ix);
   const turned = Math.abs(Math.atan2(Math.sin(ang - S.holdAng), Math.cos(ang - S.holdAng))) > THREE.MathUtils.degToRad(CONFIG.holdAngle);
   if (!S.hold || turned) {
@@ -1549,7 +1600,7 @@ const NS = {
   // item 4: continue-only cards seen this night; item 5: the corridor jokes played, the rigger's trip clock (-1 = off), the sniff posture
   contCount: 0, jokes: { echo: false, rigger: false, sniff: false }, riggerT: -1, sniffMood: { tempo: 1, chest: 0, neck: 0, head: 0 }, keptLine: '',
   // the act at the zoom-out: routine state, game-time rate (checks may raise it), seen once (tap skips after), slump for the walk back, dented hat carried, clown height m
-  A: null, actRate: 1, actSeen: false, slump: null, hatDent: false, clownH: 1.79,
+  A: null, gpUsed: {}, actRate: 1, actSeen: false, slump: null, hatDent: false, clownH: 1.79,
 };
 try { NS.actSeen = localStorage.getItem('n1ActSeen') === '1'; } catch (e) { NS.actSeen = false; }
 const crew = [];
@@ -1565,6 +1616,91 @@ const mwCam = new THREE.PerspectiveCamera(40, CONFIG.aspect, 0.1, 60);
 const mwTmp = { v: new THREE.Vector3(), v2: new THREE.Vector3(), q: new THREE.Quaternion(), up: new THREE.Vector3(0, -1, 0), look: new THREE.Vector3(), ray: new THREE.Raycaster(), plane: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0) };
 const deg = THREE.MathUtils.degToRad;
 const ease = (k) => k * k * (3 - 2 * k);
+// ----- clown falls (panel 22 Nov b, item 4): bone poses on top of the clips; prototype, the approved GLB is unchanged -----
+// Channels: hips drop/rise (m, scaled to his hip height), hips pitch, spine, head, thighs, shins, upper arms (pitch, out), forearms (degrees).
+// Axes are his body frame: x his left, y up, z forward. +pitch tips a bone that points up forward, and swings a bone that points down backward.
+const GPC = ['hy', 'hr', 'sp', 'hd', 'tL', 'tR', 'sL', 'sR', 'aLx', 'aLz', 'aRx', 'aRz', 'fL', 'fR'];
+// sit = hips on the floor, flop = lying face down (metres for a 0.85 m hip height)
+const SIT = -0.71, FLOP = -0.64;
+const GPCLIP = {
+  // the pratfall (Muybridge 56, Chaplin): feet fly forward, airborne flat, lands on his backside, legs up, a bounce, sitting
+  prat: { secs: 0.8, keys: [[0.10, { hy: 0.04, hr: -15, tL: -40, tR: -40, aLx: -60, aLz: 70, aRx: -60, aRz: -70 }],
+    [0.28, { hy: 0.18, hr: -75, tL: -25, tR: -30, sL: 15, sR: 10, hd: 25, aLx: -20, aLz: 120, aRx: -20, aRz: -120 }],
+    [0.45, { hy: SIT, hr: -55, sp: 10, tL: -45, tR: -50, hd: 25, aLz: 80, aRz: -80 }],
+    [0.62, { hy: SIT + 0.07, hr: -30, tL: -55, tR: -58, hd: 10, aLz: 60, aRz: -60 }],
+    [0.80, { hy: SIT, hr: -12, tL: -78, tR: -78, aLx: 35, aLz: 25, aRx: 35, aRz: -25 }]] },
+  // the trip (Keaton): toe catches, two windmilling stagger steps, the dive, the belly flop, heels kick, lying
+  trip: { secs: 1.2, keys: [[0.10, { hr: 15, tR: 25, hd: -10, aLx: -50, aRx: -50 }],
+    [0.25, { hr: 30, tL: -40, tR: 30, aLx: -150, aLz: 40, aRx: 40, aRz: -40 }],
+    [0.42, { hr: 40, tL: 30, tR: -45, aLx: 40, aLz: 40, aRx: -150, aRz: -40 }],
+    [0.58, { hy: 0.1, hr: 75, tL: 20, tR: 20, hd: -20, aLx: -160, aLz: 20, aRx: -160, aRz: -20 }],
+    [0.74, { hy: FLOP, hr: 88, tL: 25, tR: 25, sL: 80, sR: 80, hd: -30, aLx: -170, aLz: 15, aRx: -170, aRz: -15 }],
+    [0.88, { hy: FLOP + 0.05, hr: 86, tL: 30, tR: 30, sL: 105, sR: 100, hd: -30, aLx: -165, aLz: 25, aRx: -165, aRz: -25 }],
+    [1.20, { hy: FLOP, hr: 88, tL: 25, tR: 25, sL: 60, sR: 55, hd: -25, aLx: -170, aLz: 15, aRx: -170, aRz: -15 }]] },
+  // the Mirror pratfall: the trip's dive and flop only, fast (a dodge)
+  dive: { secs: 0.45, keys: [[0.15, { hy: 0.08, hr: 60, tL: 20, tR: 20, aLx: -150, aRx: -150 }], [0.45, { hy: FLOP, hr: 88, tL: 25, tR: 25, sL: 80, sR: 80, hd: -30, aLx: -170, aLz: 15, aRx: -170, aRz: -15 }]] },
+  // up from wherever he is (sitting, lying, kneeling): knees under, rise, stand
+  up: { secs: 0.6, keys: [[0.30, { hy: -0.38, hr: 40, tL: -100, tR: -100, sL: 110, sR: 110, aLx: -30, aRx: -30 }], [0.60, {}]] },
+  // a fast pop-up after the Mirror dive
+  pop: { secs: 0.35, keys: [[0.18, { hy: -0.35, hr: 45, tL: -90, tR: -90, sL: 100, sR: 100 }], [0.35, {}]] },
+  // kneeling (the sweep chase)
+  kneel: { secs: 0.3, keys: [[0.30, { hy: -0.42, hr: 20, sp: 10, tL: 0, tR: 0, sL: 95, sR: 95, aLx: -40, aRx: -40 }]] },
+  // a hand pressed flat to the glass (big mirror, panel item 7): right hand, or the left for the reflection
+  pressR: { secs: 0.6, keys: [[0.60, { sp: 6, hd: -4, aRx: -88, aRz: -8, fR: -6 }]] },
+  pressL: { secs: 0.6, keys: [[0.60, { sp: 6, hd: -4, aLx: -88, aLz: 8, fL: -6 }]] },
+};
+// precomputed key tables (Float32Array per key) so evaluating a clip allocates nothing
+for (const k in GPCLIP) GPCLIP[k].tab = GPCLIP[k].keys.map(([t, o]) => { const v = new Float32Array(GPC.length); GPC.forEach((n, i) => { v[i] = o[n] || 0; }); return [t, v]; });
+const GP = { e: new THREE.Euler(0, 0, 0, 'XYZ'), r: new THREE.Quaternion(), q: new THREE.Quaternion(), qi: new THREE.Quaternion(), p: new THREE.Quaternion(), pi: new THREE.Quaternion(), w: new THREE.Vector3(), v: new THREE.Vector3() };
+function gpRig(c) {
+  c.pb = {};
+  c.root.traverse((o) => { if (o.isBone) c.pb[o.name] = o; });
+  c.root.updateMatrixWorld(true);
+  c.pb.hips.getWorldPosition(GP.w);
+  c.root.getWorldPosition(GP.v);
+  // hip height scales the drop channel (a 0.85 m hip height is 1)
+  c.hipsK = Math.max(0.4, GP.w.y - GP.v.y) / 0.85;
+  c.gp = { kind: '', t: 0, from: new Float32Array(GPC.length), now: new Float32Array(GPC.length) };
+}
+// start a clip from his current pose (so every change of pose is continuous)
+function gpStart(c, kind) { c.gp.from.set(c.gp.now); c.gp.kind = kind; c.gp.t = 0; if (c === chars.clown) NS.gpUsed[kind] = (NS.gpUsed[kind] || 0) + 1; }
+function gpStop(c) { c.gp.kind = ''; c.gp.now.fill(0); }
+// value at clip time t: from the pose he was in, through the keys, holding the last
+function gpEval(c, dt) {
+  const g = c.gp;
+  if (!g.kind) return false;
+  g.t += dt;
+  const tab = GPCLIP[g.kind].tab;
+  let t0 = 0, a = g.from, b = tab[0][1], t1 = tab[0][0];
+  for (let i = 0; i < tab.length && g.t > tab[i][0]; i++) { t0 = tab[i][0]; a = tab[i][1]; b = i + 1 < tab.length ? tab[i + 1][1] : tab[i][1]; t1 = i + 1 < tab.length ? tab[i + 1][0] : t0 + 1; }
+  const k = ease(THREE.MathUtils.clamp((g.t - t0) / Math.max(1e-4, t1 - t0), 0, 1));
+  for (let i = 0; i < GPC.length; i++) g.now[i] = a[i] + (b[i] - a[i]) * k;
+  return true;
+}
+function gpDone(c) { return !!c.gp.kind && c.gp.t >= GPCLIP[c.gp.kind].secs; }
+// rotate a bone by body-frame euler degrees: world R = Q R_body Q^-1, then into the bone's parent space (P^-1 R P)
+function gpRot(c, bone, x, y, z) {
+  if (!x && !y && !z) return;
+  GP.e.set(deg(x), deg(y), deg(z));
+  GP.r.setFromEuler(GP.e);
+  c.root.getWorldQuaternion(GP.q); GP.qi.copy(GP.q).invert();
+  GP.r.premultiply(GP.q).multiply(GP.qi);
+  bone.parent.getWorldQuaternion(GP.p); GP.pi.copy(GP.p).invert();
+  bone.quaternion.premultiply(GP.r.premultiply(GP.pi).multiply(GP.p));
+}
+// apply after the mixer (and the posture layer); s scales the whole pose (0..1)
+function gpApply(c, s) {
+  const v = c.gp.now, b = c.pb, k = s === undefined ? 1 : s;
+  if (v[0]) {
+    GP.v.set(0, v[0] * c.hipsK * k, 0);
+    b.hips.getWorldPosition(GP.w).add(GP.v);
+    b.hips.position.copy(b.hips.parent.worldToLocal(GP.w));
+  }
+  gpRot(c, b.hips, v[1] * k, 0, 0); gpRot(c, b.spine, v[2] * k, 0, 0); gpRot(c, b.head, v[3] * k, 0, 0);
+  gpRot(c, b.thigh_L, v[4] * k, 0, 0); gpRot(c, b.thigh_R, v[5] * k, 0, 0); gpRot(c, b.shin_L, v[6] * k, 0, 0); gpRot(c, b.shin_R, v[7] * k, 0, 0);
+  gpRot(c, b.upper_arm_L, v[8] * k, 0, v[9] * k); gpRot(c, b.upper_arm_R, v[10] * k, 0, v[11] * k);
+  gpRot(c, b.forearm_L, v[12] * k, 0, 0); gpRot(c, b.forearm_R, v[13] * k, 0, 0);
+}
 
 // ----- cast: ramp shading by material name -----
 function rawColor(hex) {
@@ -1628,6 +1764,7 @@ async function n1Load() {
   NS.tape.position.copy(NS.cable.position);
   scene.add(NS.cable, NS.tape);
   buildReflection();
+  gpRig(chars.clown); gpRig(refl);
   buildMW();
   buildAct();
   actRigProps();
@@ -1741,16 +1878,29 @@ function toBoard() {
 function placeBoardActs() {
   if (el.boardActs.classList.contains('hidden')) return;
   const r = el.canvas.getBoundingClientRect();
-  for (const b of el.boardActBtns) {
-    const v = tmp.set(Number(b.dataset.card), N1.boardCardZ, -N1.boardCardY).project(roomCam);
-    b.style.setProperty('--x', Math.round(r.left + (v.x + 1) / 2 * r.width));
-    b.style.setProperty('--y', Math.round(r.top + (1 - v.y) / 2 * r.height));
-  }
+  N1.acts.forEach((a, i) => {
+    const b = el.boardActBtns[i], px = (x, z) => { const v = tmp.set(x, z, -N1.boardCardY).project(roomCam); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
+    const c = px(a.x, N1.boardCardZ), l = px(a.x - N1.noteW / 2, N1.boardCardZ + N1.noteH / 2), q = px(a.x + N1.noteW / 2, N1.boardCardZ - N1.noteH / 2);
+    b.style.setProperty('--x', Math.round(c[0])); b.style.setProperty('--y', Math.round(c[1]));
+    b.style.setProperty('--w', Math.round(q[0] - l[0])); b.style.setProperty('--h', Math.round(q[1] - l[1]));
+  });
 }
+// a note opens as a parchment (22 Nov b item 1): title, the routine in one line, whose it is; Perform it or Back (the loop waits behind it)
 function pickAct(id) {
   if (NS.scene !== 'boardwall') return;
+  const a = N1.acts.find((x) => x.id === id);
+  NS.scene = 'note'; NS.noteAct = id;
+  S.running = false;
+  const d = show('note', `<div class="parchment"><h2>${a.title}</h2><p>${a.line}</p><small>${a.own}</small><div class="row"><button id="perform">Perform it</button><button id="noteBack" class="back">Back</button></div></div>`);
+  d.querySelector('#perform').addEventListener('click', () => performAct(id));
+  d.querySelector('#noteBack').addEventListener('click', noteBack);
+}
+function noteBack() { if (NS.scene !== 'note') return; hideCard(); NS.scene = 'boardwall'; S.running = true; startLoop(); }
+function performAct(id) {
+  if (NS.scene !== 'note') return;
   NS.act = id;
   el.boardActs.classList.add('hidden');
+  S.running = true; startLoop();
   walkOut();
 }
 function walkOut() {
@@ -1863,8 +2013,9 @@ el.sit.addEventListener('click', () => { if (S.room && !S.mirror && S.roomView =
 // Built once at load in code; the clown, the child, the hat and the broom are moved in and out.
 const actScene = new THREE.Scene();
 const actCam = new THREE.PerspectiveCamera(40, CONFIG.aspect, 0.5, 60);
-const actU = { uTime: { value: 0 }, uExcite: { value: 0 }, uLit: { value: 1 }, uBob: { value: N1.actBob }, uLean: { value: N1.actLean } };
+const actU = { uTime: { value: 0 }, uExcite: { value: 0 }, uLit: { value: 1 }, uBob: { value: N1.actBob }, uLean: { value: N1.actLean }, uBurstT: { value: 9 }, uTarget: { value: new THREE.Vector3() } };
 const actObj = { lit: [], spot: null, beam: null, hat: null, dent: null, broom: null, bar: null, rug: null, pan: null, crowd: null, head: null, hand: null,
+  camBase: new THREE.Vector3(), pop: null, roll: null, crash: null,
   hatP: new THREE.Vector3(), hatQ: new THREE.Quaternion(), hatS: new THREE.Vector3(), broomP: new THREE.Vector3(), broomQ: new THREE.Quaternion(), broomS: new THREE.Vector3(),
   look: new THREE.Vector3(), v: new THREE.Vector3(), v2: new THREE.Vector3(), childAt: new THREE.Vector3(), childYaw: 0, srcs: [] };
 function actRand(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -1927,6 +2078,59 @@ function buildAct() {
   actObj.hat = new THREE.Mesh(mergeGeometries([brim(), crown(1, 0)], false), rampMat('HAT'));
   actObj.dent = new THREE.Mesh(mergeGeometries([brim(), crown(0.55, 0.32)], false), rampMat('HAT'));
   actObj.hat.visible = actObj.dent.visible = actObj.broom.visible = false;
+  buildActFx();
+}
+// popcorn and drums for the act's accents (panel 22 Nov b item 5)
+function buildActFx() {
+  const m4 = new THREE.Matrix4(), p = new THREE.Vector3();
+  // popcorn: starts at crowd cards, lands round the clown (uTarget), one draw while a burst flies
+  const nP = N1.actPopN, ends = new Float32Array(nP * 3), prnd = actRand(4401);
+  const pop = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), new THREE.ShaderMaterial({ uniforms: { uBurstT: actU.uBurstT, uTarget: actU.uTarget }, vertexShader: shaderText('popVert'), fragmentShader: shaderText('popFrag') }), nP);
+  for (let i = 0; i < nP; i++) {
+    const j = Math.floor(prnd() * N1.actCrowd);
+    actObj.crowd.getMatrixAt(j, m4); p.setFromMatrixPosition(m4); p.y += N1.actCardH; pop.setMatrixAt(i, m4.makeTranslation(p.x, p.y, p.z));
+    const a = prnd() * Math.PI * 2, r = 0.4 + prnd() * 1.8; ends[i * 3] = Math.sin(a) * r; ends[i * 3 + 1] = prnd() * 0.2; ends[i * 3 + 2] = Math.cos(a) * r;
+  }
+  pop.geometry.setAttribute('aEnd', new THREE.InstancedBufferAttribute(ends, 3));
+  pop.frustumCulled = true; pop.computeBoundingSphere(); pop.boundingSphere.radius += 6; pop.visible = false;
+  actObj.pop = pop; actScene.add(pop);
+  // drum roll and cymbal crash, rendered once in code (noise shaped; no filters or graphs per hit)
+  actObj.roll = drumBuffer('roll'); actObj.crash = drumBuffer('crash');
+}
+// a 44.1 kHz buffer: 'roll' = snare strokes speeding up and growing louder over N1.rollSecs; 'crash' = a bright decaying wash
+function drumBuffer(kind) {
+  const sr = 44100, secs = kind === 'roll' ? N1.rollSecs : 1.3, n = Math.floor(sr * secs), buf = new AudioBuffer({ length: n, sampleRate: sr, numberOfChannels: 1 }), d = buf.getChannelData(0);
+  let seed = kind === 'roll' ? 17 : 29, prev = 0;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 * 2 - 1; };
+  if (kind === 'roll') {
+    let tHit = 0, gap = 0.09;
+    while (tHit < secs - 0.05) {
+      const s0 = Math.floor(tHit * sr), vol = 0.12 + 0.28 * tHit / secs;
+      for (let i = 0; i < 0.06 * sr && s0 + i < n; i++) { const x = rnd(); d[s0 + i] += (x - prev) * vol * Math.exp(-i / (0.012 * sr)); prev = x; }
+      tHit += gap; gap = Math.max(0.035, gap * 0.9);
+    }
+  } else for (let i = 0; i < n; i++) { const x = rnd(); d[i] = (x - prev * 0.6) * 0.42 * Math.exp(-i / (0.35 * sr)) * (1 + 0.3 * Math.sin(i * 0.37)); prev = x; }
+  return buf;
+}
+function drum(buf) {
+  const a = audio(); if (!a) return;
+  if (!NS.drumBus) { NS.drumBus = a.createGain(); NS.drumBus.gain.value = N1.drumVol; NS.drumBus.connect(a.destination); }
+  const s = a.createBufferSource(); s.buffer = buf; s.connect(NS.drumBus); s.start(a.currentTime); actObj.srcs.push(s);
+}
+// accents (panel 22 Nov b item 5): 'perfect' = spot flash + popcorn, 'good' = a smaller flash, 'crash' = cymbal, camera shake, popcorn, the crowd roars twice
+function actFx(A, kind) {
+  if (kind === 'crash') { drum(actObj.crash); A.shake = N1.shakeM; A.fxN.crash++; A.fxN.shake++; actPop(A); laugh(0.25, 'crowd'); }
+  else { A.flash = kind === 'perfect' ? 1 : 0.5; A.fxN.flash++; if (kind === 'perfect') actPop(A); }
+}
+function actPop(A) { actU.uBurstT.value = 0; actU.uTarget.value.set(A.x, 0, A.z); actObj.pop.visible = true; A.fxN.burst++; }
+function actFxUpdate(A, dt) {
+  if (actObj.pop.visible) { actU.uBurstT.value += dt; if (actU.uBurstT.value > 1.6) actObj.pop.visible = false; }
+  A.flash = Math.max(0, A.flash - dt * 2.5);
+  actObj.spot.material.opacity = 0.34 * (1 + 1.6 * A.flash); actObj.beam.material.opacity = 0.09 * (1 + 2 * A.flash);
+  A.shake = Math.max(0, A.shake - dt * N1.shakeM * 3);
+  const s = A.shake;
+  actCam.position.set(actObj.camBase.x + s * Math.sin(actU.uTime.value * 61), actObj.camBase.y + s * Math.sin(actU.uTime.value * 47 + 1), actObj.camBase.z);
+  actCam.updateMatrixWorld();
 }
 // at load (bind pose): where the bowler sits on the head bone and the broom in the right hand
 function actRigProps() {
@@ -2003,6 +2207,7 @@ function actFit() {
     fov = THREE.MathUtils.clamp(2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(deg(fov) / 2) * px / N1.actPx)), N1.actFovMin, N1.actFovMax);
   }
   actCam.fov = fov; actCam.updateProjectionMatrix(); actCam.updateMatrixWorld();
+  actObj.camBase.copy(actCam.position);
   shared.uKeyDir.value.fromArray(CONFIG.keyDir).normalize().transformDirection(actCam.matrixWorldInverse);
   shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(actCam.matrixWorldInverse);
   shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(actCam.matrixWorldInverse);
@@ -2013,7 +2218,7 @@ function actEnter() {
   S.mode = 'act'; NS.scene = 'act';
   NS.A = { phase: 'walkon', t: 0, x: N1.walkOnFrom[0], z: N1.walkOnFrom[1], yaw: 0, rx: 0, y: 0, clip: 'idle', clipNow: 'idle', tempo: 1, face: 'smile',
     mood: { tempo: 1, chest: -6, neck: -3, head: -4 }, excite: N1.exciteHouse, spotR: N1.actSpotR, spotX: N1.actSpotAt[0], spotZ: N1.actSpotAt[1], litNow: -1, lit: 1,
-    segs: [], seg: 0, sx: 0, sz: 0, srx: 0, sy: 0, fired: {}, peaks: [], hat: 'real', hatV: new THREE.Vector3(), hatSpin: 0, hatLift: 0, fitH: 0, hold: null, done: false };
+    segs: [], seg: 0, sx: 0, sz: 0, srx: 0, sy: 0, fired: {}, peaks: [], flash: 0, shake: 0, fxN: { roll: 0, crash: 0, flash: 0, burst: 0, shake: 0 }, hat: 'real', hatV: new THREE.Vector3(), hatSpin: 0, hatLift: 0, fitH: 0, hold: null, done: false };
   actU.uExcite.value = N1.exciteHouse;
   actLit(1);
   actScene.add(c.root, c.blob);
@@ -2070,8 +2275,11 @@ function actRoutine() {
   const A = NS.A, c = chars.clown;
   hideCard();
   A.phase = 'seg'; A.t = 0; A.seg = 0; A.x = N1.actSpotAt[0]; A.z = N1.actSpotAt[1]; A.yaw = 0; A.rx = 0; A.y = 0; A.excite = 0.1; A.done = false; A.hold = null;
-  A.spotR = N1.actSpotR; A.spotX = N1.actSpotAt[0]; A.spotZ = N1.actSpotAt[1]; A.lit = 1; A.hatSpin = 0;
+  A.spotR = N1.actSpotR; A.spotX = N1.actSpotAt[0]; A.spotZ = N1.actSpotAt[1]; A.lit = 1; A.hatSpin = 0; A.flash = 0; A.shake = 0;
+  A.falls = 0; NS.gpUsed = {};
+  A.fxN.roll = 0; A.fxN.crash = 0; A.fxN.flash = 0; A.fxN.burst = 0; A.fxN.shake = 0;
   A.mood.chest = 0; A.mood.neck = 0; A.mood.head = 0;
+  gpStop(c);
   hatTo('real');
   segStart(A);
   NS.scene = 'act'; S.mode = 'act';
@@ -2080,19 +2288,18 @@ function actRoutine() {
 }
 function segStart(A) { A.sx = A.x; A.sz = A.z; A.srx = A.rx; A.sy = A.y; A.sSpotR = A.spotR; A.sSpotX = A.spotX; A.fired = {}; A.excite = Math.min(A.excite, 0.12); }
 function segPeak(grade) { return grade === 'miss' ? N1.exciteMiss : grade === 'perfect' ? N1.excitePerfect : N1.exciteGood; }
-// the real accident (a missed chain): stumble, fall backwards about his feet, the hat flies, the biggest laugh; up again unless it was the last chain
+// the real accident (a missed chain): stumble, the pratfall, the hat flies, the biggest laugh; up again unless it was the last chain
 function segMiss(A, k, last) {
+  const c = chars.clown;
   A.clip = 'idle'; A.mood.chest = 0;
-  if (k < 0.12) A.rx = A.srx + 0.15 * Math.sin(Math.PI * k / 0.12);
-  else if (k < 0.35) {
-    A.rx = lerp(A.srx, -N1.fallBack, ease((k - 0.12) / 0.23)); A.y = lerp(A.sy, 0, (k - 0.12) / 0.23); A.face = 'startle';
-    if (once(A, 'fall')) { if (A.hat === 'real' || A.hat === 'dent' || A.hat === 'lift') hatKnock(A, 1, 2.4); actLaugh('crowd'); A.excite = N1.exciteMiss; }
-  } else if (k < 0.8 || last) { A.rx = -N1.fallBack; A.face = 'wince'; }
-  else { A.rx = -N1.fallBack * (1 - ease((k - 0.8) / 0.2)); A.face = 'smile'; }
+  if (k < 0.12) A.mood.chest = -10 * Math.sin(Math.PI * k / 0.12);
+  else if (once(A, 'fall')) { A.falls++; gpStart(c, 'prat'); A.face = 'startle'; if (A.hat === 'real' || A.hat === 'dent' || A.hat === 'lift') hatKnock(A, 1, 2.4); actLaugh('crowd'); A.excite = N1.exciteMiss; actFx(A, 'crash'); }
+  if (k > 0.45 && k < 0.8) A.face = 'wince';
+  if (k >= 0.8 && !last && once(A, 'up')) { gpStart(c, 'up'); A.face = 'smile'; }
 }
-// the deliberate fall (Dazai's horizontal bar): strut and hat tip / the swing, the miss, flat on his back, the hat rolls / up, fetch the hat, the bow tips him over
+// the deliberate fall (Dazai's horizontal bar): strut and hat tip / the swing, the miss, the pratfall, the hat flies / up, fetch the hat, the bow tips him over
 function segFall(A, i, k, a, peak) {
-  const bx = N1.actBar[0] - 0.75, bz = N1.actBar[1];
+  const c = chars.clown, bx = N1.actBar[0] - 0.75, bz = N1.actBar[1];
   if (i === 0) {
     A.mood.chest = -12 * a; A.mood.head = -8 * a;
     if (k < 0.6) {
@@ -2103,22 +2310,22 @@ function segFall(A, i, k, a, peak) {
     } else {
       const m = (k - 0.6) / 0.4;
       A.clip = 'idle'; A.yaw = turnToward(A.yaw, 0, 8, A.dt);
-      if (once(A, 'tip')) { hatTo('lift'); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+      if (once(A, 'tip')) { hatTo('lift'); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); actFx(A, a < 1 ? 'good' : 'perfect'); }
       A.hatLift = 0.16 * a * Math.sin(Math.PI * Math.min(1, m * 1.4));
       if (m > 0.75 && A.hat === 'lift') { A.hatLift = 0; hatTo('real'); }
     }
   } else if (i === 1) {
     A.mood.chest = 0; A.mood.head = 0;
     if (k < 0.3) { const m = k / 0.3; A.yaw = turnToward(A.yaw, Math.PI / 2, 10, A.dt); A.y = Math.sin(Math.PI * m) * 0.45 * a; A.x = A.sx + 0.4 * a * m; A.clip = 'idle'; }
-    else if (k < 0.5) {
-      const m = (k - 0.3) / 0.2; A.rx = -N1.fallBack * ease(m); A.y = 0; A.face = 'startle';
-      if (once(A, 'miss')) { hatKnock(A, a, 2.2); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
-    } else { A.rx = -N1.fallBack; A.face = 'wince'; }
+    else {
+      A.y = 0;
+      if (once(A, 'miss')) { A.falls++; gpStart(c, 'prat'); A.face = 'startle'; hatKnock(A, a, 2.2); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); actFx(A, 'crash'); }
+      if (k > 0.55) A.face = 'wince';
+    }
   } else {
     const h = actObj.hat.position;
-    if (k < 0.2) { A.rx = A.srx * (1 - ease(k / 0.2)); A.face = 'smile'; A.clip = 'idle'; }
+    if (k < 0.2) { if (once(A, 'up')) gpStart(c, 'up'); A.face = 'smile'; A.clip = 'idle'; }
     else if (k < 0.5) {
-      A.rx = 0;
       if (A.hat === 'free' && once(A, 'to')) { A.tx = h.x + 0.35 * Math.sign(A.x - h.x || 1); A.tz = h.z; A.fx = A.x; A.fz = A.z; }
       if (A.tx !== undefined && A.fired.to) {
         const m = (k - 0.2) / 0.3, d = Math.hypot(A.tx - A.fx, A.tz - A.fz);
@@ -2130,9 +2337,8 @@ function segFall(A, i, k, a, peak) {
       A.yaw = turnToward(A.yaw, 0, 8, A.dt);
       A.mood.chest = N1.bowChest * a * ease((k - 0.5) / 0.25);
     } else {
-      const m = (k - 0.75) / 0.25;
-      A.mood.chest = N1.bowChest * a * (1 - ease(m)); A.rx = -N1.fallBack * ease(m); A.face = 'startle';
-      if (once(A, 'over')) { hatKnock(A, a, 2.0); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+      A.mood.chest = N1.bowChest * a * (1 - ease((k - 0.75) / 0.25));
+      if (once(A, 'over')) { A.falls++; gpStart(c, 'prat'); A.face = 'startle'; hatKnock(A, a, 2.0); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); actFx(A, 'crash'); }
     }
   }
 }
@@ -2143,25 +2349,26 @@ function segSweep(A, i, k, a, peak) {
     A.mood.chest = 22; A.mood.head = 18;
     if (k < 0.25) A.clip = 'idle';
     else { A.clip = 'sweep'; A.tempo = 1.2; A.spotR = r0 - 0.45 * a * ease((k - 0.25) / 0.75); }
-    if (k > 0.5 && once(A, 'laugh')) { A.excite = peak * 0.85; actLaugh(a < 1 ? 'small' : 'crowd'); }
+    if (k > 0.5 && once(A, 'laugh')) { A.excite = peak * 0.85; actLaugh(a < 1 ? 'small' : 'crowd'); actFx(A, a < 1 ? 'good' : 'perfect'); }
   } else if (i === 1) {
     const tx = N1.actRug[0] + 0.9, m = ease(k);
-    A.y = -N1.kneelDrop * ease(Math.min(1, k / 0.2)); A.mood.chest = 16; A.mood.head = 10;
+    if (once(A, 'kneel')) gpStart(chars.clown, 'kneel'); A.mood.chest = 16; A.mood.head = 10;
     A.spotX = lerp(N1.actSpotAt[0], N1.actRug[0] + 0.3, m); A.spotZ = lerp(N1.actSpotAt[1], N1.actRug[1], m);
     A.spotR = Math.max(0.25, r0 - 0.45 * a - 0.6 * a * m);
     A.x = lerp(A.sx, tx, m); A.z = lerp(A.sz, N1.actRug[1], m); A.yaw = -Math.PI / 2;
     A.clip = 'walk'; A.tempo = 0.7;
-    if (k > 0.4 && once(A, 'laugh')) { A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+    if (k > 0.4 && once(A, 'laugh')) { A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); actFx(A, a < 1 ? 'good' : 'perfect'); }
   } else {
-    A.y = A.sy * (1 - ease(Math.min(1, k / 0.2))); A.yaw = -Math.PI / 2; A.mood.chest = 22; A.mood.head = 16;
+    if (once(A, 'rise')) gpStart(chars.clown, 'up'); A.yaw = -Math.PI / 2; A.mood.chest = 22; A.mood.head = 16;
     A.clip = k < 0.65 ? 'sweep' : 'idle'; A.tempo = 1.4;
     A.spotX = lerp(A.sSpotX, N1.actRug[0], ease(Math.min(1, k * 2))); A.spotR = A.sSpotR * (1 - ease(Math.min(1, k / 0.6)));
     if (k >= 0.6) { A.spotR = 0; A.lit = N1.darkLit; }
-    if (k >= 0.7 && once(A, 'pan')) { hatTo('pan'); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); }
+    if (k >= 0.7 && once(A, 'pan')) { hatTo('pan'); A.excite = peak; actLaugh(a < 1 ? 'small' : 'crowd'); actFx(A, 'crash'); }
   }
 }
 function actSeg(A, dt) {
   const k = Math.min(1, A.t / N1.segSecs), grade = A.segs[A.seg], amt = grade === 'good' ? N1.goodAmt : 1, peak = segPeak(grade), last = A.seg === A.segs.length - 1;
+  if (once(A, 'roll')) { drum(actObj.roll); A.fxN.roll++; }
   if (grade === 'miss') segMiss(A, k, last);
   else if (NS.act === 'sweep') segSweep(A, A.seg % 3, k, amt, peak);
   else segFall(A, A.seg % 3, k, amt, peak);
@@ -2181,7 +2388,7 @@ function actHoldStep(A) {
 // then the smile and the bow with the hat back on, dented
 function actBowStep(A) {
   const k = Math.min(1, A.t / N1.bowSecs);
-  if (k < 0.3) { const m = ease(k / 0.3); A.rx = A.srx * (1 - m); A.y = A.sy * (1 - m); }
+  if (k < 0.3) { if (once(A, 'up') && chars.clown.gp.kind) gpStart(chars.clown, 'up'); A.y = A.sy * (1 - ease(k / 0.3)); }
   else {
     A.rx = 0; A.y = 0; A.face = 'smile'; A.yaw = turnToward(A.yaw, 0, 8, A.dt);
     if (once(A, 'hat')) { hatTo('dent'); A.excite = 0.2; }
@@ -2222,6 +2429,8 @@ function updateAct(dt) {
   c.root.position.set(A.x, A.y, A.z); c.root.rotation.set(A.rx, A.yaw, 0);
   c.blob.position.set(A.x, 0.02, A.z);
   moodRestore(c); c.mixer.update(dt); moodApply(c, A.mood);
+  if (gpEval(c, dt)) { gpApply(c); if ((c.gp.kind === 'up' || c.gp.kind === 'pop') && gpDone(c)) gpStop(c); }
+  actFxUpdate(A, dt);
   if (A.fitH !== S.h) actFit();
 }
 // the cue page over the ring (zoom in); the loop stops behind it
@@ -2249,6 +2458,7 @@ function actSkip() {
   if (!NS.actSeen || !A || A.done || (A.phase !== 'seg' && A.phase !== 'hold' && A.phase !== 'bow')) return false;
   actHush();
   A.rx = 0; A.y = 0; A.yaw = 0; A.face = 'smile'; A.mood.chest = 0; A.mood.head = 0; A.excite = 0.2; A.clip = 'idle'; A.hatSpin = 0;
+  gpStop(chars.clown);
   if (NS.act === 'sweep') { A.spotR = 0; A.lit = N1.darkLit; }
   hatTo('dent');
   A.skipped = true;
@@ -2267,7 +2477,7 @@ function actLeave() {
   S.mode = '';
   scene.add(c.root, c.blob); scene.add(ch);
   ch.position.copy(actObj.childAt); ch.rotation.y = actObj.childYaw;
-  c.root.rotation.set(0, 0, 0); c.root.position.y = 0;
+  c.root.rotation.set(0, 0, 0); c.root.position.y = 0; gpStop(c);
   actObj.slap.stop(); actObj.slap.setLoop(THREE.LoopOnce, 1); c.walk.timeScale = 1;
   actObj.broom.visible = false;
   if (A && A.hat !== 'dent') hatTo('dent');
@@ -2331,43 +2541,50 @@ function doVerb() {
   if (v === 'fall') {
     if (S.y > N1.cableY) return;
     NS.anim = { kind: 'prat', t: 0, y0: S.y, y1: N1.cableY + N1.pratLand, peak: 0 };
+    gpStart(chars.clown, 'trip');
   } else if (v === 'take') { NS.pies = N1.pies; if (N1.corridorJokes) NS.anim = { kind: 'sniff', t: 0 }; }
   else if (v === 'honk') { honk(1, 0); if (N1.corridorJokes) { honk(N1.echoVol, N1.echoSecs); NS.jokes.echo = true; } }
-  else if (v === 'trip') NS.anim = { kind: 'trip', t: 0, who: m };
+  else if (v === 'trip') { NS.anim = { kind: 'trip', t: 0, who: m, y0: S.y }; gpStart(chars.clown, 'trip'); }
   m.done = true; NS.verbs[v] = true;
   if (v !== 'trip' && !N1.oneBubble) m.saidT = N1.saidSecs;
   setVerb(null);
 }
 el.verb.addEventListener('click', doVerb);
-for (const b of el.boardActBtns) b.addEventListener('click', () => pickAct(b.dataset.act));
+// the notes are made once from N1.acts (projected onto the board when shown)
+for (const a of N1.acts) {
+  const b = document.createElement('button');
+  b.className = 'note'; b.dataset.act = a.id; b.textContent = a.short; b.setAttribute('aria-label', a.title);
+  b.addEventListener('click', () => pickAct(a.id));
+  el.boardActs.appendChild(b); el.boardActBtns.push(b);
+}
 function n1Anim(c, dt) {
   const a = NS.anim;
   if (!a) return false;
   a.t += dt;
-  if (a.kind === 'prat') {
-    // the Mirror World pratfall (mwFall): forward over the cable, flat out and up, landing past it
-    const k = Math.min(1, a.t / N1.fall.secs);
-    S.y = a.y0 + (a.y1 - a.y0) * k;
+  if (a.kind === 'prat' || a.kind === 'trip') {
+    // panel 22 Nov b item 4: the clown trip (stagger, dive, belly flop) carries him over the cable (or toward the child), then he gets up
+    const g = c.gp, land = GPCLIP.trip.keys[4][0], k = Math.min(1, a.t / land);
+    if (a.kind === 'prat') S.y = a.y0 + (a.y1 - a.y0) * ease(k);
+    else S.y = a.y0 + N1.tripStep * ease(k);
     S.yaw = turnToward(S.yaw, Math.PI, CONFIG.turnRate, dt);
     c.root.position.set(S.x, 0, -S.y);
-    c.root.rotation.x = 0.9 * Math.sin(Math.PI * k);
-    a.peak = Math.max(a.peak, c.root.rotation.x);
-    if (k >= 1) { NS.anim = null; NS.pratPeak = a.peak; c.root.rotation.x = 0; if (N1.corridorJokes) NS.riggerT = 0; }
+    if (g.kind === 'trip' && gpDone(c)) gpStart(c, 'up');
+    a.peak = Math.max(a.peak, g.now[1] / 90);
+    if (g.kind === 'up' && gpDone(c)) {
+      gpStop(c); NS.anim = null;
+      if (a.kind === 'prat') { NS.pratPeak = a.peak; if (N1.corridorJokes) NS.riggerT = 0; } else a.who.saidT = N1.saidSecs;
+    }
   } else if (a.kind === 'sniff') {
     const k = Math.min(1, a.t / N1.sniffSecs), m = NS.sniffMood;
     m.tempo = S.mood.tempo; m.chest = S.mood.chest; m.neck = S.mood.neck;
     m.head = S.mood.head + N1.sniffHead * Math.sin(Math.PI * k) * (0.75 + 0.25 * Math.sin(k * 28));
     c.root.position.set(S.x, 0, -S.y);
     if (k >= 1) { NS.anim = null; NS.jokes.sniff = true; }
-  } else {
-    const k = Math.min(1, a.t / N1.tripSecs), p = k < 0.35 ? k / 0.35 : 1 - (k - 0.35) / 0.65;
-    c.root.position.set(S.x, -0.05 * p, -S.y);
-    c.root.rotation.x = N1.tripPitch * ease(p);
-    if (k >= 1) { NS.anim = null; c.root.rotation.x = 0; a.who.saidT = N1.saidSecs; }
   }
   c.root.rotation.y = S.yaw;
   c.blob.position.set(S.x, 0.02, -S.y);
   moodRestore(c); c.mixer.update(dt); moodApply(c, a.kind === 'sniff' ? NS.sniffMood : S.mood);
+  if (gpEval(c, dt)) gpApply(c);
   pickShot();
   return true;
 }
@@ -2387,6 +2604,10 @@ function buildReflection() {
   const fu = c.face.material.uniforms;
   refl.root.traverse((o) => { if (o.isSkinnedMesh && o.material === c.face.material) refl.face = o; });
   refl.face.material = makeToon(fu.uMap.value, fu.uHasPaint.value ? fu.uPaint.value : null);
+  // its own body material and grade, so it can be pale while he is not (22 Nov b item 7)
+  refl.root.traverse((o) => { if (o.isSkinnedMesh && o.material === c.body.material) { o.material = makeToon(c.body.material.uniforms.uMap.value, null); refl.body = o; } });
+  refl.gTint = { value: new THREE.Color(1, 1, 1) }; refl.gAmt = { value: 0 };
+  for (const m of [refl.face.material, refl.body.material]) { m.uniforms.uGradeTint = refl.gTint; m.uniforms.uGradeAmt = refl.gAmt; }
   findMoodBones(refl);
   for (const b of refl.moodBones) b.saved.copy(b.bone.quaternion);
 }
@@ -2398,17 +2619,32 @@ function mirrorSetup(kind) {
   c.walk.stop(); if (c.slapClip) c.mixer.clipAction(c.slapClip).stop(); c.idle.reset().setEffectiveWeight(1).play();
   setGloom(kind === 'paint' ? 0 : 1);
   room.flakes.visible = kind !== 'paint';
-  setRoomView('mirror');
+  const vanity = kind === 'paint';
+  setRoomView(vanity ? 'dressing' : 'mirror');
   el.sit.classList.add('hidden'); el.roomBar.classList.add('hidden'); el.gains.classList.add('hidden');
-  const yaw = deg(room.data.views.mirror.yaw), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
-  const d = N1.mirrorClownDist, x = N1.mirrorClownX;
-  c.root.position.set(fx * d + rx * x, 0, fz * d + rz * x);
+  const yaw = deg(room.data.views[vanity ? 'dressing' : 'mirror'].yaw), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  const rb = NS.reflBase;
+  if (vanity) {
+    // 22 Nov b item 6: seated at the dressing table, back to the camera; his reflection faces him from the vanity glass
+    const ch = N1.vanityChair, g = N1.vanityGlass;
+    c.root.position.set(ch[0], 0, -ch[1]);
+    rb.x = g[0] + N1.vanityReflPast; rb.z = -N1.vanityReflY;
+  } else {
+    const d = N1.mirrorClownDist, x = N1.mirrorClownX;
+    c.root.position.set(fx * d + rx * x, 0, fz * d + rz * x);
+    rb.x = fx * N1.reflDist + rx * N1.reflX; rb.z = fz * N1.reflDist + rz * N1.reflX;
+  }
   c.root.rotation.set(0, yaw + Math.PI, 0);
   c.blob.position.set(c.root.position.x, 0.02, c.root.position.z);
-  const rb = NS.reflBase;
-  rb.x = fx * N1.reflDist + rx * N1.reflX; rb.z = fz * N1.reflDist + rz * N1.reflX; rb.fx = fx; rb.fz = fz;
+  rb.fx = fx; rb.fz = fz; rb.rx = rx; rb.rz = rz; NS.reflAdj = 0; NS.reflLift = 0; NS.handGap = -1;
   refl.root.position.set(rb.x, 0, rb.z);
   refl.root.rotation.y = yaw;
+  // the big mirror's reflection is a pale form of him, darker each night; the vanity shows him as he is
+  const sh = N1.reflShade[Math.min(N1.reflShade.length, N1.night) - 1];
+  refl.gTint.value.setRGB(sh, sh, sh * 1.04); refl.gAmt.value = vanity ? 0 : N1.reflPale;
+  // the way in: his hand to the glass (22 Nov b item 7), the reflection's hand back
+  gpStop(c); gpStop(refl);
+  if (kind === 'entry' && N1.pressHand) { c.gp.now.set(GPCLIP.pressR.tab[0][1]); refl.gp.now.set(GPCLIP.pressL.tab[0][1]); }
   // the reflection starts seated with him and in its place (the shop moves it; reset here for every mirror scene)
   NS.learn = null; NS.learnOff = 0; NS.reflUp = 0; NS.wipe = null;
   refl.walk.stop(); if (refl.slap) refl.slap.stop(); refl.idle.reset().setEffectiveWeight(1).play();
@@ -2420,7 +2656,7 @@ function mirrorSetup(kind) {
   if (kind === 'paint') { NS.paintT = -1; NS.painted = false; c.face.material.uniforms.uPaintAmt.value = N1.paintHalf; }
   else {
     c.face.material.uniforms.uPaintAmt.value = paintFor(NS.mask);
-    if (kind === 'entry') setPrompt(NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
+    if (kind === 'entry') setPrompt(N1.pressHand ? (NS.touch ? 'A pale form of him in the glass. Tap: press his hand to it.' : 'A pale form of him in the glass. Any key: press his hand to it.') : NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
   }
   sizeCracks();
 }
@@ -2428,6 +2664,7 @@ function leaveMirror() {
   const c = chars.clown;
   roomScene.remove(refl.root);
   S.mirror = null;
+  gpStop(c); gpStop(refl);
   c.root.position.y = 0; c.root.rotation.x = 0;
   room.flakes.visible = true;
   NS.crackList = []; drawCracks();
@@ -2436,7 +2673,13 @@ function leaveMirror() {
 function sizeCracks() {
   const w = S.w, h = S.h, k = Math.tan(deg(CONFIG.roomFov) / 2) / Math.tan(deg(room.data.config.renderFov) / 2), r = N1.mirrorRect;
   const sx = (f) => THREE.MathUtils.clamp(((2 * f - 1) / k + 1) / 2 * w, 0, w), sy = (f) => THREE.MathUtils.clamp((1 - (1 - 2 * f) / k) / 2 * h, 0, h);
-  const x0 = sx(r[0]), x1 = sx(r[2]), y0 = sy(r[1]), y1 = sy(r[3]);
+  let x0 = sx(r[0]), x1 = sx(r[2]), y0 = sy(r[1]), y1 = sy(r[3]);
+  if (S.mirror === 'paint') {
+    // the vanity glass, projected through the room camera (canvas px)
+    const g = N1.vanityGlass, sz = N1.vanitySize, pr = (y, z) => { const v = tmp.set(g[0], z, -y).project(roomCam); return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * h]; };
+    const a = pr(g[1] + sz[0] / 2, g[2] + sz[1] / 2), b = pr(g[1] - sz[0] / 2, g[2] - sz[1] / 2);
+    x0 = Math.min(a[0], b[0]); x1 = Math.max(a[0], b[0]); y0 = Math.min(a[1], b[1]); y1 = Math.max(a[1], b[1]);
+  }
   NS.mrect[0] = x0; NS.mrect[1] = h - y1; NS.mrect[2] = x1 - x0; NS.mrect[3] = y1 - y0;
   const dpr = renderer.getPixelRatio();
   el.cracks.width = Math.round(w * dpr); el.cracks.height = Math.round(h * dpr);
@@ -2513,10 +2756,14 @@ function updateMirror(dt) {
   }
   if (S.mirror === 'shop') v = learnUpdate(dt, v);
   NS.reflSit = v;
-  sitPose(c, NS.mood, NS.sit);
+  const press = S.mirror === 'entry' && N1.pressHand;
+  sitPose(c, NS.mood, press ? 0 : NS.sit);
   moodRestore(c); c.mixer.update(dt); moodApply(c, NS.mood);
-  sitPose(refl, NS.rmood, NS.reflSit);
+  if (press && NS.sit > 0) gpApply(c, ease(NS.sit));
+  sitPose(refl, NS.rmood, press ? 0 : NS.reflSit);
   moodRestore(refl); refl.mixer.update(dt); moodApply(refl, NS.rmood);
+  if (press && NS.reflSit > 0) gpApply(refl, ease(NS.reflSit));
+  if (press) handsMeet(dt);
   if (NS.paintT >= 0 && !NS.painted) {
     NS.paintT += dt;
     const k = Math.min(1, NS.paintT / N1.paintSecs);
@@ -2541,6 +2788,20 @@ function updateMirror(dt) {
     if (NS.sitTarget === 1 && NS.sit >= 1 && NS.reflSit >= 0.999 && !NS.fogging) { NS.fogging = true; setTimeout(nietzscheInCard, 600); }
   }
 }
+// the reflection's place is eased sideways (and up or down) until its raised hand meets his on screen (22 Nov b item 7)
+function handsMeet(dt) {
+  if (NS.sit < 0.5 || NS.reflSit < 0.5) return;
+  const c = chars.clown, rb = NS.reflBase;
+  c.pb.hand_R.getWorldPosition(mwTmp.v).project(roomCam);
+  refl.pb.hand_L.getWorldPosition(mwTmp.v2).project(roomCam);
+  const dx = mwTmp.v.x - mwTmp.v2.x, dy = mwTmp.v.y - mwTmp.v2.y;
+  NS.handGap = Math.hypot(dx * CONFIG.aspect, dy) / 2;
+  NS.handGapMin = Math.min(NS.handGapMin === undefined || NS.handGapMin < 0 ? 9 : NS.handGapMin, NS.handGap);
+  const span = N1.reflDist * Math.tan(deg(roomCam.fov) / 2), k = 1 - Math.exp(-8 * dt);
+  NS.reflAdj += dx * span * CONFIG.aspect * k;
+  NS.reflLift = (NS.reflLift || 0) + dy * span * k;
+  refl.root.position.set(rb.x + rb.rx * NS.reflAdj, NS.reflLift, rb.z + rb.rz * NS.reflAdj);
+}
 // Nietzsche line at the big mirror before he goes in (nietzscheAt 'in' or 'both'); otherwise straight into the fog
 function nietzscheInCard() {
   const at = NS.nAt;
@@ -2562,7 +2823,8 @@ function n1Key(e) {
   if (NS.scene === 'paint') { if (NS.paintT < 0) { NS.paintT = 0; setPrompt(''); } else if (NS.painted && (e.code === 'Enter' || e.code === 'Space')) goOut(); return true; }
   if (NS.scene === 'walk') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (e.code === 'Enter' || e.code === 'Space') smallPress(); return true; }
-  if (NS.scene === 'boardwall') { if (e.code === 'Digit1') pickAct('fall'); else if (e.code === 'Digit2') pickAct('sweep'); return true; }
+  if (NS.scene === 'boardwall') { const i = Number(e.code.replace('Digit', '')) - 1; if (N1.acts[i]) pickAct(N1.acts[i].id); return true; }
+  if (NS.scene === 'note') { if (e.code === 'Enter' || e.code === 'Space') performAct(NS.noteAct); else if (e.code === 'Escape') noteBack(); return true; }
   if (S.mode === 'act') { actSkip(); return true; }
   if (S.mirror === 'entry') {
     if (NS.card && NS.card.id === 'card_nietzscheIn') { if (e.code === 'Enter' || e.code === 'Space') NS.card.querySelector('#goIn').click(); return true; }
@@ -2647,18 +2909,28 @@ function buildMW() {
   buildUnworld();
 }
 // panel G: shared uniforms for the unworldly backdrop (set from Mask on entering, time each frame)
-const mwU = { uTime: { value: 0 }, uWarp: { value: 0 }, uAmt: { value: 0 }, uGlass: { value: 0 } };
+const mwU = { uTime: { value: 0 }, uWarp: { value: 0 }, uAmt: { value: 0 }, uGlass: { value: 0 }, uFlashI: { value: -1 }, uFlash: { value: 0 } };
 // a basic material whose instances sway and drift by uWarp (the tiers, the reflections where the audience sat, the corridor's mirrors)
-function unworldMat(color, amp) {
+function unworldMat(color, amp, tarnish) {
   const m = new THREE.MeshBasicMaterial({ color });
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uWarp = mwU.uWarp; sh.uniforms.uTime = mwU.uTime;
-    sh.vertexShader = 'uniform float uWarp;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    sh.uniforms.uWarp = mwU.uWarp; sh.uniforms.uTime = mwU.uTime; sh.uniforms.uFlashI = mwU.uFlashI; sh.uniforms.uFlash = mwU.uFlash;
+    sh.vertexShader = 'uniform float uWarp;\nuniform float uTime;\nuniform float uFlashI;\nvarying vec3 vTp;\nvarying float vHit;\nvarying float vEdge;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       float iid = float(gl_InstanceID);
+      vTp = position * 6.0 + vec3(iid * 7.3, iid * 3.1, iid * 1.7);
+      vEdge = max(abs(position.y), abs(position.z));
+      vHit = step(abs(iid - uFlashI), 0.5);
       transformed.y += sin(uTime * 0.9 + iid * 0.61) * uWarp * ${(0.6 * amp).toFixed(2)};
       transformed.x += sin(uTime * 0.6 + iid * 1.3 + position.y * 3.0) * uWarp * ${(0.5 * amp).toFixed(2)};`);
+    if (tarnish) sh.fragmentShader = 'uniform float uFlash;\nvarying vec3 vTp;\nvarying float vHit;\nvarying float vEdge;\nfloat tn(vec2 p) { return fract(sin(dot(floor(p), vec2(12.9898, 78.233))) * 43758.5453); }\nfloat tv(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(tn(i), tn(i + vec2(1, 0)), f.x), mix(tn(i + vec2(0, 1)), tn(i + vec2(1, 1)), f.x), f.y); }\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
+      vec2 q = vTp.zy * 0.5;
+      float smear = tv(q) * 0.6 + tv(q * 2.7) * 0.4;
+      float crack = smoothstep(0.035, 0.0, abs(fract(q.x * 0.7 + tv(q * 1.3) * 1.6) - 0.5)) * step(0.6, tv(q * 0.4));
+      float rim = smoothstep(0.36, 0.5, vEdge);
+      gl_FragColor.rgb *= mix(0.45, 1.05, smear) * (1.0 - 0.7 * crack) * (1.0 - 0.25 * rim);
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0), vHit * uFlash * 0.8);`);
   };
-  m.customProgramCacheKey = () => 'unworld' + amp;
+  m.customProgramCacheKey = () => 'unworld' + amp + (tarnish ? 't' : '');
   return m;
 }
 // Mask -> the backdrop's strength (more paint, less of a world)
@@ -2683,19 +2955,32 @@ function buildUnworld() {
   const X = N1.mwCorX, len = cz[0] - cz[1], mid = (cz[0] + cz[1]) / 2;
   const cfloor = new THREE.Mesh(new THREE.PlaneGeometry(2 * X + 0.6, len + 1.5), new THREE.MeshBasicMaterial({ color: '#1C353B' }));
   cfloor.rotation.x = -Math.PI / 2; cfloor.position.set(0, 0.002, mid);
-  const nP = 6, panels = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 2.6, 1.5), unworldMat('#6E8D94', 1.2), nP * 2);
-  for (let i = 0; i < nP * 2; i++) { const side = i < nP ? -1 : 1, k = i % nP; p.set(side * (X + 0.3), 1.3, cz[0] - 1 - k * (len - 1.5) / (nP - 1)); panels.setMatrixAt(i, m4.compose(p, q, s)); }
-  panels.computeBoundingSphere(); panels.boundingSphere.radius += 1;
+  const nP = N1.corRows, panels = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 1, 1), unworldMat('#7E9BA1', 1.2, true), nP * 2);
+  const frames = new THREE.InstancedMesh(new THREE.BoxGeometry(0.1, 1, 1), new THREE.MeshBasicMaterial({ color: '#0B1A1D' }), nP * 2);
+  const e = new THREE.Euler(), fs = new THREE.Vector3(), frnd = actRand(5150);
+  NS.corPanels = [];
+  for (let i = 0; i < nP * 2; i++) {
+    const side = i < nP ? -1 : 1, k = i % nP, h = 2.1 + frnd() * 0.9, w = 1.2 + frnd() * 0.5;
+    p.set(side * (X + 0.3), 0.15 + h / 2 + frnd() * 0.25, cz[0] - 1 - k * (len - 1.5) / (nP - 1));
+    e.set(0, side * (frnd() - 0.5) * 0.25, (frnd() - 0.5) * 0.12); q.setFromEuler(e);
+    s.set(1, h, w); panels.setMatrixAt(i, m4.compose(p, q, s));
+    fs.set(1, h + 0.16, w + 0.16); p.x += side * 0.03; frames.setMatrixAt(i, m4.compose(p, q, fs));
+    NS.corPanels.push({ x: side * (X + 0.3), z: p.z, side });
+  }
+  q.identity();
+  panels.computeBoundingSphere(); panels.boundingSphere.radius += 1; frames.computeBoundingSphere(); frames.boundingSphere.radius += 1;
+  mwScene.add(frames); frames.updateMatrix(); frames.matrixAutoUpdate = false;
   const endWall = new THREE.Mesh(new THREE.BoxGeometry(2 * X + 2, 4.5, 0.2), new THREE.MeshBasicMaterial({ color: '#11272B' }));
   endWall.position.set(0, 2.25, cz[1] - 0.6);
   const door = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 2.4), new THREE.MeshBasicMaterial({ color: '#C9D5D7', fog: false }));
   door.position.set(0, 1.2, cz[1] - 0.48);
   mwScene.add(sky, glass, cfloor, panels, endWall, door);
+  NS.corMesh = panels;
   for (const o of [sky, glass, cfloor, panels, endWall, door]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
 }
 function addFoe(kind) {
   const cfg = N1[kind], root = cast[kind];
-  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, still: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: cfg.spotR || 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1 };
+  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, still: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: cfg.spotR || 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0 };
   root.position.set(f.x, 0, f.z); root.rotation.set(0, 0, 0); root.scale.setScalar(1); root.visible = true;
   if (kind === 'light') { f.spotX = 0; f.spotZ = -3; mwScene.add(pool.beam, pool.spot); pool.beam.material.opacity = 0.14; pool.spot.material.opacity = 0.32; }
   mwScene.add(root);
@@ -2727,9 +3012,10 @@ function enterMW() {
     M.space = 'corridor'; M.x = N1.mwCorStart[0]; M.z = N1.mwCorStart[1]; M.lookX = M.x * 0.5; M.lookZ = (M.z + N1.mwCorDoor) / 2;
     mwCam.position.fromArray(N1.mwCorCam);
     tip('The mirror corridor. The way to the ring is the pale door.');
+    mwBag();
   } else mwCam.position.fromArray(N1.mwCamPos);
   for (const s of pool.shards) { s.on = false; mwScene.remove(s.m); }
-  el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch);
+  el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch); el.hint.classList.toggle('padded', NS.touch);
   el.shotName.textContent = '';
   el.hint.textContent = NS.touch ? 'Stick: move. SLAP, PIE, FALL. Lift your thumbs to stand still.' : 'WASD: move. Click or J: slap. Right click or K: pie. Space: pratfall. Let go of everything: stand still.';
   setPrompt('');
@@ -2738,11 +3024,47 @@ function enterMW() {
 // night 1: the Light always; the act's own monster; results add the Stare (a Perfect) and Shame (a miss)
 function mwRingFoes() {
   addFoe('light');
-  // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger
-  const falls = NS.hurt ? NS.hurt.falls : 0;
-  if (NS.act === 'fall' || falls > 0) { addFoe('whisper'); const w = foes[foes.length - 1]; w.hp += falls * N1.whisperFeed.hp; w.speedMul = 1 + falls * N1.whisperFeed.speed; }
-  if (NS.actInfo && NS.actInfo.perfects > 0) addFoe('stare');
-  if (NS.actInfo && NS.actInfo.misses > 0) addFoe('shame');
+  // H1: the Whisper comes for the fall act, and for any fall in the act; each fall makes it stronger. One that broke out in the corridor is already here
+  for (const k of mwRoster()) {
+    const had = foes.find((f) => f.kind === k);
+    if (had) { if (had.alive) { had.x = had.cfg.at[0]; had.z = had.cfg.at[1]; } continue; }
+    addFoe(k); mwFeed(foes[foes.length - 1]);
+  }
+}
+// the roster of constructs tonight (the Light apart) and how the Whisper is fed (H1)
+function mwRoster() {
+  const falls = NS.hurt ? NS.hurt.falls : 0, r = [];
+  if (NS.act === 'fall' || falls > 0) r.push('whisper');
+  if (NS.actInfo && NS.actInfo.perfects > 0) r.push('stare');
+  if (NS.actInfo && NS.actInfo.misses > 0) r.push('shame');
+  return r;
+}
+function mwFeed(f) { const falls = NS.hurt ? NS.hurt.falls : 0; if (f.kind === 'whisper') { f.hp += falls * N1.whisperFeed.hp; f.speedMul = 1 + falls * N1.whisperFeed.speed; } }
+// bag of marbles (22 Nov b item 2): tonight's constructs plus blanks, shuffled; a check may fix the order with NS.bagOrder
+function mwBag() {
+  const M = NS.mw, r = mwRoster();
+  if (!r.length) r.push('whisper');
+  const bag = r.concat(Array(N1.bagBlanks).fill(''));
+  for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const x = bag[i]; bag[i] = bag[j]; bag[j] = x; }
+  M.bag = NS.bagOrder ? NS.bagOrder.slice() : bag; M.row = 0; M.brk = null; M.broke = ''; M.drawn = [];
+}
+// in the corridor: at each row passed (from the second) draw one marble; the first construct breaks that row's mirror, after the tell
+function mwCorridor(M, dt) {
+  const rows = N1.corRows;
+  while (M.row < rows && M.z < NS.corPanels[M.row].z) {
+    const r = M.row++;
+    if (r === 0 || M.broke || M.brk || !M.bag.length) continue;
+    const m = M.bag.pop(); M.drawn.push(m || 'blank');
+    if (m) { const side = M.x > 0 ? -1 : 1, i = (side < 0 ? 0 : rows) + r; M.brk = { kind: m, t: 0, i, x: NS.corPanels[i].x * 0.85, z: NS.corPanels[i].z }; mwU.uFlashI.value = i; tone(1500, 600, 0.25, 'sawtooth', 0.05); }
+  }
+  if (!M.brk) return;
+  M.brk.t += dt;
+  mwU.uFlash.value = 0.5 + 0.5 * Math.sin(M.brk.t * 40);
+  if (M.brk.t < N1.breakTell) return;
+  // it bursts out and attacks; beaten here it is not in the ring, alive it follows him through the door
+  const b = M.brk; M.brk = null; M.broke = b.kind; M.breakTell = b.t; mwU.uFlash.value = 0; mwU.uFlashI.value = -1;
+  tone(2600, 300, 0.35, 'square', 0.07);
+  addFoe(b.kind); const f = foes[foes.length - 1]; f.x = b.x; f.z = b.z; f.pop = 0.4; mwFeed(f);
 }
 // the one cut of the route: corridor door -> the ring's fixed spot
 function mwCut() {
@@ -2750,6 +3072,8 @@ function mwCut() {
   M.cutting = true;
   fadeThen(N1.mwCutMs, () => {
     M.space = 'ring'; M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4; M.cuts++; M.cutting = false; M.fall = null;
+    // F25: the corridor's tip belongs to the corridor (it stayed on screen in the ring)
+    M.tip = ''; M.tipT = 0; M.tips.length = 0; el.mwTip.textContent = '';
     mwCam.position.fromArray(N1.mwCamPos);
     mwRingFoes();
   });
@@ -2768,6 +3092,7 @@ function pratfall() {
   const dx = l > 0.2 ? ix / l : Math.sin(M.yaw), dz = l > 0.2 ? -iy / l : Math.cos(M.yaw);
   M.fall = { t: 0, dx, dz };
   M.still = 0;
+  gpStart(chars.clown, 'dive');
   for (const f of foes) {
     if (!f.alive) continue;
     if (f.kind === 'shame' && f.cling) { f.cling = false; f.stun = f.cfg.stun; f.x -= dx * f.cfg.push; f.z -= dz * f.cfg.push; f.reach = 0; }
@@ -2846,6 +3171,7 @@ function updateMW(dt) {
   mwClown(M, dt);
   mwPie(M, dt);
   if (M.space === 'ring') { const alive = mwFoes(M, dt); mwShards(M, dt, alive); }
+  else { mwCorridor(M, dt); if (foes.length) { mwFoes(M, dt); mwShards(M, dt, 1); } }
   mwCamera(M, dt);
   mwHud(M, dt);
 }
@@ -2853,10 +3179,9 @@ function mwFall(M, c, dt) {
   M.fall.t += dt;
   const k = Math.min(1, M.fall.t / N1.fall.secs), step = N1.fall.dist / N1.fall.secs * dt;
   M.x += M.fall.dx * step; M.z += M.fall.dz * step;
-  c.root.rotation.x = 0.9 * Math.sin(Math.PI * k);
   if (k < 1) return;
-  c.root.rotation.x = 0;
   M.fall = null;
+  gpStart(c, 'pop');
   // the Whisper copies the pratfall: a 0.4 s tell where he landed, then it strikes there
   for (let i = 0; i < foes.length; i++) {
     const w = foes[i];
@@ -2866,7 +3191,7 @@ function mwFall(M, c, dt) {
 }
 function mwClown(M, dt) {
   const c = chars.clown;
-  const ix = input.tx || input.kx, iy = input.ty || input.ky, mag = Math.min(1, Math.hypot(ix, iy));
+  const ix = input.tx || input.kx, iy = input.ty || input.ky, raw = Math.min(1, Math.hypot(ix, iy)), mag = raw > CONFIG.deadzone ? stickCurve(raw) : raw;
   let moving = false;
   let shame = false;
   for (let i = 0; i < foes.length; i++) if (foes[i].kind === 'shame' && foes[i].alive && foes[i].cling) shame = true;
@@ -2894,6 +3219,7 @@ function mwClown(M, dt) {
   c.root.position.set(M.x, 0, M.z); c.root.rotation.y = M.yaw; c.blob.position.set(M.x, 0.02, M.z);
   S.mood = CONFIG.moodRoom;
   moodRestore(c); c.mixer.update(dt); moodApply(c, S.mood);
+  if (gpEval(c, dt)) { gpApply(c); if (c.gp.kind === 'pop' && gpDone(c)) gpStop(c); }
 }
 function mwPie(M, dt) {
   if (M.pieOn) {
@@ -2921,8 +3247,20 @@ function mwLight(M, f, dt) {
   if (out && f.inPrev) { f.leaves++; f.r = Math.min(N1.lightCap, f.r + N1.lightGrow); f.tellT = N1.lightTell; f.leftT = M.t; f.moveT = -1; }
   f.inPrev = !out;
   if (f.tellT > 0) f.tellT -= dt;
-  else if (sd > 0.05) { const st = Math.min(sd, f.cfg.follow * dt); f.spotX += sx / sd * st; f.spotZ += sz / sd * st; if (f.moveT < 0) f.moveT = M.t; }
+  else if (f.loseT > 0) {
+    // F24: it has lost him: it drifts back toward the middle, then flares and looks again
+    f.loseT -= dt;
+    const cd = Math.hypot(f.spotX, f.spotZ);
+    if (cd > 0.05) { const st = Math.min(cd, f.cfg.follow * 0.5 * dt); f.spotX -= f.spotX / cd * st; f.spotZ -= f.spotZ / cd * st; }
+    if (f.loseT <= 0) { f.chaseT = 0; f.tellT = N1.lightTell; }
+  } else if (out) {
+    // F24: the spot holds while he is in it (the beam stays on him) and chases only once he is out, at follow speed (he is faster)
+    const st = Math.min(sd, f.cfg.follow * dt); f.spotX += sx / sd * st; f.spotZ += sz / sd * st; if (f.moveT < 0) f.moveT = M.t;
+    f.chaseT += dt; if (f.chaseT >= N1.lightChase) { f.loseT = N1.lightLose; f.loses++; }
+  } else f.chaseT = 0;
   const inSpot = Math.hypot(M.x - f.spotX, M.z - f.spotZ) < f.r;
+  // time inside the spot while moving (game time; read by the real-play check)
+  if (inSpot && M.isMoving) f.inT += dt;
   if (inSpot && M.isStill) { f.still += dt; if (f.still >= f.cfg.beatSecs) killFoe(f); }
   else { f.still = Math.max(0, f.still - dt * 0.5); if (inSpot && M.isMoving) mwDrain(f.cfg.drain * (1 + N1.lightDrainGrow * f.leaves) * dt); }
   // beam from the lens to the spot; it dims as he holds still
@@ -3033,7 +3371,7 @@ function endMW(result) {
     el.fog.style.opacity = 1;
     setTimeout(() => {
       S.running = false; S.mode = 'x';
-      el.mwHud.classList.add('hidden'); el.pads.classList.add('hidden'); el.mwTip.textContent = ''; el.hint.textContent = '';
+      el.mwHud.classList.add('hidden'); el.pads.classList.add('hidden'); el.mwTip.textContent = ''; el.hint.textContent = ''; el.hint.classList.remove('padded');
       shared.uGradeAmt.value = 0;
       el.fog.style.opacity = 0;
       nietzscheCard();
@@ -3176,7 +3514,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
+window.__night = { NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

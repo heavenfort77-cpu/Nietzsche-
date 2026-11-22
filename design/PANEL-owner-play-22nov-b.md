@@ -68,3 +68,8 @@ Harshest objection per seat, written before the owner's suggestions were weighed
 - 6, mobile producer: "The face will be tiny from behind." Lost; answered by the framing check.
 - 7, core gamer: "Hands that must meet need exact alignment." Lost; answered by a check.
 - Indie critic (all items): "Fill the phone screen first (stranger finding 1)." Not voted: outside the owner's list; it is first on the next list.
+
+## Producer check (after the build)
+
+- Item 3: with growth and chase limits alone the real-play bot still spent 3.45 s of 8 inside the spot: the spot re-centred on him while he was in it, so he left it only at the speed difference. Built: the spot holds while he is in it and chases only once he is out; the owner's speeds stay (he 1.72 m/s, the Light 1.2). Gate result: 1.30 s (full stick) and 0.90 s (60% stick) of 8 s.
+- Item 4: built as page poses (`GPCLIP` in `night1.html`): `prat`, `trip`, `dive`, `up`, `pop`, `kneel`, `pressR`/`pressL`. Not yet seen by the owner; these are first keys, to be tuned by eye.
