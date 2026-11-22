@@ -9,3 +9,5 @@ clown_v2/out_*/
 __pycache__/
 web/step0/lib/
 web/step0/assets/
+art/cast2/renders/*.png
+art/cast2/renders/*.blend
