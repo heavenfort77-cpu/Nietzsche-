@@ -76,7 +76,7 @@ vpart = np.zeros(len(body.data.vertices), np.int32)
 for p_ in body.data.polygons:
     for v in p_.vertices: vpart[v] = fpart[p_.index]
 epart = vpart[edges[:, 0]]
-CLIPS = next((a.split('=')[1].split(',') for a in sys.argv if a.startswith('--clips=')), ['idle', 'walk', 'slap'])
+CLIPS = next((a.split('=')[1].split(',') for a in sys.argv if a.startswith('--clips=')), list(getattr(C, 'CLIPS', ['idle', 'walk', 'slap'])))
 for name in CLIPS:
     act = bpy.data.actions[name]; arm.animation_data.action = act
     f0, f1 = act.frame_range
@@ -116,7 +116,8 @@ if '--sheet' in sys.argv:
     cam = bpy.data.cameras.new('cam'); co_ = bpy.data.objects.new('cam', cam); sc.collection.objects.link(co_); sc.camera = co_
     render3d.stage('clown')
     sc.cycles.samples = 10; sc.render.resolution_x = sc.render.resolution_y = 320; sc.cycles.device = 'CPU'
-    for name, yaw in (('idle', -35), ('walk', -70), ('slap', -35)):
+    # pose sheets: clip and view yaw (a figure with its own clips names its own in SHEET)
+    for name, yaw in getattr(C, 'SHEET', (('idle', -35), ('walk', -70), ('slap', -35))):
         piv.rotation_euler = (0, 0, math.radians(yaw))
         act = bpy.data.actions[name]; arm.animation_data.action = act
         f0, f1 = act.frame_range; frames = []

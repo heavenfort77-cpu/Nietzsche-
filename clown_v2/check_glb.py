@@ -1,12 +1,15 @@
 """GLB gates, read straight from the file (no Blender). Expected clip lengths come from the Muybridge
 plates here, not from s3_rig, so a wrong constant in the rig script is caught.
 Run: python3 -I check_glb.py <clown_v2.glb>"""
-import sys, json, struct
+import os, sys, json, struct
 
 # CONFIG ---------------------------------------------------------------
 CONFIG = dict(
     # expected clip lengths in seconds: idle (no plate), walk = 12 x 0.083 (series 1), slap = 11 x 0.112 (series 32)
     clips=dict(idle=2.0, walk=12 * 0.083, slap=11 * 0.112),
+    # a figure with its own clips (CHAR): expected lengths written here too, so a wrong time in the module is caught
+    # (the Light: flare is its 0.4 s tell and hit its 0.6 s hold-off, GDD monster table)
+    clips_by_char=dict(light=dict(idle=2.0, flare=0.4, hit=0.6, out=1.0)),
     # allowed error: one sampled frame at 30 fps
     clip_tol=1 / 30 + 1e-3,
     # file size ceiling before compression, KB
@@ -25,8 +28,9 @@ def main(path):
     def dur(a):
         acc = j['accessors'][a['samplers'][0]['input']]; return acc['max'][0] - acc['min'][0]
     durs = {k: round(dur(a), 3) for k, a in anims.items()}
-    gate('clips are idle, walk, slap', set(anims) == set(c['clips']), sorted(anims))
-    bad = {k: (durs.get(k), round(v, 3)) for k, v in c['clips'].items() if k not in durs or abs(durs[k] - v) > c['clip_tol']}
+    clips = c['clips_by_char'].get(os.environ.get('CHAR', ''), c['clips'])
+    gate('clips are ' + ', '.join(clips), set(anims) == set(clips), sorted(anims))
+    bad = {k: (durs.get(k), round(v, 3)) for k, v in clips.items() if k not in durs or abs(durs[k] - v) > c['clip_tol']}
     gate('clip lengths match the plates (within 1 frame)', not bad, bad or durs)
     gate('one skin', len(j.get('skins', [])) == 1, len(j.get('skins', [])))
     gate('two meshes (body, face)', len(j.get('meshes', [])) == 2, len(j.get('meshes', [])))

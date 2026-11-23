@@ -12,7 +12,9 @@ import numpy as np
 LIMIT_DEG = 4.0
 
 glb = sys.argv[1]
-clips = sys.argv[2].split(',') if len(sys.argv) > 2 else ['idle', 'walk']
+# looping clips per character when not given (the Light's flare, hit and out play once)
+LOOPS = dict(light=['idle'])
+clips = sys.argv[2].split(',') if len(sys.argv) > 2 else LOOPS.get(os.environ.get('CHAR', ''), ['idle', 'walk'])
 b = open(glb, 'rb').read()
 n = struct.unpack('<I', b[12:16])[0]
 j = json.loads(b[20:20 + n])

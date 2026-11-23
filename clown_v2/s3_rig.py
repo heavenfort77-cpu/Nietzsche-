@@ -147,9 +147,14 @@ def main():
     wt = [i * c['walk_dt'] for i in range(c['walk_n'] + 1)]
     st = [i * c['slap_dt'] for i in range(c['slap_n'])]
     it = [i * c['idle_len'] / 8 for i in range(9)]
-    make_action('idle', it, lambda i, t: C.idle(t, c['idle_len']))
-    make_action('walk', wt, lambda i, t: K.walk(C.CONFIG, c, t, C.WALK))
-    make_action('slap', st, lambda i, t: K.slap_key(getattr(C, 'SLAP', K.SLAP), i))
+    if hasattr(C, 'CLIPS'):
+        # a figure that is not human-shaped (the Light) defines its own clips: name -> (key times in s, poser(i, t))
+        for name, (times, poser) in C.CLIPS.items():
+            make_action(name, times, poser)
+    else:
+        make_action('idle', it, lambda i, t: C.idle(t, c['idle_len']))
+        make_action('walk', wt, lambda i, t: K.walk(C.CONFIG, c, t, C.WALK))
+        make_action('slap', st, lambda i, t: K.slap_key(getattr(C, 'SLAP', K.SLAP), i))
     K.rest()
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(D, 'rigged.blend'))
     out = os.path.join(D, 'clown_v2.glb')
@@ -162,8 +167,11 @@ def main():
         acc = j['accessors'][a['samplers'][0]['input']]; return acc['max'][0] - acc['min'][0]
     durs = {k: round(dur(a), 3) for k, a in anims.items()}
     exp = dict(idle=c['idle_len'], walk=c['walk_dt'] * c['walk_n'], slap=c['slap_dt'] * (c['slap_n'] - 1))
+    if hasattr(C, 'CLIPS'):
+        # a figure with its own clips: each lasts until its last key
+        exp = {k: v[0][-1] for k, v in C.CLIPS.items()}
     ok = set(anims) == set(exp) and all(abs(durs[k] - exp[k]) <= 1.01 / c['fps'] for k in exp)
-    gate('GLB: 3 clips, durations = photographs x interval', ok, f'{durs} expected {dict((k, round(v, 3)) for k, v in exp.items())}')
+    gate(f'GLB: {len(exp)} clips, durations = photographs x interval', ok, f'{durs} expected {dict((k, round(v, 3)) for k, v in exp.items())}')
     gate('GLB size', True, f'{os.path.getsize(out) / 1024:.0f} KB, skins {len(j.get("skins", []))}, meshes {len(j["meshes"])}')
     json.dump(G, open(os.path.join(D, 'gates_step3.json'), 'w'), indent=1)
 
