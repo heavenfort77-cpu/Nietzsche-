@@ -12,8 +12,8 @@ import numpy as np
 LIMIT_DEG = 4.0
 
 glb = sys.argv[1]
-# looping clips per character when not given (the Light's flare, hit and out play once)
-LOOPS = dict(light=['idle'])
+# looping clips per character when not given (the Light's flare, hit and out play once; so do the Whisper's copy, strike, hit, out)
+LOOPS = dict(light=['idle'], whisper=['idle'])
 clips = sys.argv[2].split(',') if len(sys.argv) > 2 else LOOPS.get(os.environ.get('CHAR', ''), ['idle', 'walk'])
 b = open(glb, 'rb').read()
 n = struct.unpack('<I', b[12:16])[0]

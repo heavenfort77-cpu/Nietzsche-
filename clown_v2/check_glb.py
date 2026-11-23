@@ -8,8 +8,9 @@ CONFIG = dict(
     # expected clip lengths in seconds: idle (no plate), walk = 12 x 0.083 (series 1), slap = 11 x 0.112 (series 32)
     clips=dict(idle=2.0, walk=12 * 0.083, slap=11 * 0.112),
     # a figure with its own clips (CHAR): expected lengths written here too, so a wrong time in the module is caught
-    # (the Light: flare is its 0.4 s tell and hit its 0.6 s hold-off, GDD monster table)
-    clips_by_char=dict(light=dict(idle=2.0, flare=0.4, hit=0.6, out=1.0)),
+    # (the Light: flare is its 0.4 s tell and hit its 0.6 s hold-off, GDD monster table; the Whisper: copy is its 0.4 s tell,
+    # N1.whisper.tell in night1.html, then strike where he landed)
+    clips_by_char=dict(light=dict(idle=2.0, flare=0.4, hit=0.6, out=1.0), whisper=dict(idle=2.0, copy=0.4, strike=0.4, hit=0.6, out=1.0)),
     # allowed error: one sampled frame at 30 fps
     clip_tol=1 / 30 + 1e-3,
     # file size ceiling before compression, KB
