@@ -51,3 +51,26 @@ Night 1 would then be: corridor (Whisper breaking out), ring (Light), photograph
 1. First box-and-shape sample, for the owner to play (rule 1): the spotlight sweep hold game (owner request H12, already in the GDD), then the Stare's photograph room. Art and sound only after he says they work.
 2. Then the scale bar, then Shame's void; the night 2-3 styles stay pitch until night 2 is built.
 3. Fairness check for every new game: bot sweep at three skill levels and tell times measured, as for the cue.
+
+## Owner decisions, 23 Nov 09:23
+
+- Timing games agreed: fall (mask ring), sweep (hold), scale (bar), drill (call and response), tit-for-tat (exchange). Not in his list: the mirror routine and the encore dial; lead's reading: they stay as the GDD has them.
+- At the act board the player can try the act's timing game and is told what Laughs and Mask are.
+- Mirror World: the 2.5D styles mix and match to form each night's route, which always ends in the arena; insecurities come together, never one alone and never one type. This replaces "one at a time" (06:22, 08:08).
+- All styles in the pitch agreed. Build the whole game; /cocolito keeps the style correct, /klad-headless-cli makes the textures; detail a laptop can run, phone dialled down from the laptop; every method that lowers GPU strain so the game runs at 60 fps or more.
+
+## Build plan (lead, 23 Nov; 3 batches a session, rule 1 order: loop in box-and-shape first, then art)
+
+| Session.batch | Scope | File |
+| --- | --- | --- |
+| 22.2 | Five timing games and the rehearsal mode in the cue page; the board passes each act's game | `cue_model.html`, `night1.html` |
+| 22.3 | Board: "Try it" on each act note (rehearsal), Laughs and Mask explained there | `night1.html` |
+| 23.1 | Mirror World route mixer: a night is a list of spaces in styles, ending in the arena; groups of two or more types per space; nearest-figure hint | `night1.html` |
+| 23.2 | The Stare's photograph room (box-and-shape: one fixed shot, sepia grade in the post pass, flash tell 0.6 s) | `night1.html` |
+| 23.3 | Shame's pencil void (outline only, floor line drawn as he walks) | `night1.html` |
+| 24.1-3 | Nights 2 and 3: night counter and carry-over, board acts per night (scale, drill, tit-for-tat), whiteface take from night 2, the Sergeant and the Weigher with their spaces, the final night (Performer fight, ending buttons) | `night1.html`, `cue_model.html` |
+| 25 | Checks session (requirement 6): stale checks, mutations for every new switch, perf gates, bot sweep on each timing game | `web/step0/*.cjs` |
+| 26 | Art pass after the owner says the loop works: cocolito measurement against the approved Clown-and-the-Mirror style for every new space and figure; klad CLI (built on a runner) for paper, pencil, sepia print, toy-theatre and parade flats; one sample at play size each for approval | `art/`, `web/step0/` |
+| 27 | Laptop master tier then phone dial-down, `[gpu]` runs, real-phone run, release build with cover and screenshots | all |
+
+Performance methods applied to each new space (from OWNER-REQUIREMENTS.md section 2): plates for backgrounds (2.5D), one real light, effects merged into the one post pass, grades by LUT, line art by the existing hull outline, no per-frame allocation, pooled figures and effects, HUD written on change, pixel ratio 1.25 cap, AO off by default.

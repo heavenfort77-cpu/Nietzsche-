@@ -82,7 +82,6 @@
   // hosted by night1.html (?host=...): only the one line and the start button show (owner's item 4, stranger cold read)
   if (/[?&]host=/.test(location.search)) {
     document.documentElement.classList.add('hosted');
-    document.getElementById('hostLine').textContent = window.matchMedia('(pointer: coarse)').matches ? 'Tap HIT when the ring closes onto the mask on his face.' : 'Press Space when the ring closes onto the mask on his face.';
   }
 'use strict';
 (function () {
@@ -111,6 +110,43 @@
     // Owner 23 Nov 08:29 ("it should be 3 ring show 1 act letting player know success and failure. not 9 ring consecutive"): switch, when night1.html
     // hosts the page with byact=1 the page stops after each act (scene 'actDone') until the host calls __game.nextAct(); false = all acts back to back
     actByAct: true,
+    // Owner 23 Nov 09:23 (pitch rows agreed): the timing game when no ?game= is given. 'ring' mask ring (the fall), 'hold' press, hold, release (spotlight sweep),
+    // 'bar' needle and zone (talking scale), 'call' the whiteface taps, he answers (soldier drill), 'trade' turns that speed up (tit-for-tat)
+    game: 'ring',
+    // hold: beat gaps from the press fit to the release fit
+    holdGaps: 2,
+    // hold: the pan's radius as a fraction of the mask radius (the pool must shrink onto it)
+    panFrac: 0.45,
+    // bar: good window scale for the 1st, 2nd, 3rd... beat of an act (the zone narrows each beat; last value repeats)
+    barNarrow: [1, 0.85, 0.7],
+    // bar: the zone never gets narrower than the perfect window plus this (ms)
+    barFloorMs: 20,
+    // bar: needle swing each side of the zone, as a fraction of the mask radius (capped at 42% of the screen width)
+    barSwing: 2.2,
+    // call: gaps between the whiteface's taps, each picked from these beat gaps (whole gaps only, so windows never overlap)
+    callGaps: [1, 2],
+    // call: beat gaps from his last tap to the first answer
+    callAnswerGaps: 2,
+    // call: from this night the whiteface's "hup" on each answer comes late by callLateMs; the drum and the picture stay on time
+    callLateFromNight: 2,
+    // call: how late the voice is (ms)
+    callLateMs: 90,
+    // trade: tempo rise per exchange (one neighbour turn plus one of his)
+    tradeStep: 0.08,
+    // trade: tempo cap (project rule: about 1.4x at the peak)
+    tradeCap: 1.4,
+    // trade: how long the neighbour's hand is seen coming before his turn lands (ms, at least the 0.4 s tell)
+    tradeTellMs: 500,
+    // rehearsal (?rehearse=1, from the act board, owner 09:23 "let player try the timing game"): one act, no Laughs or Mask, misses never end it
+    rehearsalBanner: 'REHEARSAL - nothing counts',
+    // the one line under the start button when hosted, per game: [touch, desktop]
+    gameLines: {
+      ring: ['Tap HIT when the ring closes onto the mask on his face.', 'Press Space when the ring closes onto the mask on his face.'],
+      hold: ['Hold HIT when the ring meets the mask. Let go when the light shrinks onto the pan.', 'Hold Space when the ring meets the mask. Let go when the light shrinks onto the pan.'],
+      bar: ['Tap HIT when the needle crosses the gold zone. The zone gets narrower.', 'Press Space when the needle crosses the gold zone. The zone gets narrower.'],
+      call: ['The whiteface taps a pattern. Tap it back after him, on the drum.', 'The whiteface taps a pattern. Press Space to tap it back after him, on the drum.'],
+      trade: ['His turn, then yours. Tap HIT when your ring closes. It gets faster.', 'His turn, then yours. Press Space when your ring closes. It gets faster.']
+    },
     // Whiteface interrupts per act for nights 1, 2, 3+
     interruptsPerAct: [0, 1, 2],
     // Night from which take, topper flip and interrupts open
@@ -189,16 +225,26 @@
 
   // ===== STATE =====
   const PENDING = 0, DONE = 1;
-  const HIT = 0, TAKE = 1;
+  const HIT = 0, TAKE = 1, REL = 2;
   // act by act: only when night1.html hosts the page and asks for it (its crowd card path, N1.actShow off, keeps all acts back to back)
   const BY_ACT = CONFIG.actByAct && /[?&]host=/.test(location.search) && /[?&]byact=1(&|$)/.test(location.search);
+  const HOSTED = /[?&]host=/.test(location.search);
+  const GAMES = ['ring', 'hold', 'bar', 'call', 'trade'];
+  const gameParam = (location.search.match(/[?&]game=([a-z]+)/) || [])[1];
+  const GAME = GAMES.indexOf(gameParam) >= 0 ? gameParam : CONFIG.game;
+  const REHEARSE = /[?&]rehearse=1(&|$)/.test(location.search);
   const MAX_ACTS = Math.max.apply(null, CONFIG.actsPerShow);
-  const MAX_BEATS = MAX_ACTS * Math.max.apply(null, CONFIG.beatsPerChain);
+  // hold acts use two beats per ring (press and release)
+  const MAX_BEATS = MAX_ACTS * Math.max.apply(null, CONFIG.beatsPerChain) * 2;
   const beats = [];
   // chain = index of the act the beat belongs to (name kept: night1.html reads it); snd = its drum's slot in A.scheduled, -1 = none
+  // kind REL = the release of a hold (pair = index of its press beat, or of its release on a press); win = good window for this beat (ms), 0 = the night's
   for (let i = 0; i < MAX_BEATS; i++) {
-    beats.push({ fit: 0, spawn: 0, kind: HIT, topper: false, chain: 0, state: PENDING, result: '', judged: 0, snd: -1 });
+    beats.push({ fit: 0, spawn: 0, kind: HIT, topper: false, chain: 0, state: PENDING, result: '', judged: 0, snd: -1, pair: -1, win: 0, grade: '' });
   }
+  // call and trade: the other clown's turns (not judged): t = when it lands, chain = its act, who 0 = whiteface tap, 1 = neighbour's swipe
+  const calls = [];
+  for (let i = 0; i < MAX_BEATS; i++) calls.push({ t: 0, chain: 0, who: 0, snd: -1 });
   const S = {
     scene: 'title', night: 1, phone: false, phoneSetByUser: false, latencyMs: 0,
     laughs: 0, mask: 0, actCount: 0, flipUsed: [false, false, false, false],
@@ -206,6 +252,8 @@
     demoSpawn: -1, demoFit: -1, demoUntil: -1,
     // act by act: on for this show, beats per act, the act being played, when its last ring was done (-1 = still playing)
     byAct: false, per: 0, curAct: 0, actEndAt: -1,
+    // the timing game; beats in the pool per act (twice per for hold); calls in use; the press beat being held (-1 = none)
+    game: GAME, rehearse: REHEARSE, perBeats: 0, callN: 0, holding: -1,
     misses: 0, perfects: 0, goods: 0, takes: 0, takeBeats: 0, flips: 0, actLaughs: 0, fallSound: '',
     offSum: 0, offSq: 0, offN: 0,
     ended: false, endReason: '', endAt: 0, resultsShown: false,
@@ -297,12 +345,21 @@
     for (let i = 0; i < S.beatCount; i++) beats[i].snd = -1;
     if (!S.clockAudio) return;
     if (S.demoFit >= 0 && act <= 0) A.scheduled[A.schedN++] = playSound('drum', S.actStartAudio + S.demoFit / 1000);
+    const late = S.game === 'call' && S.night >= CONFIG.callLateFromNight ? CONFIG.callLateMs : -1;
     for (let i = 0; i < S.beatCount; i++) {
       const b = beats[i];
       if (act >= 0 && b.chain !== act) continue;
       b.snd = A.schedN;
       A.scheduled[A.schedN++] = playSound(b.topper ? 'rim' : 'drum', S.actStartAudio + b.fit / 1000);
       if (b.kind === TAKE) A.scheduled[A.schedN++] = playSound('sting', S.actStartAudio + b.spawn / 1000);
+      if (late >= 0) A.scheduled[A.schedN++] = playSound('rim', S.actStartAudio + (b.fit + late) / 1000);
+    }
+    for (let i = 0; i < S.callN; i++) {
+      const c = calls[i];
+      c.snd = -1;
+      if (act >= 0 && c.chain !== act) continue;
+      c.snd = A.schedN;
+      A.scheduled[A.schedN++] = playSound(c.who ? 'slap' : 'rim', S.actStartAudio + c.t / 1000);
     }
   }
   function stopScheduled() {
@@ -340,20 +397,50 @@
   function buildSchedule() {
     const n = nightIdx(), gap = CONFIG.gapMs[n], close = CONFIG.closeMs[n], per = CONFIG.beatsPerChain[n];
     let spawn0 = CONFIG.leadInMs, k = 0;
-    S.acts = CONFIG.actsPerShow[n];
+    const G = S.game;
+    S.acts = S.rehearse ? 1 : CONFIG.actsPerShow[n];
     S.per = per;
-    // the shown ring takes the first slot of the grid; the first counted ring fits one gap after it
+    S.perBeats = G === 'hold' ? per * 2 : per;
+    S.callN = 0; S.holding = -1;
+    // the shown ring takes the first slot of the grid; the first counted ring fits one gap after it (call and trade show the other clown's turn instead)
     S.demoSpawn = -1; S.demoFit = -1; S.demoUntil = -1;
-    if (CONFIG.shownRing) { S.demoSpawn = spawn0; S.demoFit = spawn0 + close; S.demoUntil = S.demoFit + gap / 2; spawn0 += gap; }
+    if (CONFIG.shownRing && (G === 'ring' || G === 'hold' || G === 'bar')) { S.demoSpawn = spawn0; S.demoFit = spawn0 + close; S.demoUntil = S.demoFit + gap / 2; spawn0 += gap; }
+    const put = (fit, kind, c, j) => {
+      const b = beats[k++];
+      b.fit = fit; b.spawn = kind === REL ? fit - CONFIG.holdGaps * gap : fit - close; b.kind = kind; b.chain = c;
+      b.topper = (G === 'ring' || G === 'bar') && S.night >= CONFIG.secondButtonFromNight && j === per - 1;
+      b.state = PENDING; b.result = ''; b.judged = 0; b.pair = -1; b.win = 0; b.grade = '';
+      if (G === 'bar') { const s = CONFIG.barNarrow[Math.min(j, CONFIG.barNarrow.length - 1)]; b.win = Math.max(winPerfect() + CONFIG.barFloorMs, Math.round(winGood() * s)); }
+      return fit;
+    };
+    const call = (t, c, who) => { const x = calls[S.callN++]; x.t = t; x.chain = c; x.who = who; };
     for (let c = 0; c < S.acts; c++) {
-      const firstFit = spawn0 + close;
-      for (let j = 0; j < per; j++) {
-        const b = beats[k++];
-        b.fit = firstFit + j * gap; b.spawn = b.fit - close; b.kind = HIT; b.chain = c;
-        b.topper = S.night >= CONFIG.secondButtonFromNight && j === per - 1;
-        b.state = PENDING; b.result = ''; b.judged = 0;
+      let t = spawn0 + close;
+      if (G === 'hold') {
+        for (let j = 0; j < per; j++) {
+          put(t, HIT, c, j); put(t + CONFIG.holdGaps * gap, REL, c, j);
+          beats[k - 2].pair = k - 1; beats[k - 1].pair = k - 2;
+          t += (CONFIG.holdGaps + 1) * gap;
+        }
+        t -= gap;
+      } else if (G === 'call') {
+        // his taps: per taps, gaps picked from callGaps; then the answers repeat them after callAnswerGaps
+        const t0 = t;
+        for (let j = 0; j < per; j++) { if (j) t += gap * CONFIG.callGaps[Math.floor(rand() * CONFIG.callGaps.length)]; call(t, c, 0); }
+        const back = t + CONFIG.callAnswerGaps * gap - t0;
+        for (let j = 0; j < per; j++) t = put(calls[S.callN - per + j].t + back, HIT, c, j);
+      } else if (G === 'trade') {
+        // neighbour, him, neighbour, him...; each exchange a little faster, capped
+        for (let j = 0; j < per; j++) {
+          const g2 = gap / Math.min(CONFIG.tradeCap, 1 + CONFIG.tradeStep * j);
+          call(t, c, 1); t += g2; put(t, HIT, c, j); t += g2;
+        }
+        t -= gap / Math.min(CONFIG.tradeCap, 1 + CONFIG.tradeStep * (per - 1));
+      } else {
+        for (let j = 0; j < per; j++) put(t + j * gap, HIT, c, j);
+        t += (per - 1) * gap;
       }
-      S.chainLastFit[c] = firstFit + (per - 1) * gap;
+      S.chainLastFit[c] = t;
       S.chainMisses[c] = 0;
       spawn0 = S.chainLastFit[c] + CONFIG.gagPauseMs;
     }
@@ -362,7 +449,8 @@
     placeInterrupts(per);
   }
   function placeInterrupts(per) {
-    const count = S.night >= CONFIG.secondButtonFromNight ? CONFIG.interruptsPerAct[nightIdx()] : 0;
+    // the whiteface interrupt belongs to the face games; drill, sweep and tit-for-tat have their own rules
+    const count = S.night >= CONFIG.secondButtonFromNight && !S.rehearse && (S.game === 'ring' || S.game === 'bar') ? CONFIG.interruptsPerAct[nightIdx()] : 0;
     S.takeBeats = 0;
     for (let i = 0; i < count; i++) {
       const chain = i % S.acts;
@@ -376,7 +464,7 @@
     S.misses = 0; S.perfects = 0; S.goods = 0; S.takes = 0; S.flips = 0; S.actLaughs = 0; S.fallSound = '';
     S.offSum = 0; S.offSq = 0; S.offN = 0;
     S.ended = false; S.endReason = ''; S.endAt = 0; S.resultsShown = false;
-    S.byAct = BY_ACT; S.curAct = 0; S.actEndAt = -1;
+    S.byAct = BY_ACT && !S.rehearse; S.curAct = 0; S.actEndAt = -1; S.holding = -1;
     S.fbUntil = -1e9; S.snapUntil = -1e9; S.fallAt = -1e9; S.flipUntil = -1e9; S.excite = CONFIG.exciteRest;
     for (let i = 0; i < cf.life.length; i++) cf.life[i] = 0;
   }
@@ -407,22 +495,28 @@
   // the host's call: the next act's grid starts fresh from now on the same clock, its first ring after the lead-in
   function nextAct() {
     if (S.scene !== 'actDone') throw new Error('nextAct called in scene ' + S.scene);
-    const c = S.curAct + 1, first = c * S.per, shift = actNow() + CONFIG.leadInMs - beats[first].spawn;
+    const c = S.curAct + 1, first = c * S.perBeats;
+    let start = beats[first].spawn;
+    for (let i = 0; i < S.callN; i++) if (calls[i].chain === c && calls[i].t - CONFIG.tradeTellMs < start) start = calls[i].t - CONFIG.tradeTellMs;
+    const shift = actNow() + CONFIG.leadInMs - start;
     for (let i = first; i < S.beatCount; i++) { beats[i].fit += shift; beats[i].spawn += shift; }
+    for (let i = 0; i < S.callN; i++) if (calls[i].chain >= c) calls[i].t += shift;
     for (let k = c; k < S.acts; k++) S.chainLastFit[k] += shift;
     S.lastFit += shift;
-    S.curAct = c; S.actEndAt = -1;
+    S.curAct = c; S.actEndAt = -1; S.holding = -1;
     if (S.clockAudio) { S.lastAudioT = A.ctx.currentTime; S.audioStillSince = performance.now(); }
     scheduleBeatSounds(c);
     releaseAll();
     S.scene = 'act';
     showPanels();
   }
+  // presses go to press beats only; a hold's release is judged in releaseAt
   function nearestBeat(t) {
     let best = -1, bestD = 1e9;
     for (let i = 0; i < S.beatCount; i++) {
       const b = beats[i];
       if (b.spawn > t) break;
+      if (b.kind === REL) continue;
       const d = Math.abs(t - b.fit);
       if (d < bestD) { bestD = d; best = i; }
     }
@@ -440,6 +534,17 @@
     b.state = DONE; b.judged++;
     if (b.kind === TAKE) judgeTake(b, btn, t - b.fit);
     else judgeHit(b, btn, t - b.fit);
+    // hold: a press that landed starts the sweep; its release is judged when he lets go
+    if (b.pair >= 0 && b.result === 'held' && !S.ended) S.holding = b.pair;
+  }
+  // hold: letting go of HIT (key up, finger up, blur) is the release of the press being held
+  function releaseAt(t) {
+    if (S.holding < 0 || S.scene !== 'act' || S.ended) { S.holding = -1; return; }
+    const r = beats[S.holding];
+    S.holding = -1;
+    if (r.state !== PENDING) return;
+    r.state = DONE; r.judged++;
+    judgeHit(r, HIT, t - r.fit);
   }
   function judgeTake(b, btn, d) {
     if (btn === TAKE && Math.abs(d) <= CONFIG.takeMs) {
@@ -454,13 +559,21 @@
     endAct('the slap landed');
   }
   function judgeHit(b, btn, d) {
-    const ad = Math.abs(d);
+    let ad = Math.abs(d);
     if (btn === TAKE && !b.topper) { missBeat(b, 'WRONG'); return; }
-    if (ad > winGood()) { missBeat(b, d < 0 ? 'EARLY' : 'LATE'); return; }
+    if (ad > (b.win || winGood())) { missBeat(b, d < 0 ? 'EARLY' : 'LATE'); return; }
     S.offSum += d; S.offSq += d * d; S.offN++;
+    // hold: the press only starts the sweep (result 'held', its grade kept); the ring is scored once, at its release, by the worse of the two
+    if (b.kind !== REL && b.pair >= 0) {
+      b.result = 'held'; b.grade = ad <= winPerfect() ? 'perfect' : 'good';
+      feedback(b.grade === 'perfect' ? 'PERFECT' : 'GOOD', b.grade === 'perfect' ? CONFIG.col.perfect : CONFIG.col.good, 0);
+      playSound('snap', 0);
+      return;
+    }
+    if (b.kind === REL && beats[b.pair].grade === 'good' && ad <= winPerfect()) ad = winPerfect() + 1;
     if (ad <= winPerfect()) {
       b.result = 'perfect'; S.perfects++;
-      S.mask += CONFIG.paintPerPerfect;
+      if (!S.rehearse) S.mask += CONFIG.paintPerPerfect;
       addLaughs(CONFIG.laughsPerfect);
       feedback('PERFECT', CONFIG.col.perfect, CONFIG.exciteStep[0]);
       S.snapUntil = S.now + 250;
@@ -497,6 +610,10 @@
     S.fallSound = window.__cueOpts && window.__cueOpts.hurt ? 'laughBig' : 'cough';
     playSound('slip', 0); playSound(S.fallSound, 0.25 + (A.ctx ? A.ctx.currentTime : 0));
     S.chainMisses[b.chain]++;
+    // hold: a press that missed has no release to judge
+    if (b.kind !== REL && b.pair >= 0 && beats[b.pair].state === PENDING) cutBeat(beats[b.pair]);
+    // rehearsal: misses are shown and heard but never end it
+    if (S.rehearse) return;
     if (!CONFIG.shortActs) { if (S.misses >= CONFIG.missesToEnd) endAct('two misses'); return; }
     if (S.chainMisses[b.chain] < CONFIG.missesToEnd) return;
     // this act is over: the last act ends the show on the fall; an earlier one loses its rings left and the next act starts on its own grid
@@ -506,11 +623,25 @@
     for (let i = 0; i < S.beatCount; i++) {
       const b = beats[i];
       if (b.chain !== c || b.state !== PENDING) continue;
-      b.state = DONE; b.result = 'cut';
-      if (b.snd >= 0 && b.snd < A.schedN) { try { A.scheduled[b.snd].stop(); } catch (e) { /* already ended */ } }
+      cutBeat(b);
+    }
+    for (let i = 0; i < S.callN; i++) {
+      const x = calls[i];
+      if (x.chain !== c || x.t <= S.now) continue;
+      x.t = -1e9;
+      if (x.snd >= 0 && x.snd < A.schedN) { try { A.scheduled[x.snd].stop(); } catch (e) { /* already ended */ } }
     }
   }
-  function addLaughs(n) { S.laughs += n; S.actLaughs += n; }
+  // a beat that will not be played: its drum (and the call game's late voice) stopped
+  function cutBeat(b) {
+    b.state = DONE; b.result = 'cut';
+    const n = S.game === 'call' && S.night >= CONFIG.callLateFromNight ? 2 : 1;
+    for (let j = 0; j < n; j++) {
+      const s = b.snd + j;
+      if (b.snd >= 0 && s < A.schedN) { try { A.scheduled[s].stop(); } catch (e) { /* already ended */ } }
+    }
+  }
+  function addLaughs(n) { if (S.rehearse) return; S.laughs += n; S.actLaughs += n; }
   function feedback(word, col, excite) {
     S.fbWord = word; S.fbCol = col; S.fbUntil = S.now + CONFIG.feedbackMs;
     S.excite = Math.max(0, Math.min(1, S.excite + excite));
@@ -521,6 +652,7 @@
     if (reason !== 'complete') S.fallAt = S.now;
     for (let i = 0; i < S.beatCount; i++) if (beats[i].state === PENDING) { beats[i].state = DONE; beats[i].result = 'cut'; }
     stopScheduled();
+    S.holding = -1;
     if (S.actLaughs < CONFIG.laughsFloor) addLaughs(CONFIG.laughsFloor - S.actLaughs);
   }
   function updateAct(dt) {
@@ -535,7 +667,7 @@
       if (t - S.actEndAt > CONFIG.resultsDelayMs) { actDone(); return; }
     } else {
       expireBeats(t);
-      if (S.byAct && !S.ended && S.curAct < S.acts - 1 && beats[(S.curAct + 1) * S.per - 1].state === DONE) S.actEndAt = t;
+      if (S.byAct && !S.ended && S.curAct < S.acts - 1 && beats[(S.curAct + 1) * S.perBeats - 1].state === DONE) S.actEndAt = t;
       if (!S.ended && t > S.lastFit + winGood() + 400) endAct('complete');
     }
     S.excite += (CONFIG.exciteRest - S.excite) * Math.min(1, dt * 0.6);
@@ -545,11 +677,11 @@
     for (let i = 0; i < S.beatCount && !S.ended; i++) {
       const b = beats[i];
       if (b.state !== PENDING) continue;
-      const limit = b.kind === TAKE ? CONFIG.takeMs : winGood();
+      const limit = b.kind === TAKE ? CONFIG.takeMs : (b.win || winGood());
       if (t <= b.fit + limit) break;
       b.state = DONE; b.judged++;
       if (b.kind === TAKE) { b.result = 'slap'; playSound('slap', 0); endAct('the slap landed'); }
-      else missBeat(b, 'LATE');
+      else { if (b.kind === REL) S.holding = -1; missBeat(b, b.kind === REL ? 'HELD' : 'LATE'); }
     }
   }
   function burstConfetti() {
@@ -572,8 +704,8 @@
   }
   function resultsText() {
     const hits = S.perfects + S.goods;
-    const total = S.beatCount;
-    let s = 'Night ' + S.night + ': ' + (S.endReason === 'complete' ? 'act complete' : 'act ended, ' + S.endReason) + '\n\n';
+    const total = S.game === 'hold' ? S.beatCount / 2 : S.beatCount;
+    let s = (S.rehearse ? CONFIG.rehearsalBanner + '\n' : '') + 'Night ' + S.night + ': ' + (S.endReason === 'complete' ? 'act complete' : 'act ended, ' + S.endReason) + '\n\n';
     s += 'Laughs +' + S.actLaughs + ' (total ' + S.laughs + ')   Mask ' + S.mask + '\n';
     s += 'Perfect ' + S.perfects + '  Good ' + S.goods + '  Miss ' + S.misses + '  of ' + total + ' beats\n';
     if (S.takeBeats) s += 'Slaps taken ' + S.takes + ' of ' + S.takeBeats + '\n';
@@ -606,14 +738,27 @@
     e.preventDefault();
     if (S.scene === 'act') pressAt(btn, eventActTime(e.timeStamp));
   }
+  // hold: letting go of Space is the release
+  function onKeyUp(e) {
+    if (e.code !== 'Space' || S.holding < 0) return;
+    e.preventDefault();
+    releaseAt(eventActTime(e.timeStamp));
+  }
   function onPadDown(e) {
     e.preventDefault();
     const btn = e.currentTarget === el.padHit ? HIT : TAKE;
     e.currentTarget.classList.add('down');
     if (S.scene === 'act') pressAt(btn, eventActTime(e.timeStamp));
   }
-  function onPadUp(e) { e.currentTarget.classList.remove('down'); }
-  function releaseAll() { el.padHit.classList.remove('down'); el.padTake.classList.remove('down'); }
+  function onPadUp(e) {
+    e.currentTarget.classList.remove('down');
+    if (e.currentTarget === el.padHit && S.holding >= 0) releaseAt(eventActTime(e.timeStamp));
+  }
+  // blur, hidden tab, between acts: the pads come up, and a hold being held is let go now
+  function releaseAll() {
+    el.padHit.classList.remove('down'); el.padTake.classList.remove('down');
+    if (S.holding >= 0) releaseAt(eventActTime(performance.now()));
+  }
   function onVisibility() {
     const now = performance.now();
     if (document.hidden && !S.paused) S.hiddenAt = now;
@@ -649,6 +794,8 @@
 
   // ===== RENDER =====
   let g = null;
+  // line dash patterns, made once (setLineDash reads them each frame)
+  const DASH = [6, 6], NO_DASH = [];
   // pose handed to the 3D layer every frame (reused, no allocation)
   const pose = { tilt: 0, flip: false, snap: false, miss: false, mask: 0 };
   function layout() {
@@ -696,6 +843,7 @@
     drawConfetti();
     drawCrowd(t);
     drawFeedback(t);
+    if (S.rehearse && S.scene === 'act') { g.fillStyle = CONFIG.col.good; g.font = view.font; g.textAlign = 'center'; g.fillText(CONFIG.rehearsalBanner, view.cx, Math.max(view.R * 0.5, view.cy - view.R * 2.2)); }
   }
   function clownTilt(t) {
     if (S.ended && S.endReason !== 'complete') return Math.min(1.35, (t - S.fallAt) / 300);
@@ -728,7 +876,7 @@
     const C = CONFIG.col, R = view.R;
     let col = C.outline, lw = 0, alpha = 0;
     for (let i = 0; i < S.beatCount; i++) {
-      if (Math.abs(t - beats[i].fit) < CONFIG.flashMs) { col = C.paint; lw = 4; alpha = 1; break; }
+      if (beats[i].kind !== REL && Math.abs(t - beats[i].fit) < CONFIG.flashMs) { col = C.paint; lw = 4; alpha = 1; break; }
     }
     if (S.demoFit >= 0 && Math.abs(t - S.demoFit) < CONFIG.flashMs) { col = C.paint; lw = 4; alpha = 1; }
     if (t < S.fbUntil) { col = S.fbCol; lw = 4; alpha = 1; }
@@ -747,6 +895,8 @@
   function drawRings(t) {
     let first = true;
     view.ringR = 0;
+    if (S.game === 'bar') { drawBar(t); return; }
+    if (S.game === 'call') { drawCalls(t); return; }
     // the shown ring: drawn like a counted one, gone at its fit
     if (S.demoFit >= 0 && t >= S.demoSpawn && t < S.demoFit) {
       view.ringR = view.R + (view.R0 - view.R) * (1 - (t - S.demoSpawn) / (S.demoFit - S.demoSpawn));
@@ -756,7 +906,7 @@
     for (let i = 0; i < S.beatCount; i++) {
       const b = beats[i];
       if (b.spawn > t) break;
-      if (b.state !== PENDING) continue;
+      if (b.state !== PENDING || b.kind === REL) continue;
       const p = Math.min(1, (t - b.spawn) / (b.fit - b.spawn));
       const over = Math.max(0, t - b.fit);
       const r = view.R + (view.R0 - view.R) * (1 - p) - Math.min(view.R * 0.2, over * 0.6);
@@ -764,6 +914,108 @@
       drawRing(view.cx, view.cy, r, first ? 1 : 0.35, b.kind);
       first = false;
     }
+    if (S.game === 'hold') drawHold(t);
+    if (S.game === 'trade') drawCalls(t);
+  }
+  // hold (spotlight sweep): the pan is a dashed circle inside the mask; after a press lands, the light pool shrinks onto it, let go when it fits
+  function drawHold(t) {
+    const C = CONFIG.col, R = view.R, pan = R * CONFIG.panFrac;
+    g.save();
+    g.translate(view.cx, view.cy);
+    g.lineWidth = Math.max(2, R * 0.04);
+    g.setLineDash(DASH); g.strokeStyle = C.black; g.globalAlpha = 0.8;
+    g.beginPath(); g.arc(0, 0, pan, 0, Math.PI * 2); g.stroke();
+    g.setLineDash(NO_DASH);
+    for (let i = 0; i < S.beatCount; i++) {
+      const b = beats[i];
+      if (b.spawn > t) break;
+      if (b.kind !== REL || b.state !== PENDING) continue;
+      const pr = beats[b.pair];
+      if (pr.state !== DONE || pr.result !== 'held') continue;
+      const p = Math.min(1, (t - b.spawn) / (b.fit - b.spawn)), over = Math.max(0, t - b.fit);
+      const r = R - (R - pan) * p - Math.min(pan * 0.5, over * 0.3);
+      g.globalAlpha = 0.42; g.fillStyle = C.spot;
+      g.beginPath(); g.arc(0, 0, Math.max(2, r), 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 1; g.strokeStyle = Math.abs(t - b.fit) < CONFIG.flashMs ? C.paint : C.outline;
+      g.beginPath(); g.arc(0, 0, Math.max(2, r), 0, Math.PI * 2); g.stroke();
+    }
+    g.restore();
+  }
+  // bar (talking scale): a track under the face, the coming beat's zone (it narrows each beat), and one needle per beat swinging through it on its fit
+  function drawBar(t) {
+    const C = CONFIG.col, R = view.R, half = Math.min(R * CONFIG.barSwing, view.w * 0.42), y = view.cy + R * 1.9, hh = R * 0.22;
+    const close = CONFIG.closeMs[nightIdx()];
+    let cur = -1;
+    for (let i = 0; i < S.beatCount; i++) {
+      if (beats[i].spawn > t) break;
+      if (beats[i].state === PENDING) { cur = i; break; }
+    }
+    const zw = half * (cur >= 0 && beats[cur].win ? beats[cur].win : winGood()) / close, pw = half * winPerfect() / close;
+    g.save();
+    g.lineWidth = Math.max(2, R * CONFIG.ringWidth);
+    g.strokeStyle = C.paint; g.globalAlpha = 0.5;
+    g.beginPath(); g.moveTo(view.cx - half, y); g.lineTo(view.cx + half, y); g.stroke();
+    g.fillStyle = C.perfect; g.globalAlpha = 0.4; g.fillRect(view.cx - zw, y - hh, zw * 2, hh * 2);
+    g.globalAlpha = 0.9; g.fillRect(view.cx - pw, y - hh, pw * 2, hh * 2);
+    if (S.demoFit >= 0 && t >= S.demoSpawn && t < S.demoFit) drawNeedle(view.cx - half * (t - S.demoFit) / close, y, hh, 1);
+    let first = true;
+    for (let i = 0; i < S.beatCount; i++) {
+      const b = beats[i];
+      if (b.spawn > t) break;
+      if (b.state !== PENDING) continue;
+      const dir = i % 2 ? -1 : 1, k = Math.max(-1.1, Math.min(1.1, (t - b.fit) / close));
+      drawNeedle(view.cx + dir * half * k, y, hh, first ? 1 : 0.35);
+      first = false;
+    }
+    g.restore();
+  }
+  function drawNeedle(x, y, hh, alpha) {
+    g.globalAlpha = alpha; g.strokeStyle = CONFIG.col.outline;
+    g.beginPath(); g.moveTo(x, y - hh * 1.8); g.lineTo(x, y + hh * 1.8); g.stroke();
+  }
+  // call: the whiteface (cone hat) beside his face taps the pattern, a dot lights per tap; his answers are dots at the same spacing under the mask
+  // trade: the neighbour's hand slides in from the right and lands on its beat
+  function drawCalls(t) {
+    const C = CONFIG.col, R = view.R;
+    g.save();
+    if (S.game === 'trade') {
+      for (let i = 0; i < S.callN; i++) {
+        const c = calls[i], tell = CONFIG.tradeTellMs;
+        if (t < c.t - tell || t > c.t + 150) continue;
+        const p = Math.min(1, (t - (c.t - tell)) / tell), x = view.w + R - (view.w + R - (view.cx + R * 1.15)) * p;
+        g.globalAlpha = 1; g.fillStyle = t >= c.t ? C.paint : C.crimson;
+        g.fillRect(x, view.cy - R * 0.18, R * 0.9, R * 0.36);
+      }
+      g.restore();
+      return;
+    }
+    let ch = -1;
+    for (let i = 0; i < S.beatCount; i++) if (beats[i].state === PENDING) { ch = beats[i].chain; break; }
+    if (ch < 0) ch = S.curAct;
+    let c0 = -1, c1 = -1;
+    for (let i = 0; i < S.callN; i++) if (calls[i].chain === ch && calls[i].t > -1e8) { if (c0 < 0) c0 = i; c1 = i; }
+    if (c0 < 0) { g.restore(); return; }
+    const t0 = calls[c0].t, span = Math.max(1, calls[c1].t - t0), sc = R * 1.6 / span, hx = view.cx - R * 2.1, d = Math.max(3, R * 0.08);
+    let tapAt = -1e9;
+    for (let i = c0; i <= c1; i++) if (calls[i].t <= t) tapAt = calls[i].t;
+    const pulse = t - tapAt < 140 ? 1.15 : 1;
+    g.globalAlpha = 1;
+    g.fillStyle = C.crimson; g.beginPath(); g.arc(hx, view.cy, R * 0.45 * pulse, 0, Math.PI * 2); g.fill();
+    g.fillStyle = C.silver; g.beginPath(); g.moveTo(hx - R * 0.3, view.cy - R * 0.38); g.lineTo(hx + R * 0.3, view.cy - R * 0.38); g.lineTo(hx, view.cy - R * 1.2); g.closePath(); g.fill();
+    for (let i = c0; i <= c1; i++) {
+      const x = hx - R * 0.8 + (calls[i].t - t0) * sc;
+      g.globalAlpha = calls[i].t <= t ? 1 : 0.3; g.fillStyle = C.silver;
+      g.beginPath(); g.arc(x, view.cy + R * 0.75, d, 0, Math.PI * 2); g.fill();
+    }
+    let a0 = -1;
+    for (let i = 0; i < S.beatCount; i++) if (beats[i].chain === ch) { a0 = i; break; }
+    for (let i = a0; i >= 0 && i < S.beatCount && beats[i].chain === ch; i++) {
+      const b = beats[i], x = view.cx - R * 0.8 + (calls[c0 + i - a0].t - t0) * sc;
+      g.globalAlpha = b.state === PENDING ? 0.35 : 1;
+      g.fillStyle = b.result === 'perfect' || b.result === 'good' ? C.perfect : b.result === 'miss' ? C.miss : C.paint;
+      g.beginPath(); g.arc(x, view.cy + R * 1.2, d, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
   }
   function drawRing(x, y, r, alpha, kind) {
     const C = CONFIG.col;
@@ -861,12 +1113,13 @@
   // ===== BOOT =====
   function grab() {
     const ids = ['cv', 'hudNight', 'hudLaughs', 'hudMask', 'padTake', 'padHit', 'title', 'nightRow', 'btnDesk', 'btnPhone',
-      'latDown', 'latVal', 'latUp', 'btnStart', 'results', 'resText', 'btnAgain', 'btnMenu', 'errPanel', 'errText'];
+      'latDown', 'latVal', 'latUp', 'btnStart', 'hostLine', 'results', 'resText', 'btnAgain', 'btnMenu', 'errPanel', 'errText'];
     for (let i = 0; i < ids.length; i++) el[ids[i]] = document.getElementById(ids[i]);
     g = el.cv.getContext('2d');
   }
   function wire() {
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
     window.addEventListener('resize', onResize);
     window.addEventListener('blur', releaseAll);
     // errors outside the loop (handlers, timers, promises) reach the error panel too
@@ -896,6 +1149,8 @@
   }
   function boot() {
     grab();
+    // hosted: the one line under the start button says how tonight's timing game is played (CONFIG.gameLines)
+    if (HOSTED) el.hostLine.textContent = CONFIG.gameLines[S.game][window.matchMedia('(pointer: coarse)').matches ? 0 : 1];
     wire();
     onResize();
     setLatency(0);
@@ -907,17 +1162,20 @@
     start(night) { startAct(night); },
     advance(ms) { S.vclock = ms; updateAct(0.016); render(); },
     input(btn, ms) { S.vclock = ms; S.now = ms; pressAt(btn, ms - S.latencyMs); },
+    release(ms) { S.vclock = ms; S.now = ms; releaseAt(ms - S.latencyMs); },
+    calls() { return calls.slice(0, S.callN).map((c) => Object.assign({}, c)); },
     nextAct() { nextAct(); },
     setLatency(v) { setLatency(v); },
     info() {
       return { scene: S.scene, actIndex: S.curAct, byAct: S.byAct, ended: S.ended, endReason: S.endReason, misses: S.misses, perfects: S.perfects, goods: S.goods,
         takes: S.takes, takeBeats: S.takeBeats, flips: S.flips, fallSound: S.fallSound, laughs: S.laughs, actLaughs: S.actLaughs, mask: S.mask,
+        game: S.game, rehearse: S.rehearse, holding: S.holding, callN: S.callN, perBeats: S.perBeats,
         beatCount: S.beatCount, acts: S.acts, demoFit: S.demoFit, lastFit: S.lastFit, endAt: S.endAt, phone: S.phone, w: view.w, h: view.h, R: view.R, R0: view.R0, cx: view.cx, cy: view.cy, ringR: view.ringR, maskR: view.maskR,
         actCount: S.actCount, model: !!(window.__model && window.__model.ready), modelError: window.__model ? window.__model.error : 'no module', view3d: window.__model ? window.__model.viewName : '', confettiAlive: cf.life.reduce((n, l) => n + (l > 0 ? 1 : 0), 0) };
     },
     beats() { return beats.slice(0, S.beatCount).map((b) => Object.assign({}, b)); },
     config: CONFIG,
-    HIT: HIT, TAKE: TAKE
+    HIT: HIT, TAKE: TAKE, REL: REL
   };
   boot();
 })();

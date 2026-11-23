@@ -921,9 +921,10 @@ const N1 = Object.freeze({
   // switch; the cards' height and wall depth (Blender z and y, m) where the two act buttons sit (card x is in each button's data-card)
   boardWall: true, boardCardZ: 1.85, boardCardY: 4.77,
   // the acts on the board (22 Nov b item 1: a note each, a tap opens it as a parchment; more acts add notes): card centre x on the board (Blender), its size m
+  // game: the act's timing game in cue_model.html (owner 23 Nov 09:23: one per act; fall the mask ring, sweep press-hold-release)
   acts: [
-    { id: 'fall', title: 'The deliberate fall', short: 'The fall', line: 'Miss the bar on purpose, land on your backside, bow.', own: 'Yours. It always pays a little.', x: -0.95 },
-    { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Lent tonight, free.', x: 0.95 },
+    { id: 'fall', title: 'The deliberate fall', short: 'The fall', line: 'Miss the bar on purpose, land on your backside, bow.', own: 'Yours. It always pays a little.', x: -0.95, game: 'ring' },
+    { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Lent tonight, free.', x: 0.95, game: 'hold' },
   ],
   noteW: 0.86, noteH: 1.12,
   // ----- panel G (owner 22 Nov 11:22 items 2 and 4, agreed 15:58): Mirror World night 1 = the mirror corridor, then the ring; unworldly by Mask -----
@@ -2219,7 +2220,8 @@ function openCue() {
   NS.cue.id = 'cueFrame';
   // hosted: the cue page hides its own title, notes and settings and shows one line and its start button (owner's item 4)
   // act by act (owner 23 Nov 08:29) when the act plays in the ring; the crowd card path keeps all acts back to back
-  NS.cue.src = 'cue_model.html?host=night1' + (N1.actShow ? '&byact=1' : '');
+  const act = N1.acts.find((x) => x.id === NS.act);
+  NS.cue.src = 'cue_model.html?host=night1' + (N1.actShow ? '&byact=1' : '') + '&game=' + (act ? act.game : 'ring');
   NS.contCount++;
   document.body.appendChild(NS.cue);
   NS.poll = setInterval(() => {
