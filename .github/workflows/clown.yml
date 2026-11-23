@@ -63,6 +63,7 @@ jobs:
           node step0/smoke_night1.cjs /tmp/night1 | tee -a step0.txt || rc=1
           node step0/probe_cover.cjs step0 | tee -a step0.txt || rc=1
           node step0/probe_shop.cjs step0 | tee -a step0.txt || rc=1
+          node step0/check_anchors.cjs step0 | tee -a step0.txt || rc=1
           ! grep -q '^FAIL\|RESULT FAIL' step0.txt && [ "$rc" = 0 ]
   # session 25: the night1 mutations (web/step0/n1_mutations.txt) on 8 runners at once; each runs every 8th line (they ran one after another in step0 before)
   n1mut:
@@ -307,7 +308,8 @@ jobs:
     needs: [build, ring]
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[gpu]')
     runs-on: macos-15
-    timeout-minutes: 15
+    # session 25: plus night1.html (gpu_night1.mjs, 5 setups x 3 scenes)
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -326,7 +328,11 @@ jobs:
           git show FETCH_HEAD:web/game/index.html > web/game/control.html
           cd web
           system_profiler SPDisplaysDataType | grep -E 'Chipset|Metal|VRAM' | tee gpu.txt || true
-          node gpu_measure.mjs game index.html control.html 2>&1 | tee -a gpu.txt
+          node gpu_measure.mjs game index.html control.html 2>&1 | tee -a gpu.txt || rc=1
+          # session 25: the game the owner plays (night1.html), its heaviest scenes, owner requirement 2 budget 16.7 ms
+          bash step0/cube25d/setup.sh
+          node gpu_night1.mjs step0 2>&1 | tee -a gpu.txt || rc=1
+          [ "${rc:-0}" = 0 ]
       - uses: actions/upload-artifact@v4
         if: always()
         with:

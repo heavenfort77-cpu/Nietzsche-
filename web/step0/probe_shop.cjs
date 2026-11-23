@@ -1,6 +1,7 @@
 // Session 25 probe (F35): the shop at the mirror on every screen and night. For each: every item and End the night must have its centre on screen
 // and hit itself (as probe_cover.cjs), and the card's content must cover at most 5% of the reflection's box in the glass (as the smoke's fix 5 step),
 // seated and while the reflection performs a buy (learn phase 2). Prints FAIL lines and RESULT shop probe <ok> of <n>.
+// Also: no two parts of the card overlap (their content included).
 // Usage: node probe_shop.cjs [web/step0 dir]; SHOTS=<dir> saves each shop after its buy; ONLY_SCREEN=<name> one screen; needs cube25d/setup.sh.
 const path = require('path'), http = require('http'), fs = require('fs');
 function need(names) { for (const n of names) { try { return require(n); } catch (e) { /* next */ } } console.error('Missing playwright'); process.exit(2); }
@@ -14,8 +15,20 @@ const SCREENS = [{ n: 'desk', w: 1280, h: 720, m: false }, { n: 'hd', w: 1920, h
 const NIGHTS = [['', 'night 1'], ['#n=2&m=3&s=40&b=&t=sweep.scale&lo=0', 'night 2'], ['#n=3&m=6&s=60&b=&t=sweep.scale.drill&lo=1', 'night 3']];
 const reach = () => Array.from(document.querySelectorAll('#card_shop .opt, #card_shop #endNight')).map((x) => {
   const q = x.getBoundingClientRect(), cx = q.left + q.width / 2, cy = q.top + q.height / 2, hit = document.elementFromPoint(cx, cy);
-  return { id: x.id || 'opt:' + (x.dataset.id || ''), off: cx < 0 || cy < 0 || cx > innerWidth || cy > innerHeight, ok: !!hit && (hit === x || x.contains(hit)), h: Math.round(q.height) };
+  return { id: x.id || 'opt:' + (x.dataset.id || ''), off: cx < 0 || cy < 0 || cx > innerWidth || cy > innerHeight, ok: !!hit && (hit === x || x.contains(hit)), h: Math.round(q.height), by: hit ? (hit.id || hit.className || hit.tagName) + (hit.parentElement ? ' in ' + (hit.parentElement.id || hit.parentElement.className || hit.parentElement.tagName) : '') : 'none', at: [Math.round(cx), Math.round(cy)] };
 });
+// the card's own parts never lie over each other (run 99: the shard row kept 22 px while its three rows of shards drew over the first item)
+const overlap = () => {
+  const els = Array.from(document.querySelectorAll('#card_shop > *, #card_shop .opts > *')).filter((e) => { const q = e.getBoundingClientRect(); return q.width > 0 && q.height > 0 && !e.classList.contains('opts'); });
+  const box = (e) => { const q = e.getBoundingClientRect(); let r = q.right, bt = q.bottom; for (const c of e.querySelectorAll('*')) { const k = c.getBoundingClientRect(); if (k.width && k.height) { r = Math.max(r, k.right); bt = Math.max(bt, k.bottom); } } return [q.left, q.top, r, bt]; };
+  const out = [];
+  for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+    if (els[i].contains(els[j]) || els[j].contains(els[i])) continue;
+    const a = box(els[i]), b = box(els[j]), w = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), h = Math.min(a[3], b[3]) - Math.max(a[1], b[1]);
+    if (w > 1 && h > 1) out.push(`${els[i].id || els[i].className || els[i].tagName} over ${els[j].id || els[j].dataset.id || els[j].className || els[j].tagName} by ${Math.round(h)} px`);
+  }
+  return out;
+};
 const cover = () => {
   // the reflection's box inside the glass (canvas px, offset by the canvas box), as in smoke_night1.cjs step "shop at the mirror ... (fix 5)"
   const N = window.__night, W = window.__walkTest, w = N.S.w, h = N.S.h, m = N.NS.mrect, cb = W.renderer.domElement.getBoundingClientRect();
@@ -49,7 +62,9 @@ const cover = () => {
       await pg.waitForSelector('#card_shop'); await pg.waitForTimeout(400);
       const where = `${sc.n} ${sc.w}x${sc.h} ${name}`;
       const r = await pg.evaluate(reach);
-      for (const x of r) { n++; if (x.off || !x.ok) fail(`${where}: ${x.id} ${x.off ? 'off screen' : 'covered'}`); }
+      for (const x of r) { n++; if (x.off || !x.ok) fail(`${where}: ${x.id} ${x.off ? 'off screen' : 'covered by ' + x.by} at ${x.at}`); }
+      const ov = await pg.evaluate(overlap); n++;
+      if (ov.length) fail(`${where}: card parts overlap: ${ov.slice(0, 3).join('; ')}`);
       const c0 = await pg.evaluate(cover); n++;
       if (c0.area < 400) fail(`${where}: reflection not visible in the glass (${c0.area} px2)`); else if (c0.worst > 0.05) fail(`${where}: shop card covers ${(c0.worst * 100).toFixed(0)}% of the seated reflection (${c0.who})`);
       // one buy: the reflection stands, steps closer and performs it
@@ -60,7 +75,7 @@ const cover = () => {
         const c1 = await pg.evaluate(cover); n++;
         if (c1.area < 400) fail(`${where}: performing reflection not visible in the glass (${c1.area} px2)`); else if (c1.worst > 0.05) fail(`${where}: shop card covers ${(c1.worst * 100).toFixed(0)}% of the performing reflection (${c1.who})`);
         const r2 = await pg.evaluate(reach);
-        for (const x of r2) { n++; if (x.off || !x.ok) fail(`${where} after a buy: ${x.id} ${x.off ? 'off screen' : 'covered'}`); }
+        for (const x of r2) { n++; if (x.off || !x.ok) fail(`${where} after a buy: ${x.id} ${x.off ? 'off screen' : 'covered by ' + x.by} at ${x.at}`); }
       }
       console.log(`  ${where}: ${r.length} buttons, reflection covered ${(c0.worst * 100).toFixed(0)}% seated`);
       if (process.env.SHOTS) await pg.screenshot({ path: `${process.env.SHOTS}/shop_${sc.n}_${name.replace(' ', '')}.png` });

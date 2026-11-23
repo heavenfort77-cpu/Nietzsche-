@@ -352,3 +352,33 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Where: `web/step0/smoke_night1.cjs` MUTS `vanitylow`.
 - Fix: the mutation lifts the glass clear of his face (centre 1.95 m, 0.7 m high). The check is unchanged.
 - Proof: PASS local: `desk FAIL opening at the dressing table, his reflection facing him (22b-6) vanity {..."inGlass":false...}` / `RESULT night1 smoke 5 of 6 pass (MUTATE=vanitylow)`, so the mutation is caught.
+
+## F38: in the shop the shard row drew over the first item (F35's panel shrank its parts)
+- Found: session 25 batch 2, CI run 99 (8f4ec42): `FAIL laptop 1366x768 night 3: opt:sweep covered` / `RESULT shop probe 239 of 240 pass`; it passed locally.
+- Probe: FAIL local `node web/step0/probe_shop.cjs` with a new check that no two parts of the card overlap (content included): `FAIL laptop 1366x768 night 3: card parts overlap: shards over sweep by 18 px` / `RESULT shop probe 263 of 264 pass`. The screenshot shows three rows of shards over the top of "Spotlight sweep".
+- Cause: F35 gave the shop card a fixed height; its parts are flex items of a column, which shrink by default, so the shard row kept its 22 px minimum while its wrapped shards drew over the item below. The fit test then saw no overflow (the parts had shrunk), so `tight` never came on. On CI the item's centre fell under the shards (font metrics), locally just beside them.
+- Class: parts of a fixed-height flex card squeezed instead of overflowing.
+- Sweep: the overlap check on all 8 screens x nights 1-3 seated and after a buy: only this case. The other fixed-height cards: none (every other card is full screen and scrolls; `.card.see` sits at the bottom with its own height).
+- Where: `web/step0/night1.html` CSS `.card.shopAt > *`.
+- Fix: the shop card's parts keep their height (`flex-shrink: 0`), so too much content overflows, `shopFit()` sees it and goes tight, then tighter, then the card scrolls.
+- Proof: PASS `RESULT shop probe 264 of 264 pass` after the change (overlap check added to the probe, which runs in CI job `step0`).
+
+## F39: the stickfull mutation was caught only some runs; the 60% stick run no longer checked the stick curve
+- Found: CI run 99 job `n1mut (5)`: `FAIL night1 mutation stickfull: not caught (smoke passed)` (also run 84; caught in run 98).
+- Probe: FAIL local `MUTATE=stickfull ONLY=desk UNTIL='60% stick' node web/step0/smoke_night1.cjs` with the run's speed printed: `run 0.6 : inside the spot 1.95 s of 8.0 s ... speed 1.02 of 1.72 m/s` passed the 2 s limit by 0.05 s, so whether the mutation was caught depended on the run.
+- Cause: the step checked the stick curve only through being caught by the Light (F24). Since F24 (the Light loses him, no re-centring) and F36 (the Light alone), a slower thumb still gets away just inside the limit; the curve itself (stickFull 0.35: full speed from 35% of the stick) was not measured.
+- Class: a rule checked only through a side effect that other changes have weakened.
+- Sweep: the other mutations whose step is a real-play outcome: lightlose (caught, `100% stick` needs the Light to lose him at least once), gnaw, lampgag, lightdark, bag, corwide (caught in runs 98 and 99, each step reads its own value: drain, hits, dark lamp, bag order, corridor width).
+- Where: `web/step0/smoke_night1.cjs`, the `Light: running from it at ...% stick` loop.
+- Fix: the run measures his average speed while not fallen and fails below 90% of full speed (`S.speed x mwTempo`) at 60% and 100% stick.
+- Proof: PASS local desk: `run 0.6 : ... speed 1.66 of 1.72 m/s`, `RESULT night1 smoke 52 of 52 pass`; with the mutation: `desk FAIL Light: running from it at 60% stick escapes it (real play) slower than full speed at 60% stick {..."speed":1.02,"full":1.72}` / `RESULT night1 smoke 51 of 52 pass (MUTATE=stickfull)`.
+
+## F40: the shoplow mutation lost its anchor when F35 changed the shop CSS
+- Found: CI run 99 job `n1mut (6)`: `FAIL night1 mutation shoplow: failed on another step` / `Error: mutation anchor not found once: .card.shopAt { background: linear-gradient(...`.
+- Probe: FAIL as found (the anchor search in `smoke_night1.cjs` throws before any step); session 25's own anchor scan was run before batch 1 but not after batch 2.
+- Cause: batch 2 replaced the `.card.shopAt` rule the mutation searched for, and no check looks at mutation anchors before a push.
+- Class: a mutation anchor not found once in the file it breaks (it then fails "on another step" and hides whether its rule is checked).
+- Sweep: new `web/step0/check_anchors.cjs` over every mutation in `smoke_night1.cjs` (65), `smoke_games.cjs` (8), `smoke_nights.cjs` (20): only shoplow was missing; in CI job `step0` from now on.
+- Where: `web/step0/smoke_night1.cjs` MUTS `shoplow`; new `web/step0/check_anchors.cjs`.
+- Fix: shoplow now gives the shop panel the whole screen (`let best = [0, 0, vw, vh, 'b']` in `shopFit()`), over the glass.
+- Proof: PASS `RESULT anchors 93 of 93 found once`; local `MUTATE=shoplow UNTIL='fix 5' ONLY=desk`: `desk FAIL shop at the mirror: the reflection performs each buy back at him (fix 5) shop card covers 42% of the reflection (opts)` / `RESULT night1 smoke 60 of 61 pass (MUTATE=shoplow)`.

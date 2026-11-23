@@ -47,7 +47,8 @@
   .card.shopAt.side-r { background: linear-gradient(270deg, #0c0809e6 0, #0c0809cc 75%, #0c080900 100%); }
   .card.shopAt.side-b { background: linear-gradient(0deg, #0c0809e6 0, #0c0809cc 75%, #0c080900 100%); align-items: center; text-align: center; }
   .card.shopAt.side-t { background: linear-gradient(180deg, #0c0809e6 0, #0c0809cc 75%, #0c080900 100%); align-items: center; text-align: center; }
-  .card.shopAt > * { max-width: 100%; }
+  /* F38: its parts keep their height (a fixed-height flex column shrank the shard row onto the first item); what does not fit goes to tight, tighter, then scrolls */
+  .card.shopAt > * { max-width: 100%; flex-shrink: 0; }
   .card.shopAt .opts { flex-direction: column; justify-content: flex-start; }
   .card.shopAt .opt { padding: 8px 14px; }
   /* not all fits: items two to a row, the header lines go */
@@ -1782,14 +1783,18 @@ function frame(t) {
   const ms = S.lastT ? t - S.lastT : 16;
   const dt = Math.min(0.05, ms / 1000);
   S.lastT = t;
+  stepFrame(dt);
+  tierWatch(ms, dt);
+  S.raf = requestAnimationFrame(frame);
+}
+// one frame of game logic for dt s, then the draw (also the test hook for gpu_night1.mjs, which times it with the loop stopped)
+function stepFrame(dt) {
   if (S.mode === 'mw') updateMW(dt);
   else if (S.mode === 'end') updateEnd(dt);
   else if (S.mode === 'act') updateAct(dt);
   else if (S.room) { if (S.mirror) updateMirror(dt); else updateRoom(dt); }
   else { updateClown(dt); updatePerformers(dt); updateCrew(dt); }
   renderFrame();
-  tierWatch(ms, dt);
-  S.raf = requestAnimationFrame(frame);
 }
 function startLoop() {
   if (S.raf || !S.running || S.lost || document.hidden || NS.paused) return;
@@ -5102,8 +5107,8 @@ function endCard() {
   d.querySelector('#again1').addEventListener('click', runRestart);
 }
 
-// test hook for night-1 checks (read-mostly; killFoe added session 25 for smoke_nights.cjs, which puts each space's figures down directly)
-window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU, endObj, perfList, endChoose, killFoe };
+// test hook for night-1 checks (read-mostly; session 25: killFoe for smoke_nights.cjs, which puts each space's figures down directly; stepFrame for gpu_night1.mjs)
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU, endObj, perfList, endChoose, killFoe, stepFrame };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

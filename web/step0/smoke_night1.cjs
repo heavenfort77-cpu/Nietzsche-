@@ -85,7 +85,8 @@ const MUTS = {
   cost: ['night1.html', 'M.spent = n; M.spentT = N1.spendShow;', 'M.spent = n;'],
   musicsoft: ['night1.html', 'N1.musicVol * musicSoft() * M.duck', 'N1.musicVol * M.duck'],
   musicduck: ['night1.html', 'function openCue() {\n  musicDuck(true);', 'function openCue() {'],
-  shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; justify-content: safe center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
+  // F35 (session 25): the shop panel placed by shopFit(); the mutation gives it the whole screen, over the glass
+  shoplow: ['night1.html', '  let best = null;\n  for (const r of regs)', '  let best = [0, 0, vw, vh, \'b\'];\n  for (const r of regs)'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
 if (process.env.MUTATE && !MUT) { console.error('unknown MUTATE ' + process.env.MUTATE); process.exit(2); }
@@ -505,14 +506,16 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
         // F36: the run measures the Light alone; the ring's other figures (route mixer: a group, plus followers from the corridor) are taken out of play for it and put back after,
         // so a Shame that the steps before left clinging (wall-clock sleeps leave different game time on a slow runner) cannot slow him
         window.__parked = N.foes.filter((f) => f.alive && f !== L); for (const f of window.__parked) { f.alive = false; f.cling = false; f.reach = 0; }
-        window.__runDiag = { fallT: 0, cling: 0, hurts: 0, lastT: N.M.t, lastH: 0, near: 9 };
-        window.__runBot = setInterval(() => { const D = window.__runDiag, gt = N.M.t - D.lastT; D.lastT = N.M.t; if (N.M.fall) D.fallT += gt; if (N.foes.some((f) => f.kind === 'shame' && f.alive && f.cling)) D.cling += gt; if ((N.M.hurtT || 0) > D.lastH + 0.1) D.hurts++; D.lastH = N.M.hurtT || 0; for (const f of N.foes) if (f.alive && f !== L) D.near = Math.min(D.near, Math.hypot(f.x - N.M.x, f.z - N.M.z));
+        window.__runDiag = { fallT: 0, cling: 0, hurts: 0, lastT: N.M.t, lastH: 0, near: 9, dist: 0, moveT: 0, lx: N.M.x, lz: N.M.z };
+        window.__runBot = setInterval(() => { const D = window.__runDiag, gt = N.M.t - D.lastT; D.lastT = N.M.t; if (N.M.fall) D.fallT += gt; else { D.dist += Math.hypot(N.M.x - D.lx, N.M.z - D.lz); D.moveT += gt; } D.lx = N.M.x; D.lz = N.M.z; if (N.foes.some((f) => f.kind === 'shame' && f.alive && f.cling)) D.cling += gt; if ((N.M.hurtT || 0) > D.lastH + 0.1) D.hurts++; D.lastH = N.M.hurtT || 0; for (const f of N.foes) if (f.alive && f !== L) D.near = Math.min(D.near, Math.hypot(f.x - N.M.x, f.z - N.M.z));
           const M = N.M, dx = M.x - L.spotX, dz = M.z - L.spotZ, d = Math.hypot(dx, dz) || 1, r = Math.hypot(M.x, M.z) || 1;
           let ax = dx / d * 0.6 - M.z / r * 0.8, az = dz / d * 0.6 + M.x / r * 0.8; const n = Math.hypot(ax, az) || 1; N.input.tx = ax / n * drag; N.input.ty = -az / n * drag; }, 30); }, drag);
       await pg.waitForFunction(() => window.__night.M.t - window.__runT0 >= 8 || window.__night.M.over, null, { timeout: 120000 });
-      const r = await pg.evaluate(() => { clearInterval(window.__runBot); const N = window.__night; for (const f of window.__parked || []) f.alive = true; window.__parked = null; N.input.tx = 0; N.input.ty = 0; const L = N.foes.find((f) => f.kind === 'light'); const D = window.__runDiag; return { inT: L.inT, t: N.M.t - window.__runT0, r: L.r, over: N.M.over, loses: L.loses, fallT: +D.fallT.toFixed(2), cling: +D.cling.toFixed(2), hurts: D.hurts, near: +D.near.toFixed(2) }; });
-      console.log('    run', drag, ': inside the spot', r.inT.toFixed(2), 's of', r.t.toFixed(1), 's, spot r', r.r, '| fallen', r.fallT, 's, Shame clung', r.cling, 's, hurt', r.hurts, 'x, nearest other figure', r.near, 'm');
+      const r = await pg.evaluate(() => { clearInterval(window.__runBot); const N = window.__night; for (const f of window.__parked || []) f.alive = true; window.__parked = null; N.input.tx = 0; N.input.ty = 0; const L = N.foes.find((f) => f.kind === 'light'); const D = window.__runDiag; return { inT: L.inT, t: N.M.t - window.__runT0, r: L.r, over: N.M.over, loses: L.loses, fallT: +D.fallT.toFixed(2), cling: +D.cling.toFixed(2), hurts: D.hurts, near: +D.near.toFixed(2), speed: +(D.dist / Math.max(0.01, D.moveT)).toFixed(2), full: +(N.S.speed * N.N1.mwTempo).toFixed(2) }; });
+      console.log('    run', drag, ': inside the spot', r.inT.toFixed(2), 's of', r.t.toFixed(1), 's, spot r', r.r, '| fallen', r.fallT, 's, Shame clung', r.cling, 's, hurt', r.hurts, 'x, nearest other figure', r.near, 'm | speed', r.speed, 'of', r.full, 'm/s');
       if (r.over || r.inT > 2) throw new Error('caught by the Light ' + JSON.stringify(r));
+      // F39 (owner 22 Nov, F24 stick curve): a thumb at 60% of the stick runs at full speed (stickFull 0.35); the Light alone no longer proves it
+      if (r.speed < 0.9 * r.full) throw new Error('slower than full speed at ' + drag * 100 + '% stick ' + JSON.stringify(r));
       // F24: running at full stick the Light chases, then loses him (lightChase), at least once in 8 s
       if (drag === 1 && r.loses < 1) throw new Error('the Light never lost him ' + JSON.stringify(r));
     });
