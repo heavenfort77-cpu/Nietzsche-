@@ -8,7 +8,7 @@ Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, n
 ## Owner requests not built (read first every session; producer finding 22 Nov: these were overtaken without telling the owner)
 
 - 22 Nov 15:13 item 7: spotlight sweep hold beats (H12).
-- 22 Nov 11:22 item 1: the other 8 cast figures through the clowns' pipeline (rigger APPROVED 23 Nov 20:48; props girl and strongman APPROVED 23 Nov, session 28; child (a girl) APPROVED 23 Nov 22:52; the Light sample built session 28 batch 3, waiting; 3 to go: the Whisper, the Stare, Shame); item 6: panel on the changed night 1 (needs a stranger report first, `design/PANEL-RULES.md`).
+- 22 Nov 11:22 item 1: the other 8 cast figures through the clowns' pipeline (rigger APPROVED 23 Nov 20:48; props girl and strongman APPROVED 23 Nov, session 28; child (a girl) APPROVED 23 Nov 22:52; the Light APPROVED 23 Nov 23:43; 3 to go: the Whisper, the Stare, Shame); item 6: panel on the changed night 1 (needs a stranger report first, `design/PANEL-RULES.md`).
 - Built in session 17 (owner to play): panel A (batch 1), panels B-G (batch 2), the owner's 7 points of 22 Nov 17:58 (batch 3, panel `design/PANEL-owner-play-22nov-b.md`).
 - Next list from the stranger cold read of the full build (`design/STRANGER-night1-full-cold-read.md`, clarity 2, fun 2, want-next 3), owner to agree: (1) the picture fills the phone screen on walking and Mirror World screens (portrait strip; its first change); act-screen developer line; keyboard hints on a phone; two Laughs numbers in the room; shop text and prices; end card (Mask unexplained, no next night); the Mirror World does not say what the constructs are or what wins.
 
@@ -190,7 +190,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
-Session 28 closed at 3 batches: child sample, child as a girl (APPROVED 22:52), the Light sample with the pipeline's per-character clips. Session 29: the owner's verdict on the Light (`art/cast2/v2/light_v2_sample.jpg`, `light_v2_clips.jpg`). Then, one per batch: the Whisper (wears the child's cap, cast2 panel), the Stare, Shame (non-humanoid rigs where they are not human-shaped); then swap the night-1 page to the approved v2 GLBs (rigger, props girl, strongman, child if approved) in one batch; then the art pass's spaces. Checks session 30 as below, plus the props girl, strongman, child and the Light in the CI `cast` matrix (the Light has no approved model, so it skips the side-by-side step like the stagehand), and the s3_check pose-sheet camera fitted to tall figures.
+Session 28 closed at 3 batches: child sample, child as a girl (APPROVED 22:52), the Light sample with the pipeline's per-character clips. Session 29: the Light is APPROVED (owner 23 Nov 23:43). Next, one per batch: the Whisper (wears the child's cap, cast2 panel), the Stare, Shame (non-humanoid rigs where they are not human-shaped); then swap the night-1 page to the approved v2 GLBs (rigger, props girl, strongman, child if approved) in one batch; then the art pass's spaces. Checks session 30 as below, plus the props girl, strongman, child and the Light in the CI `cast` matrix (the Light has no approved model, so it skips the side-by-side step like the stagehand), and the s3_check pose-sheet camera fitted to tall figures.
 
 Session 27 closed at 3 batches: strongman sample, then stripes flat, shoulders sloped, fists modelled (owner 21:45), then flex, bicep, elbow seam, back hair and straps (owner 22:02). Session 28: owner's verdict on the strongman (and on the legs, item 6 of the 22:01 critique: thicker legs change the cast2 proportions). Next: the owner's verdict on the props girl and the strongman (and whether the strongman turns); then the child (not shorter rule does not apply), then the Light, the Whisper, the Stare, Shame (non-humanoid rigs where not human-shaped), one figure per batch; then the art pass's spaces. Swap the night-1 page to v2 GLBs only after approval. Checks session 30 as below, plus the strongman and props girl in the CI `cast` matrix.
 
@@ -255,7 +255,7 @@ Owner, 22 Nov 10:13: "agree to all 3" (panel rounds 2, 3, 4) and hand over. All 
 
 ## Waiting on the owner
 
-- Session 28: approve the Light v2 sample (`art/cast2/v2/light_v2_sample.jpg`, `light_v2_clips.jpg`) or say what to change.
+- OWNER 23 Nov 23:43: "approve" (the Light v2 APPROVED as built, `art/cast2/v2/light_v2.glb`, source `clown_v2/chars/light.py`).
 - OWNER 23 Nov 22:52: "approval" (child v2, a girl, APPROVED as built, `art/cast2/v2/child_v2.glb`, source `clown_v2/chars/child.py`).
 - OWNER 23 Nov 22:22: "no need to change." (strongman v2 APPROVED as built, `art/cast2/v2/strongman_v2.glb`, source `clown_v2/chars/strongman.py`; legs and rest yaw unchanged) and "yes for girl assuming her hand won't be shown." (props girl v2 APPROVED, `art/cast2/v2/props_girl_v2.glb`, source `clown_v2/chars/props_girl.py`; the pie-over-fingers gap stays).
 - OWNER 23 Nov 20:48: "rigger is ok as from that angle won't see hand". Rigger v2 APPROVED as built (`art/cast2/v2/rigger_v2.glb`, source `clown_v2/chars/rigger.py`); the hands short of the cable stay. OWNER DECISIONS 23 Nov, session 26: checks wait for session 30 ("No, wait"); the three nights' loop works, start the art pass ("Loop works, start art").
