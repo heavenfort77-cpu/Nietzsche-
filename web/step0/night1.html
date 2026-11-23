@@ -22,6 +22,9 @@
   #panel button { font: inherit; font-weight: 600; padding: 10px 22px; border-radius: 6px; border: 0; background: #cfaa4e; color: #1e1714; }
   #state { font-size: 12px; opacity: .8; }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity var(--fade, 300ms) linear; }
+  /* session 24: the ending's black, and its two buttons side by side */
+  .card .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  #fade.black { opacity: 1; }
   #roomBar { position: fixed; left: 0; right: 0; bottom: 34px; display: flex; justify-content: center; gap: 10px; }
   #gains { position: absolute; right: 10px; top: 8px; text-align: right; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; }
   #carry { font-size: 12px; font-weight: 400; opacity: .85; }
@@ -643,12 +646,15 @@ const CONFIG = Object.freeze({
     pie: { keys: ['KeyK'], mouse: [2], label: 'Throw a pie' },
     // owner 23 Nov 06:22 item 5 ("the first fall should be name as dodge but keep the animation"): the one name the player reads for the Mirror pratfall (pause card, pad, key hint); 'Pratfall' switches it back; the action id, animation and sound are unchanged
     fall: { keys: ['Space'], mouse: [], label: 'Dodge' },
+    // session 24 batch 3: the ending's two worded buttons
+    quit: { keys: ['Digit1'], mouse: [], label: 'Bow, say "I quit" and walk out' },
+    again: { keys: ['Digit2'], mouse: [], label: 'Perform one last act' },
   },
   // which actions each scene listens to (the pause card lists these; a check fails if two share a key in one scene)
   bindScenes: {
     title: ['confirm'], paint: ['confirm', 'pause'], walk: ['up', 'down', 'left', 'right', 'interact', 'pause'], room: ['turnL', 'turnR', 'sit', 'pause'],
     board: ['act1', 'act2', 'act3', 'act4', 'act5', 'pause'], note: ['confirm', 'back'], rehearse: ['back'], mirror: ['press', 'pause'], act: ['pause'], small: ['confirm', 'pause'],
-    mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'],
+    mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'], ending: ['quit', 'again', 'pause'],
   },
   // idle and walk blend time, s
   blend: 0.2,
@@ -778,7 +784,7 @@ const N1 = Object.freeze({
   },
   // band edges (deep, shadow, base, light) and the light toward the viewer, view space (build.py light -0.45, -0.72, 0.53 seen from its camera)
   bands: [0, 0.30, 0.55, 0.82], lightDir: [-0.45, 0.53, 0.72],
-  // corridor crew (GDD night loop step 2, panel round 1 D): Blender floor (x, y) metres, rest yaw degrees, the night-1 line (warm), verb;
+  // corridor crew (GDD night loop step 2, panel round 1 D): Blender floor (x, y) metres, rest yaw degrees, the night-1 line (warm), verb.
   // lines: a night's own line (GDD: warm on nights 1-2, polite after; session 24 lead's wording for night 3)
   crew: [
     { id: 'stagehand', title: 'Stagehand', at: [0.62, 4.9], yaw: -90, line: 'Evening. Full house tonight.', lines: { 3: 'Good evening.' } },
@@ -893,6 +899,34 @@ const N1 = Object.freeze({
   // their box-and-shape figures: ramp names (N1.ramps) for body, dark parts and the trim
   sergeantLook: { body: 'M_MID', dark: 'M_DARK', trim: 'CRIMSON', hat: 'BLACK', plume: 'PAINT' },
   weigherLook: { body: 'SILVER', dark: 'M_DARK', dial: 'PAINT', needle: 'CRIMSON' },
+  // ----- session 24 batch 3 (build plan 24.3; GDD "Final night and the ending", owner 22 Nov 23:54): the last night's Performer, his pale double (the v2 Performer model) -----
+  // switch: false = the last night ends like the others
+  performerFight: true,
+  // after the arena's group is down on the last night it enters here (x, z); HP = hp x (1 + Mask x hpPerMask), never below hp, at most hpCap x hp (lead's starting values)
+  // it keeps keep m from him at speed m/s; gap s between attacks, recover s after one (when it is open to gags); its opening run shows each attack it holds for showSecs s
+  performer: { h: 1.8, hp: 12, hpPerMask: 0.04, hpCap: 1.4, shards: 0, at: [0, -4.5], keep: 2.6, speed: 1.1, gap: 1.1, recover: 0.7, showSecs: 0.9 },
+  // its attacks, one for the fall it always has and one per act or ability he bought (GDD: every act bought is one more attack); tell s (at least 0.6, each with its own sound).
+  // line: a line on the floor from it toward him (len, width m), then it moves along it (move m in moveSecs s; 0 = a thrust); spot: a ring where he stood (r m), then it lands.
+  // answer: after each gag he lands it answers within r m in front of it. hit = Laughs. Lead's defaults for the open GDD row "the Performer's attack for each buyable act"
+  perfAttacks: {
+    fall: { name: 'the deliberate fall', kind: 'line', tell: 0.7, len: 4.4, width: 1.0, move: 4.0, moveSecs: 0.35, hit: 10, hz: [300, 150] },
+    sweep: { name: 'the spotlight sweep', kind: 'spot', tell: 0.7, r: 1.4, hit: 8, hz: [1400, 2600] },
+    scale: { name: 'the talking scale', kind: 'spot', tell: 0.8, r: 1.7, hit: 10, hz: [300, 900] },
+    drill: { name: 'the soldier drill', kind: 'line', tell: 0.7, len: 3.4, width: 0.8, move: 0, moveSecs: 0.15, hit: 9, hz: [520, 380] },
+    dash: { name: 'the dash', kind: 'line', tell: 0.6, len: 5.2, width: 0.9, move: 5.0, moveSecs: 0.25, hit: 9, hz: [800, 1600] },
+    trade: { name: 'tit-for-tat', kind: 'answer', tell: 0.6, r: 2.0, hit: 8, hz: [700, 500] },
+  },
+  perfTip: 'The Performer. It does every act you bought. Dodge its tell, then strike.',
+  // the ending (GDD steps 1-4): black after the shatter for s, the Nietzsche line, the warm light (colour, radius m), the audience one by one (count, first gap s, each gap x, then held s),
+  // the clapping cut to silence, then the two worded buttons
+  endBlackSecs: 1.4, endWarmCol: '#FFD9A0', endWarmR: 1.5,
+  // the warm light's floor disc and cone opacity, and the camera's field of view in the ending (degrees; wide enough for the audience round the ring)
+  endWarmOp: [0.9, 0.2], endFov: 44,
+  // where his light opens: the ring's middle (he is placed there under the black), x, z
+  endAt: [0, 0.5], endAudience: 36, endClapGap: 0.5, endClapFaster: 0.9, endClapHold: 1.6,
+  endQuitText: 'Bow, say "I quit" and walk out', endAgainText: 'Perform one last act',
+  // after a choice: the bow s, his line, the walk out to (x, z) at the ring's edge where the child stands, the last act's falls, black and silence s before the restart button
+  endBowSecs: 1.4, endQuitLine: 'I quit.', endExit: [0, -7.4], endFalls: 3, endFallGap: 1.7, endHoldSecs: 2.5,
   // a passing tip (cost, gnaw, corridor; a construct's first sighting when mwHints is off), s on screen
   tipSecs: 4.5,
   // owner 23 Nov 06:22 ("solve 1 and 2", player: "in the mirror I also don't know what to do"): switch, the insecurities come one at a time in the ring; the next enters when the one before is down (the Light: put out); false = all of tonight's from the start, as before
@@ -957,7 +991,7 @@ const N1 = Object.freeze({
   // owner 23 Nov 06:22 item 4 ("all insecurities have hints"): switch, the insecurity he faces shows its hint as one fixed line from its entry until it is down; false = the first sighting tip for tipSecs, as before
   mwHints: true,
   // the hint of each insecurity (the owner edits the wording; "dodge" is the Mirror pratfall, see CONFIG.binds.fall.label)
-  mwHint: { light: 'Three gags on its lamp.', stare: 'Hit it from the side.', shame: 'Dodge to shake it off.', whisper: 'Step past it. Stay on your feet.', sergeant: 'Hit it between the drum beats.', weigher: 'Spend Laughs and it gets lighter.' },
+  mwHint: { light: 'Three gags on its lamp.', stare: 'Hit it from the side.', shame: 'Dodge to shake it off.', whisper: 'Step past it. Stay on your feet.', sergeant: 'Hit it between the drum beats.', weigher: 'Spend Laughs and it gets lighter.', performer: 'Dodge its tell, then strike.' },
   // owner 23 Nov 06:22 item 3 ("should let player know he is fighting insecurities"; a count of figures: no): the line shown on entering the Mirror World ('' = none)
   mwNameText: 'These are his insecurities. Face each one.',
   // how long that line stays, s (the action is not paused)
@@ -965,7 +999,7 @@ const N1 = Object.freeze({
   // owner 23 Nov 00:32 "player must know laugh is limited else they will spam": the cost shows on each gag button and in the hint; the Laughs count shows the spend for spendShow s and turns red at lowLaughs or under
   spendShow: 0.7, lowLaughs: 20,
   // shop (prices are glass pieces on the ledge, never numbers)
-  // act: an act from N1.acts, sold once it was tried on the board (NS.tried) or from night `from`; note on the night it was tried, later after;
+  // act: an act from N1.acts, sold once it was tried on the board (NS.tried) or from night `from`; note on the night it was tried, later after.
   // others (abilities) are always sold. Prices for scale, drill and trade are the lead's starting values (session 24), to tune in play
   shop: [
     { id: 'sweep', title: 'Spotlight sweep', note: 'Lent tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
@@ -1011,7 +1045,7 @@ const N1 = Object.freeze({
   // the track files, by key
   musicFiles: { cold: 'music/cold_tea_and_morning_light.mp3', waltz: 'music/the_trapeze_waltz.mp3', weight: 'music/the_weight_of_remaining.mp3' },
   // the track each scene plays; a scene not listed keeps the track already playing (backstage: cold tea; walk to the ring and the act: the waltz; walk back, Mirror World, shop and end: the weight)
-  musicScene: { paint: 'cold', bravado: 'cold', boardwall: 'cold', note: 'cold', rehearse: 'cold', walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight', mw: 'weight', out: 'weight', small: 'weight', kept: 'weight', shop: 'weight', end: 'weight' },
+  musicScene: { paint: 'cold', bravado: 'cold', boardwall: 'cold', note: 'cold', rehearse: 'cold', walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight', mw: 'weight', out: 'weight', small: 'weight', kept: 'weight', shop: 'weight', end: 'weight', ending: '' },
   // music volume, 0-1 (laughs, horn and the cue sit on top)
   musicVol: 0.55,
   // share of musicVol per scene, a scene not listed plays at 1 (owner 22 Nov 23:08: softer in the room and the Mirror World; read as the music level)
@@ -1726,6 +1760,7 @@ function fit() {
 function renderFrame() {
   renderer.clear();
   if (S.mode === 'mw') { renderer.render(mwScene, mwCam); return; }
+  if (S.mode === 'end') { renderer.render(endScene, mwCam); return; }
   if (S.mode === 'act') { renderer.render(actScene, actCam); return; }
   if (S.room && NS.press) renderer.render(pressScene, pressCam);
   else if (S.room) { renderer.render(roomScene, roomCam); if (S.mirror) renderReflection(); }
@@ -1747,6 +1782,7 @@ function frame(t) {
   const dt = Math.min(0.05, ms / 1000);
   S.lastT = t;
   if (S.mode === 'mw') updateMW(dt);
+  else if (S.mode === 'end') updateEnd(dt);
   else if (S.mode === 'act') updateAct(dt);
   else if (S.room) { if (S.mirror) updateMirror(dt); else updateRoom(dt); }
   else { updateClown(dt); updatePerformers(dt); updateCrew(dt); }
@@ -1827,6 +1863,8 @@ async function boot() {
   }
   await n1Load();
   buildBoardPaper();
+  // session 24 batch 3: the Performer (v2 model) is loaded only on the last night, just before use; never in the wings (the panel: only in a prop mirror)
+  if (lastNightFight()) { chars.performer = await loadChar('performer', tl); scene.remove(chars.performer.root, chars.performer.blob); }
   placeStart(false);
   fit();
   // warm-up: every shader and texture once under the loading panel (walk, room with the clown and flakes, vignette)
@@ -2179,8 +2217,11 @@ function n1Warm() {
   const c = chars.clown;
   mwScene.add(c.root);
   for (const k of MW_KINDS) mwScene.add(cast[k]);
-  // session 24: the stripe and the weigh ring compile here too
+  // session 24: the stripe and the weigh ring compile here too; batch 3: the Performer in the Mirror World, and the ending's scene with him in it
   mwScene.add(pool.stripe, pool.weighRing);
+  const pr = chars.performer ? chars.performer.root : null, prAt = pr && pr.parent;
+  if (pr) mwScene.add(pr);
+  endScene.add(c.root); endObj.crowd.count = 1; renderer.compile(endScene, mwCam); endObj.crowd.count = 0; mwScene.add(c.root);
   // session 23: the photograph room's lens and cone and the void's outlines, line and door fill compile here too (shown for the compile only)
   for (const h of NS.castHulls) h.visible = true;
   NS.voidLine.count = 1; mwScene.add(pool.lens, pool.wedge);
@@ -2188,6 +2229,7 @@ function n1Warm() {
   for (const h of NS.castHulls) h.visible = false;
   NS.voidLine.count = 0; mwScene.remove(pool.lens, pool.wedge, pool.stripe, pool.weighRing);
   for (const k of MW_KINDS) mwScene.remove(cast[k]);
+  if (pr) { if (prAt) prAt.add(pr); else mwScene.remove(pr); }
   // the act's ring, props, hat and broom compile here (hidden props shown for the compile only)
   actScene.add(c.root, cast.child);
   const hide = [actObj.hat, actObj.dent, actObj.broom];
@@ -2273,7 +2315,7 @@ function musicHold(on) {
 function show(id, html) {
   hideCard();
   const d = document.createElement('div');
-  d.className = 'card' + (id === 'dazai' || id === 'small' || ((id === 'crowd' || id === 'actLine') && N1.actShow) ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
+  d.className = 'card' + (id === 'dazai' || id === 'small' || id === 'ending' || ((id === 'crowd' || id === 'actLine') && N1.actShow) ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
   d.id = 'card_' + id;
   if (N1.continueCards.indexOf(id) >= 0) NS.contCount++;
   d.innerHTML = html;
@@ -3539,6 +3581,7 @@ function bindScene() {
   if (NS.scene === 'rehearse') return 'rehearse';
   if (NS.scene === 'boardwall') return 'board';
   if (NS.scene === 'small') return 'small';
+  if (NS.scene === 'ending') return 'ending';
   if (S.mode === 'act') return 'act';
   if (S.mode === 'mw') return 'mw';
   if (S.mirror === 'entry') return 'mirror';
@@ -3582,6 +3625,7 @@ function n1Key(e) {
   if (NS.scene === 'bravado') return true;
   if (NS.scene === 'walk') { if (bound('interact', e.code)) { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (bound('confirm', e.code)) smallPress(); return true; }
+  if (NS.scene === 'ending') { if (bound('quit', e.code)) endChoose('quit'); else if (bound('again', e.code)) endChoose('again'); return true; }
   if (NS.scene === 'boardwall') { let i = -1; for (let k = 0; k < NS.acts.length && k < 5; k++) if (bound('act' + (k + 1), e.code)) i = k; if (NS.acts[i]) pickAct(NS.acts[i].id); return true; }
   if (NS.scene === 'note') { if (bound('confirm', e.code)) performAct(NS.noteAct); else if (bound('back', e.code)) noteBack(); return true; }
   if (S.mode === 'act') return true;
@@ -3686,7 +3730,7 @@ function buildMW() {
   pool.stripe.geometry.rotateX(-Math.PI / 2);
   pool.weighRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 32), new THREE.MeshBasicMaterial({ color: '#F4FAFB', transparent: true, opacity: 0.55, depthWrite: false }));
   pool.weighRing.geometry.rotateX(-Math.PI / 2);
-  buildParade(); buildTilt();
+  buildParade(); buildTilt(); buildEnd();
   mwCam.position.fromArray(N1.mwCamPos);
   buildUnworld();
 }
@@ -3875,6 +3919,242 @@ function mwWeigher(M, f, dt, dx, dz, d) {
   }
   if (d < c.reach) { f.ph = 1; f.phT = 0; mwScene.add(pool.weighRing); tone(300, 900, c.tell, 'triangle', 0.05); return; }
   const st = c.speed * (c.lean + w) * dt; f.x += dx / d * st; f.z += dz / d * st;
+}
+// ----- session 24 batch 3: the last night (GDD "Final night and the ending") -----
+function lastNightFight() { return N1.performerFight && NS.night === N1.nights; }
+// what the Performer holds: the fall (his own first act) and one attack per act or ability he bought, in the order he bought them
+function perfList() { return ['fall'].concat(NS.bought.filter((id) => N1.perfAttacks[id] && id !== 'fall')); }
+// the arena is clear on the last night: his pale double steps in; it first runs through every act it holds, then fights
+function perfEnter(M) {
+  M.perfMet = true; M.winT = 0;
+  const P = N1.performer, c = chars.performer, list = perfList();
+  cast.performer = c.root;
+  addFoe('performer');
+  const f = foes[foes.length - 1], k = THREE.MathUtils.clamp(1 + NS.mask * P.hpPerMask, 1, P.hpCap);
+  if (Math.hypot(f.x - M.x, f.z - M.z) < N1.mwSpawnClear) f.z = -f.z;
+  f.hp = f.hpMax = Math.round(P.hp * k);
+  f.list = list.filter((id) => N1.perfAttacks[id].kind !== 'answer'); f.answers = list.indexOf('trade') >= 0; f.k = 0; f.ansT = -1; f.atk = null;
+  f.show = true; f.showI = -1; f.phT = 0; f.ph = 0; f.pop = 0.4;
+  mwScene.add(c.blob);
+  c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play(); f.moving = false;
+  setFace(c, 'smile');
+  tip(N1.perfTip);
+  tone(2600, 300, 0.4, 'square', 0.07);
+}
+// one attack's tell starts: its line or ring shows, its sound plays, its aim locks
+function perfTell(M, f, id) {
+  const a = N1.perfAttacks[id];
+  f.atk = id; f.ph = 1; f.phT = 0; f.hitDone = false;
+  if (a.kind === 'line') {
+    f.sx = Math.sin(f.yaw); f.sz = Math.cos(f.yaw); f.ox = f.x; f.oz = f.z;
+    pool.stripe.scale.set(a.width / N1.sergeant.width, 1, a.len / N1.sergeant.len);
+    pool.stripe.position.set(f.x + f.sx * a.len / 2, 0.03, f.z + f.sz * a.len / 2); pool.stripe.rotation.y = f.yaw; mwScene.add(pool.stripe);
+  } else { f.tx = M.x; f.tz = M.z; pool.weighRing.position.set(M.x, 0.03, M.z); pool.weighRing.scale.setScalar(a.r); mwScene.add(pool.weighRing); }
+  tone(a.hz[0], a.hz[1], a.tell, 'sawtooth', 0.05); tone(2400, 2000, 0.05, 'square', 0.03);
+}
+function perfClip(c, slap) {
+  const to = slap && c.slapClip ? c.mixer.clipAction(c.slapClip) : null;
+  if (to) { to.setLoop(THREE.LoopOnce, 1); to.reset().setEffectiveWeight(1).play(); }
+}
+function mwPerformer(M, f, dt, dx, dz, d) {
+  const P = f.cfg, c = chars.performer;
+  c.mixer.update(dt); c.blob.position.set(f.x, 0.02, f.z);
+  f.phT += dt;
+  // the opening run: each act it holds, in a row, its name on the tip line; it cannot be hurt yet
+  if (f.show) {
+    f.yaw = Math.atan2(dx, dz);
+    const i = Math.floor(f.phT / P.showSecs);
+    if (i !== f.showI) {
+      f.showI = i;
+      if (i >= f.list.length + (f.answers ? 1 : 0)) { f.show = false; f.ph = 0; f.phT = 0; return; }
+      const id = i < f.list.length ? f.list[i] : 'trade';
+      perfClip(c, true); f.pop = 0.15; tone(N1.perfAttacks[id].hz[0], N1.perfAttacks[id].hz[1], 0.2, 'triangle', 0.05);
+      M.tip = 'The Performer runs through ' + N1.perfAttacks[id].name + '.'; M.tipT = P.showSecs;
+    }
+    return;
+  }
+  // tit-for-tat: it answers a landed gag within reach in front of it
+  if (f.ansT >= 0) {
+    f.ansT += dt; pool.ring.position.set(f.x, 0.03, f.z); pool.ring.scale.setScalar(N1.perfAttacks.trade.r);
+    if (f.ansT >= N1.perfAttacks.trade.tell) {
+      const a = N1.perfAttacks.trade, front = (dx * Math.sin(f.yaw) + dz * Math.cos(f.yaw)) / d;
+      if (d < a.r && front > 0) mwHurt(a.hit);
+      f.ansT = -1; mwScene.remove(pool.ring); perfClip(c, true); f.pop = 0.15; tone(900, 300, 0.07, 'square', 0.09);
+    }
+  }
+  if (f.ph === 0) {
+    // keep its distance, facing him; the next attack after the gap
+    f.yaw = Math.atan2(dx, dz);
+    const want = d > P.keep + 0.3 ? 1 : d < P.keep - 0.6 ? -0.6 : 0, moving = want !== 0;
+    if (want) { const st = P.speed * want * dt; f.x += dx / d * st; f.z += dz / d * st; }
+    const rr = Math.hypot(f.x, f.z); if (rr > N1.mwRadius) { f.x *= N1.mwRadius / rr; f.z *= N1.mwRadius / rr; }
+    if (moving !== f.moving) { f.moving = moving; if (moving) { c.walk.reset().play(); c.idle.crossFadeTo(c.walk, 0.2, false); } else { c.idle.reset().play(); c.walk.crossFadeTo(c.idle, 0.2, false); } }
+    if (f.phT >= P.gap && f.list.length) { if (f.moving) { f.moving = false; c.idle.reset().play(); c.walk.crossFadeTo(c.idle, 0.1, false); } perfTell(M, f, f.list[f.k++ % f.list.length]); }
+    return;
+  }
+  const a = N1.perfAttacks[f.atk];
+  if (f.ph === 1) {
+    if (f.phT < a.tell) return;
+    f.ph = 2; f.phT = 0; perfClip(c, true); f.pop = 0.12;
+    mwScene.remove(pool.stripe, pool.weighRing);
+    if (a.kind === 'spot') { if (Math.hypot(M.x - f.tx, M.z - f.tz) < a.r) mwHurt(a.hit); tone(160, 60, 0.18, 'sine', 0.12); f.ph = 3; f.phT = 0; }
+    return;
+  }
+  if (f.ph === 2) {
+    // a line attack: it moves along its line (or thrusts where it stands); caught on the line costs Laughs, once
+    const k = Math.min(1, f.phT / a.moveSecs);
+    f.x = f.ox + f.sx * a.move * k; f.z = f.oz + f.sz * a.move * k;
+    const t = (M.x - f.ox) * f.sx + (M.z - f.oz) * f.sz, side = Math.abs((M.x - f.ox) * f.sz - (M.z - f.oz) * f.sx);
+    if (!f.hitDone && t > -0.3 && t < Math.max(a.move * k, 0.3) + 0.6 && t < a.len && side < a.width / 2) { f.hitDone = true; mwHurt(a.hit); }
+    if (k >= 1) { f.ph = 3; f.phT = 0; tone(900, 200, 0.1, 'square', 0.07); }
+    return;
+  }
+  // open to gags while it recovers
+  if (f.phT >= P.recover) { f.ph = 0; f.phT = 0; }
+}
+// the Performer shatters with the mirror (GDD ending step 1)
+function perfShatter(f) {
+  mwScene.remove(f.root, chars.performer.blob, pool.stripe, pool.weighRing, pool.ring);
+  el.flash.classList.add('on'); setTimeout(() => el.flash.classList.remove('on'), 160);
+  tone(3200, 200, 0.6, 'square', 0.08); tone(2100, 900, 0.4, 'sawtooth', 0.05);
+}
+// ----- the ending: black and silence, the Nietzsche line, his own warm light, the audience one by one clapping, cut to silence, two worded buttons -----
+const endScene = new THREE.Scene();
+const endObj = { warm: null, cone: null, crowd: null, child: null, clap: null };
+function buildEnd() {
+  endScene.background = new THREE.Color('#000000');
+  const warm = new THREE.MeshBasicMaterial({ color: N1.endWarmCol, transparent: true, opacity: N1.endWarmOp[0], blending: THREE.AdditiveBlending, depthWrite: false });
+  endObj.warm = new THREE.Mesh(new THREE.CircleGeometry(N1.endWarmR, 40), warm); endObj.warm.rotation.x = -Math.PI / 2; endObj.warm.position.y = 0.02;
+  const cone = new THREE.MeshBasicMaterial({ color: N1.endWarmCol, transparent: true, opacity: N1.endWarmOp[1], blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  endObj.cone = new THREE.Mesh(new THREE.CylinderGeometry(0.15, N1.endWarmR, 9, 32, 1, true), cone); endObj.cone.position.y = 4.5;
+  // the audience: one instanced draw of dark figures on the far half of the ring, shown one by one (instance count); never culled apart (bounds = the ring)
+  const n = N1.endAudience, im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.46, 1.15, 0.34), new THREE.MeshBasicMaterial({ color: '#2B2428' }), n);
+  const m4 = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0), rnd = actRand(4401);
+  for (let i = 0; i < n; i++) {
+    const row = i % 3, a = -Math.PI * 0.42 + Math.PI * 0.84 * ((Math.floor(i / 3) + 0.5 * row) / (n / 3)) + (rnd() - 0.5) * 0.05, r = 7.6 + row * 1.3;
+    p.set(Math.sin(a) * r, 0.58 + row * 0.55, -Math.cos(a) * r); q.setFromAxisAngle(up, -a + Math.PI); s.set(1, 0.85 + rnd() * 0.3, 1);
+    im.setMatrixAt(i, m4.compose(p, q, s));
+  }
+  im.count = 0; im.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, -4), 14);
+  endObj.crowd = im;
+  endScene.add(endObj.warm, endObj.cone, im);
+  for (const o of [endObj.warm, endObj.cone, im]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
+}
+// one clap: a short noise burst, the buffer made once on first use
+function clap() {
+  const a = audio(); if (!a) return;
+  if (!endObj.clap) {
+    const b = a.createBuffer(1, Math.floor(a.sampleRate * 0.07), a.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (a.sampleRate * 0.012));
+    endObj.clap = b;
+  }
+  const src = a.createBufferSource(), g = a.createGain();
+  src.buffer = endObj.clap; src.playbackRate.value = 0.85 + Math.random() * 0.3; g.gain.value = 0.18;
+  src.connect(g).connect(a.destination); src.start();
+}
+function endingStart(M) {
+  M.over = 'ending'; NS.result = 'ending';
+  M.gnawLvl = 0; el.gnaw.className = ''; gnawSound(0);
+  setScene('ending');
+  // silence: the music is cut at once, not faded
+  if (NS.music) { NS.music.key = ''; musicApply(0.01); }
+  el.mwHud.classList.add('hidden'); el.pads.classList.add('hidden'); el.mwTip.textContent = ''; el.hint.textContent = ''; el.hint.classList.remove('padded');
+  endFade(true, 200);
+  NS.end = { t: 0, step: 'black', clapN: 0, clapT: 0, gap: N1.endClapGap, choice: '', walk: 0, falls: 0, x: M.x, z: M.z, yaw: M.yaw };
+  // the ending's own loop and scene from here (black under the fade until his light opens)
+  S.mode = 'end';
+}
+// the ending's steps run on game time in updateEnd
+function updateEnd(dt) {
+  const E = NS.end, c = chars.clown;
+  E.t += dt;
+  c.mixer.update(dt);
+  if (E.step === 'black' && E.t >= N1.endBlackSecs) { E.step = 'quote'; endQuote(); }
+  if (E.step === 'clap') {
+    E.clapT += dt;
+    if (E.clapN < N1.endAudience && E.clapT >= E.gap) {
+      E.clapT = 0; E.gap = Math.max(0.05, E.gap * N1.endClapFaster); E.clapN++;
+      endObj.crowd.count = E.clapN; clap();
+      if (E.clapN > 6) clap();
+    }
+    if (E.clapN >= N1.endAudience && E.clapT >= N1.endClapHold) {
+      // cut to silence (Evangelion): no more claps from here on; the buttons
+      E.step = 'choose'; endButtons();
+    }
+  }
+  if (E.step === 'quit') endQuit(E, c, dt);
+  if (E.step === 'again') endAgain(E, c, dt);
+  if (E.step === 'done' && E.t >= N1.endHoldSecs && !E.shown) { E.shown = true; endRestartCard(); }
+  moodRestore(c); moodApply(c, gpMood(c, NS.endMood || CONFIG.moodRoom));
+  if (gpEval(c, dt)) { gpApply(c); if (c.gp.kind === 'pop' && gpDone(c)) gpStop(c); }
+  c.root.position.set(E.x, 0, E.z); c.root.rotation.y = E.yaw; c.blob.position.set(E.x, 0.02, E.z);
+}
+// the cards of the ending (each made once, when its step starts)
+function endQuote() {
+  const q = quoteFor('nietzsche');
+  const d = show('nietzsche', `<div class="quote">"${q[0]}"<small>${q[1]}</small></div><button id="toLight" class="held">Go on</button>`);
+  const b = d.querySelector('#toLight');
+  b.addEventListener('click', endLight);
+  setTimeout(() => { if (NS.card === d) b.classList.remove('held'); }, N1.nietzscheHoldMs);
+}
+function endButtons() {
+  const d = show('ending', `<div class="row"><button id="endQuit">${N1.endQuitText}</button><button id="endAgain">${N1.endAgainText}</button></div>`);
+  d.querySelector('#endQuit').addEventListener('click', () => endChoose('quit'));
+  d.querySelector('#endAgain').addEventListener('click', () => endChoose('again'));
+}
+function endRestartCard() {
+  const d = show('end', `<button id="again1">Start again from night 1</button>`);
+  d.querySelector('#again1').addEventListener('click', runRestart);
+}
+// black over the picture (#fade.black), its fade time from the style variable
+function endFade(on, ms) { el.fade.style.setProperty('--fade', ms + 'ms'); el.fade.classList.toggle('black', on); }
+// his own warm light opens on him; the mask is gone; the audience starts to appear
+function endLight() {
+  const E = NS.end, c = chars.clown, M = NS.mw;
+  if (!E || E.step !== 'quote') return;
+  hideCard();
+  E.step = 'clap'; E.t = 0; E.x = N1.endAt[0]; E.z = N1.endAt[1]; E.yaw = Math.atan2(N1.mwCamPos[0] - E.x, N1.mwCamPos[2] - E.z);
+  endScene.add(c.root, c.blob);
+  endObj.warm.position.set(E.x, 0.02, E.z); endObj.cone.position.set(E.x, 4.5, E.z); endObj.warm.updateMatrix(); endObj.cone.updateMatrix();
+  c.face.material.uniforms.uPaintAmt.value = 0;
+  shared.uGradeAmt.value = 0; rampU.uGradeAmt.value = 0; mwPaper(false); mwCam.up.set(0, 1, 0);
+  c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
+  setFace(c, 'sad');
+  mwTmp.look.set(E.x, N1.mwLookH + 0.8, E.z); mwCam.position.fromArray(N1.mwCamPos); mwCam.fov = N1.endFov; mwCam.updateProjectionMatrix(); mwCam.lookAt(mwTmp.look); mwCam.updateMatrixWorld();
+  S.mode = 'end';
+  endFade(false, 1200);
+}
+function endChoose(k) {
+  const E = NS.end;
+  if (!E || E.step !== 'choose') return;
+  hideCard(); E.step = k; E.t = 0;
+}
+// 1: he bows, says "I quit" and walks out of the ring past the child at the exit, out of his light
+function endQuit(E, c, dt) {
+  if (!E.child) {
+    E.child = cast.child; endScene.add(cast.child); cast.child.position.set(N1.endExit[0] + 0.8, 0, N1.endExit[1]); cast.child.rotation.set(0, Math.atan2(E.x - N1.endExit[0], E.z - N1.endExit[1]), 0); cast.child.updateMatrixWorld(true);
+  }
+  const b = N1.endBowSecs;
+  if (E.t < b) { const k = Math.sin(Math.PI * Math.min(1, E.t / b)); NS.endMood = { tempo: 1, chest: N1.bowChest * k, neck: 0, head: 0 }; return; }
+  NS.endMood = null;
+  if (E.t < b + 1.6) { setPrompt(N1.endQuitLine); return; }
+  setPrompt('');
+  if (!E.walk) { E.walk = 1; setFace(c, 'sad'); c.walk.reset().play(); c.idle.crossFadeTo(c.walk, 0.2, false); }
+  const dx = N1.endExit[0] - E.x, dz = N1.endExit[1] - E.z, d = Math.hypot(dx, dz);
+  if (d > 0.2) { const st = Math.min(d, S.speed * dt); E.x += dx / d * st; E.z += dz / d * st; E.yaw = Math.atan2(dx, dz); return; }
+  E.step = 'done'; E.t = 0; c.walk.stop(); c.idle.reset().play();
+  endFade(true, 1500);
+}
+// 2: one last act, shown with no judgement: his falls in the light, the audience still, no laugh, no numbers
+function endAgain(E, c, dt) {
+  const n = Math.floor(E.t / N1.endFallGap);
+  if (n >= N1.endFalls) {
+    E.step = 'done'; E.t = 0;
+    endFade(true, 1500);
+    return;
+  }
+  if (n >= E.falls) { E.falls = n + 1; E.popAt = E.t + 0.9; gpStart(c, 'prat'); setFace(c, 'smile'); tone(220, 110, 0.15, 'triangle', 0.08); }
+  if (E.popAt > 0 && E.t >= E.popAt) { E.popAt = 0; gpStart(c, 'pop'); }
 }
 // the line starts again under him on entering the void: a short stroke where he stands
 const voidTmp = { m: new THREE.Matrix4(), q: new THREE.Quaternion(), p: new THREE.Vector3(), s: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0) };
@@ -4296,6 +4576,8 @@ function hitFoe(f, dmg, fromX, fromZ) {
     const a = Math.atan2(fromX - f.x, fromZ - f.z), d = Math.abs(Math.atan2(Math.sin(a - f.yaw), Math.cos(a - f.yaw)));
     if (d < deg(f.cfg.cone)) { tip('It sees it coming. Hit the Stare from the side.'); f.pop = 0.12; return; }
   }
+  // session 24 batch 3: the Performer cannot be hurt during its opening run; with tit-for-tat it answers each gag that lands
+  if (f.kind === 'performer') { if (f.show) return; if (f.answers && f.ansT < 0) { f.ansT = 0; mwScene.add(pool.ring); tone(N1.perfAttacks.trade.hz[0], N1.perfAttacks.trade.hz[1], N1.perfAttacks.trade.tell, 'sawtooth', 0.05); } }
   // session 24: on the drum beat the Sergeant parries; between beats the gag lands
   if (f.kind === 'sergeant' && Math.min(f.beatT, f.cfg.beat - f.beatT) < f.cfg.onBeat) { tip(TIPS.sergeantParry); f.pop = 0.1; tone(1500, 1400, 0.05, 'square', 0.05); return; }
   f.hp -= dmg; f.pop = 0.18;
@@ -4311,6 +4593,7 @@ function killFoe(f) {
   f.alive = false;
   // A4: the Light is put out, never beaten: no sinking, the dark lamp stays with a glint on its lens
   if (f.kind === 'light') { f.dark = true; f.clickT = 0; NS.lightOuts++; mwScene.remove(pool.beam, pool.spot, pool.rim); mwScene.add(pool.glint); }
+  else if (f.kind === 'performer') { NS.mw.beaten.push(f.kind); perfShatter(f); }
   else { f.sink = 0.6; NS.mw.beaten.push(f.kind); }
   if (f.kind === 'stare') mwScene.remove(pool.lens, pool.wedge);
   if (f.kind === 'sergeant') { f.strikeOn = false; mwScene.remove(pool.stripe); }
@@ -4563,6 +4846,7 @@ function mwFoes(M, dt) {
     else if (f.kind === 'shame') mwShame(M, f, dt, dx, dz, d);
     else if (f.kind === 'sergeant') mwSergeant(M, f, dt, dx, dz, d);
     else if (f.kind === 'weigher') mwWeigher(M, f, dt, dx, dz, d);
+    else if (f.kind === 'performer') mwPerformer(M, f, dt, dx, dz, d);
     if (f.pop > 0) f.pop -= dt;
     f.root.scale.setScalar(1 + Math.max(0, f.pop) * 0.9);
     f.root.position.set(f.x, f.lift, f.z);
@@ -4582,7 +4866,8 @@ function mwShards(M, dt, alive, final) {
     s.m.rotation.y += dt * 2;
     if (Math.hypot(M.x - s.x, M.z - s.z) < 0.7 || (alive === 0 && M.winT > 1.2)) { s.on = false; mwScene.remove(s.m); M.shards++; tone(1800, 2400, 0.08, 'sine', 0.05); }
   }
-  if (alive === 0 && !M.over) { M.winT += dt; if (final && M.winT > 1.5 && left === 0) endMW('win'); }
+  // session 24 batch 3: on the last night the arena's win brings the Performer; beating it brings the ending
+  if (alive === 0 && !M.over) { M.winT += dt; if (final && M.winT > 1.5 && left === 0) { if (lastNightFight() && !M.perfMet) perfEnter(M); else if (lastNightFight()) endingStart(M); else endMW('win'); } }
 }
 // a room's group is down: its pale door opens (once), the only way on; cuts only between spaces, never inside a fight
 function mwRoomOpen(M, alive) {
@@ -4786,15 +5071,18 @@ function endCard() {
     Crowd: ${NS.crowd}<br>
     Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}${NS.putOut ? '; the Light put out' : ''}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
     Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>${N1.endBrief ? '</details>' : ''}
-    ${NS.night < N1.nights ? `<button id="nextNight">Go on to night ${NS.night + 1}</button>` : ''}<button id="again1" class="back">Start again from night 1</button>`);
+    ${NS.night < N1.nights ? `<button id="nextNight">Go on to night ${NS.night + 1}</button>` : `<button id="retryNight">Try the last night again</button>`}<button id="again1" class="back">Start again from night 1</button>`);
   // session 24: the next night carries Mask, shards, what he bought, what he tried and the Light's widening (runNext); start over clears the run
   const nx = d.querySelector('#nextNight');
   if (nx) nx.addEventListener('click', runNext);
+  // the last night lost (or the Performer not met): the same night again, with what the run carried into it (the address hash is unchanged)
+  const rt = d.querySelector('#retryNight');
+  if (rt) rt.addEventListener('click', () => location.reload());
   d.querySelector('#again1').addEventListener('click', runRestart);
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU };
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU, endObj, perfList, endChoose };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });

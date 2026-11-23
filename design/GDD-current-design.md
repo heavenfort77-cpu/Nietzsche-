@@ -242,7 +242,14 @@ One Dazai line before each show (the mask goes on) and one Nietzsche line on lea
 
 ## Final night and the ending
 
-Rewritten from the owner's decisions of 22-23 Nov 2026. Not built.
+Rewritten from the owner's decisions of 22-23 Nov 2026. Built as box and shape on 23 Nov 2026 (session 24 batch 3, `performerFight`); lead's defaults where the GDD was open, each a CONFIG value:
+- Night 3 of the jam build is the last night. It keeps its stage act (the board and the drill tryout) and its Mirror World route; when the arena's group is down, the Performer (the v2 Performer model, loaded on that night only) steps into the ring.
+- It first runs through every act it holds, one after another, naming each on the tip line; it cannot be hurt during the run. Then it keeps about 2.6 m from him and attacks every 1.1 s, open to gags for 0.7 s after each.
+- Its attacks: the deliberate fall always (it dives along a line on the floor, 0.7 s tell, 10 Laughs); one per act or ability he bought: spotlight sweep (a ring where he stood, 0.7 s, 8), talking scale (a wider ring, 0.8 s, 10), soldier drill (a thrust along a line, 0.7 s, 9), dash (a long fast lunge along a line, 0.6 s, 9), tit-for-tat (it answers each gag he lands, 0.6 s later, within 2 m in front of it, 8). Each tell has its own sound.
+- HP 12 x (1 + 0.04 per Mask), never below 12, at most 1.4 x 12. Gnawing goes on as everywhere.
+- Lost: he wakes at the mirror as on any night; the end card offers "Try the last night again" (the same night, with what the run carried in).
+- The ending: the Performer shatters (flash, glass sound); black and silence (the music is cut, not faded); the last Nietzsche line on its own card ("I refuse to be a saint; I would rather be a clown.", Ecce Homo, Ludovici 1911); his warm light opens on him in the middle of the ring, his paint gone; the audience appears one by one round the ring, each with a clap, faster and faster (36 figures), held, then cut to silence; two worded buttons (keys 1 and 2): "Bow, say "I quit" and walk out" (he bows, "I quit." on screen, walks out to the ring's edge where the child stands, black) and "Perform one last act" (three falls in the light, no laugh, no words, no numbers, black). After either, 2.5 s of black and silence, then only "Start again from night 1".
+- Not built: the Performer's face as the cue's mask on this night; the Quit option greyed out on the last night (there is no menu Quit yet).
 
 **The fight.** The last night keeps its Dazai line. In the Mirror World he first fights the night's insecurities as on any night. Then the Performer, his pale double: the Performer is himself.
 

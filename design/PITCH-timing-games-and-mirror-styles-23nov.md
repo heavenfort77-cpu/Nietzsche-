@@ -68,7 +68,7 @@ Night 1 would then be: corridor (Whisper breaking out), ring (Light), photograph
 | 23.1 | Mirror World route mixer: a night is a list of spaces in styles, ending in the arena; groups of two or more types per space; nearest-figure hint | `night1.html` |
 | 23.2 | The Stare's photograph room (box-and-shape: one fixed shot, sepia grade in the post pass, flash tell 0.6 s) | `night1.html` |
 | 23.3 | Shame's pencil void (outline only, floor line drawn as he walks) | `night1.html` |
-| 24.1-3 | Nights 2 and 3: night counter and carry-over, board acts per night (scale, drill, tit-for-tat), whiteface take from night 2, the Sergeant and the Weigher with their spaces, the final night (Performer fight, ending buttons) | `night1.html`, `cue_model.html` |
+| 24.1-3 | DONE (session 24: 1d49ef0, 2b1dbb9 and batch 3, box and shape): Nights 2 and 3: night counter and carry-over, board acts per night (scale, drill, tit-for-tat), whiteface take from night 2, the Sergeant and the Weigher with their spaces, the final night (Performer fight, ending buttons) | `night1.html`, `cue_model.html` |
 | 25 | Checks session (requirement 6): stale checks, mutations for every new switch, perf gates, bot sweep on each timing game | `web/step0/*.cjs` |
 | 26 | Art pass after the owner says the loop works: cocolito measurement against the approved Clown-and-the-Mirror style for every new space and figure; klad CLI (built on a runner) for paper, pencil, sepia print, toy-theatre and parade flats; one sample at play size each for approval | `art/`, `web/step0/` |
 | 27 | Laptop master tier then phone dial-down, `[gpu]` runs, real-phone run, release build with cover and screenshots | all |
