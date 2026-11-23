@@ -21,8 +21,8 @@ const MUTS = {
   climb: ['night1.html', "if (b.result === 'miss') c.push(Math.min(1, sc / N1.climbBeats));", "if (b.result === 'miss') c.push(1);"],
   triplabel: ['night1.html', "verbText: 'Trip',", "verbText: 'Trip (on purpose)',"],
   laughreal: ['night1.html', 'laughReal: true,', 'laughReal: false,'],
-  whisperfeed: ['night1.html', 'w.hp += falls * N1.whisperFeed.hp;', ''],
-  host: ['night1.html', "NS.cue.src = 'cue_model.html?host=night1';", "NS.cue.src = 'cue_model.html';"],
+  whisperfeed: ['night1.html', "if (f.kind === 'whisper') { f.hp += falls * N1.whisperFeed.hp;", "if (f.kind === 'whisper') {"],
+  host: ['night1.html', "NS.cue.src = 'cue_model.html?host=night1' + (N1.actShow ? '&byact=1' : '')", "NS.cue.src = 'cue_model.html?x=1' + (N1.actShow ? '&byact=1' : '')"],
   jokes: ['night1.html', 'corridorJokes: true,', 'corridorJokes: false,'],
   mergekept: ['night1.html', 'mergeKept: true,', 'mergeKept: false,'],
   endbrief: ['night1.html', 'endBrief: true,', 'endBrief: false,'],
@@ -34,12 +34,12 @@ const MUTS = {
   actsegs: ['night1.html', "  for (const g of by) if (g) segs.push(g.m ? 'miss' : g.g ? 'good' : 'perfect');", ''],
   actexcite: ['night1.html', 'exciteMiss: 1.0,', 'exciteMiss: 0.5,'],
   acthold: ['night1.html', "  A.face = 'sad'; A.excite = 0; A.clip = 'idle';", "  A.excite = 0; A.clip = 'idle';"],
-  actskip: ['night1.html', "  el.actSkip.classList.toggle('hidden', !NS.actSeen);", "  el.actSkip.classList.add('hidden');"],
+  actskip: ['night1.html', "  setScene('act'); S.mode = 'act';\n  el.actSkip.classList.toggle('hidden', !NS.actSeen);", "  setScene('act'); S.mode = 'act';\n  el.actSkip.classList.add('hidden');"],
   tapskip: ['night1.html', "  if (NS.scene === 'small') { smallPress(); return true; }\n  if (S.mode === 'act') return true;", "  if (NS.scene === 'small') { smallPress(); return true; }\n  if (S.mode === 'act') { actSkip(); return true; }"],
   actslump: ['night1.html', 'slumpMax: { tempo: 0.78, chest: 15,', 'slumpMax: { tempo: 0.78, chest: 6,'],
   // owner's answers 22 Nov 15:58 (panel B, C, D, E; session 17 batch 2)
   mwtempo: ['night1.html', 'mwTempo: 2.3,', 'mwTempo: 1.6,'],
-  lightgrow: ['night1.html', 'lightGrow: 0.25,', 'lightGrow: 0,'],
+  lightgrow: ['night1.html', 'lightGrow: 0.15,', 'lightGrow: 0,'],
   lighttell: ['night1.html', 'lightTell: 0.4,', 'lightTell: 0,'],
   oneb: ['night1.html', 'oneBubble: true,', 'oneBubble: false,'],
   walkout: ['night1.html', 'moodOut: { tempo: 1.6,', 'moodOut: { tempo: 1.18,'],
@@ -57,7 +57,7 @@ const MUTS = {
   falls: ['night1.html', "else if (once(A, 'fall')) { A.falls++; gpStart(c, 'prat');", "else if (once(A, 'fall')) { A.falls++;"],
   intense: ['night1.html', "  if (once(A, 'roll')) { drum(actObj.roll); A.fxN.roll++; }", ''],
   vanity: ['night1.html', "  const vanity = kind === 'paint';", '  const vanity = false;'],
-  pale: ['night1.html', 'reflPale: 0.85, night: 1,', 'reflPale: 0, night: 1,'],
+  pale: ['night1.html', 'reflPale: 0.85,\n', 'reflPale: 0,\n'],
   press: ['night1.html', '  if (press && NS.press) pressMeasure();', ''],
   // owner's phone play 22 Nov 19:38 (panel 22 Nov c, session 18)
   vanitylow: ['night1.html', 'vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9],', 'vanityGlass: [4.83, 0, 1.55], vanitySize: [1.3, 1.1],'],
@@ -84,7 +84,7 @@ const MUTS = {
   cost: ['night1.html', 'M.spent = n; M.spentT = N1.spendShow;', 'M.spent = n;'],
   musicsoft: ['night1.html', 'N1.musicVol * musicSoft() * M.duck', 'N1.musicVol * M.duck'],
   musicduck: ['night1.html', 'function openCue() {\n  musicDuck(true);', 'function openCue() {'],
-  shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
+  shoplow: ['night1.html', '.card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; justify-content: safe center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }', '.card.shopAt { justify-content: center; }'],
 };
 const MUT = MUTS[process.env.MUTATE || ''];
 if (process.env.MUTATE && !MUT) { console.error('unknown MUTATE ' + process.env.MUTATE); process.exit(2); }
@@ -121,7 +121,8 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     const step = async (name, fn) => { if (until) return; if (process.env.UNTIL && name.indexOf(process.env.UNTIL) >= 0) until = true; nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); if (/Timeout/.test(e.message)) console.log('    why: ' + String(e.message).split('\n').slice(1, 9).join(' | ').slice(0, 700)); } await seen(name).catch(() => {}); };
     const shot = (n) => pg.screenshot({ path: `${OUT}/${sc.n}_${n}.png` });
     await pg.goto(url);
-    await step('loads', async () => { await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 120000 }); });
+    // session 25: this journey keeps the corridor-then-ring route (route mixer with no rooms); smoke_nights.cjs checks the rooms, nights 2-3 and the ending
+    await step('loads', async () => { await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 120000 }); await pg.evaluate(() => { window.__night.NS.routeOrder = []; }); });
     const nAt = process.env.N_AT || await pg.evaluate(() => window.__night.N1.nietzscheAt);
     await pg.evaluate((a) => { window.__night.NS.nAt = a; }, nAt);
     // fault F27 (owner 22 Nov 19:38 "what that fall he squashed"): every page pose gives the same result twice and never sinks under the floor

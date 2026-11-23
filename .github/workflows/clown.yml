@@ -61,18 +61,64 @@ jobs:
           python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt || rc=1
           node check-static.cjs step0/night1.html | tee -a step0.txt || rc=1
           node step0/smoke_night1.cjs /tmp/night1 | tee -a step0.txt || rc=1
-          # session 18 batch 1 (panel 22 Nov c): vanity lower (face in the glass), false bravado and its late reflection, F27 pose restore and floor contact, trip and act falls across the camera
-          # session 17 batch 3 (panel 22 Nov b): act notes, corridor bag and width, stick curve, Light loses him, clown poses, act intensity, vanity opening, pale reflection, hands meet
-          # session 17 batch 2 (owner's answers on panel B-G): Light speed, growth and tell; one bubble; brisk walk out; cable in the wings; walk back ends at the wings; act board wall; Mirror route; backdrop by Mask
-          # session 17 act mutations (actshow ... actslump): switch off, clown size, draw calls, loop behind the cue, segments per chain, miss excitement, the beat after, skip, slump
-          # each mutation must make its own step FAIL (H1 climb off, H2 old label, H8 tones, H1 Whisper not fed, fix 2 off, fix 5 off, old end card heading, fall sound back to the cough, sideways lean, small win off, shop panel over the glass)
-          for m in hurt:'fix 2' learn:'fix 5' endtext:'shame of living' fallsound:'item 1' lean:'item 8' smallwin:'small win' shoplow:'fix 5' climb:'climb' triplabel:'H2' laughreal:'small win, win' whisperfeed:'Whisper is fed' host:'item 4' jokes:'item 5' mergekept:'end card' endbrief:'end card' actshow:'act: walk-on' actpx:'act: clown 60-64' actcalls:'act: draw calls' actloop:'act: loop stopped' actsegs:'act: one routine segment' actexcite:'act: the crowd rocks' acthold:'act: the beat after' actskip:'only the Skip button' actslump:'walk back: slump' mwtempo:'(B)' lightgrow:'(B)' lighttell:'(B)' oneb:'(C)' walkout:'(C)' cablewings:'(D)' backend:'(E)' boardwall:'(F)' mwroute:'mirror corridor, then' unworld:'unworldly backdrop' notes:'act board on the room wall' bag:'bag of marbles' corwide:'bag of marbles' stickfull:'60% stick' lightlose:'100% stick' falls:'clown poses' intense:'intensity' vanity:'dressing table' pale:'pale form' press:'hands meet' vanitylow:'dressing table' bravado:'false bravado' bravrefl:'false bravado' gprestore:'nothing under the floor' fallfloor:'nothing under the floor' tripacross:'seen across the camera (22c-3)' missyaw:'act: falls seen across' tapskip:'only the Skip button' pressshot:'mirror entry' truemirror:'mirror entry' bindclash:'one bindings table' pause:'Esc pauses' musicmap:'music: backstage' musicpause:'Esc pauses' musicduck:'act: loop stopped' musicsoft:'music: backstage' gnaw:'standing still: they gnaw' lampgag:'Light: three gags' lightdark:'Light: three gags' hints:'hints say act' cost:'gags show what they cost'; do
-            k=${m%%:*}; want=${m#*:}
-            if MUTATE=$k UNTIL="$want" ONLY=desk node step0/smoke_night1.cjs /tmp/night1m > m_$k.txt 2>&1; then echo "FAIL night1 mutation $k: not caught (smoke passed)" | tee -a step0.txt; rc=1
-            elif grep -q "FAIL .*$want" m_$k.txt; then echo "PASS night1 mutation $k: caught ($(grep RESULT m_$k.txt))" | tee -a step0.txt
-            else echo "FAIL night1 mutation $k: failed on another step" | tee -a step0.txt; { grep 'FAIL\|RESULT' m_$k.txt || tail -c 600 m_$k.txt; } | tee -a step0.txt; rc=1; fi
-          done
+          node step0/probe_cover.cjs step0 | tee -a step0.txt || rc=1
           ! grep -q '^FAIL\|RESULT FAIL' step0.txt && [ "$rc" = 0 ]
+  # session 25: the night1 mutations (web/step0/n1_mutations.txt) on 8 runners at once; each runs every 8th line (they ran one after another in step0 before)
+  n1mut:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: { shard: [0, 1, 2, 3, 4, 5, 6, 7] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - name: night1 mutations, shard ${{ matrix.shard }} of 8 (each must FAIL its own step)
+        run: |
+          npm i --prefix /tmp/n --no-save playwright-core > /dev/null
+          export NODE_PATH=/tmp/n/node_modules
+          bash web/step0/cube25d/setup.sh
+          cd web
+          rc=0; i=0; : > mut.txt
+          while IFS=$'\t' read -r k want; do
+            case "$k" in ''|'#'*) continue;; esac
+            i=$((i+1)); [ $(( (i-1) % 8 )) = ${{ matrix.shard }} ] || continue
+            if MUTATE=$k UNTIL="$want" ONLY=desk node step0/smoke_night1.cjs /tmp/night1m > m_$k.txt 2>&1; then echo "FAIL night1 mutation $k: not caught (smoke passed)" | tee -a mut.txt; rc=1
+            elif grep 'FAIL' m_$k.txt | grep -qF -- "$want"; then echo "PASS night1 mutation $k: caught ($(grep RESULT m_$k.txt))" | tee -a mut.txt
+            else echo "FAIL night1 mutation $k: failed on another step" | tee -a mut.txt; { grep 'FAIL\|RESULT' m_$k.txt || tail -c 600 m_$k.txt; } | tee -a mut.txt; rc=1; fi
+          done < step0/n1_mutations.txt
+          echo "RESULT shard ${{ matrix.shard }}: $(grep -c '^PASS' mut.txt) caught of $(grep -c 'mutation' mut.txt)"
+          [ "$rc" = 0 ]
+  # session 25: the timing games (cue_model.html), the route mixer, the four rooms, nights 2-3, the Performer and the ending; each with its mutations
+  nights:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: { part: [games, nights, gamemut, nightmut] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - name: ${{ matrix.part }}
+        run: |
+          npm i --prefix /tmp/n --no-save playwright-core > /dev/null
+          export NODE_PATH=/tmp/n/node_modules
+          bash web/step0/cube25d/setup.sh
+          cd web/step0
+          case ${{ matrix.part }} in
+            games) node smoke_games.cjs ;;
+            nights) node smoke_nights.cjs /tmp/nights ;;
+            gamemut) MUTATE=all node smoke_games.cjs ;;
+            nightmut) MUTATE=all node smoke_nights.cjs /tmp/nightsm ;;
+          esac
   build:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[checks]') || startsWith(github.event.head_commit.message, '[gpu]')
     runs-on: ubuntu-latest

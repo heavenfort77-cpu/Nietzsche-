@@ -48,5 +48,6 @@ let fails = 0, probes = 0;
     await ctx.close();
   }
   console.log(`RESULT cover probe ${probes - fails} of ${probes} buttons reachable`);
+  if (fails) process.exitCode = 1;
   await b.close(); srv.close();
 })().catch((e) => { console.error(e); process.exit(1); });
