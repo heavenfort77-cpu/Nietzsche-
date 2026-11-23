@@ -51,6 +51,12 @@ CONFIG = dict(
     chest_z=27.0, chest_R=(11.0, 8.0, 11.0),
     # horn: tube radius, bulb radius, bell mouth radius, bell length (approved units)
     horn_r=0.45, bulb_R=2.0, bell_R=2.6, bell_len=4.2,
+    # singlet stripe height and how far it stands out from the chest (cast2 tubes were 1.9 tall, 1.05 proud)
+    stripe_w=2.2, stripe_lip=0.15,
+    # deltoid: how far down the arm its centre sits from the shoulder joint, and its radii (across, across, along)
+    delt_down=1.4, delt_R=(3.9, 3.7, 4.4),
+    # fist: finger length to the knuckle, and how far the curled finger tips turn back toward the palm
+    knuckle=1.3, curl=1.4,
     # idle: where the bulb end of the horn points (armature space; up and toward the clown)
     horn_aim=(0.0, -0.35, 1.0),
 )
@@ -129,11 +135,13 @@ def _torso(c):
     # barrel chest in the singlet
     res(32, 16)
     tag(ell(T('WARM_WHITE'), TC, TR), 'WARM_WHITE', 'hips,spine,chest')
-    # singlet stripes (cast2), skinned by height
+    # singlet stripes (cast2 heights): flat bands that follow the chest's curve, standing proud only by stripe_lip
+    # (session 27: the cast2 round tubes read as ropes tied round him)
     res(32, 6)
+    h = c['stripe_w'] / 2
     for z, bones in ((19.8, 'hips,spine'), (23.4, 'spine'), (27.0, 'spine,chest'), (30.6, 'chest')):
-        R = TR[0] * math.sqrt(max(1 - ((z - TC[2]) / TR[2]) ** 2, 0.05))
-        tag(torus(T('CRIMSON'), (0, 0, z), R + 0.1, 0.95, scale=(1, TR[1] / TR[0], 1)), 'CRIMSON', bones)
+        ra, rb = (TR[0] * math.sqrt(max(1 - ((zz - TC[2]) / TR[2]) ** 2, 0.05)) + c['stripe_lip'] for zz in (z - h, z + h))
+        tag(cone(T('CRIMSON'), (0, 0, z - h), (0, 0, z + h), ra, rb, yscale=TR[1] / TR[0]), 'CRIMSON', bones)
     # scoop neck: bare chest showing above the singlet
     res(20, 10)
     tag(ell(T('SKIN_TAN'), (0, on_surface(TC, TR, 0, 34.4, -1.9), 34.4), (4.6, 2.2, 3.0)), 'SKIN_TAN', 'chest')
@@ -166,9 +174,12 @@ def _arms(c):
     for s in (-1, 1):
         S = side(s)
         sh, el, wr, d1, d2 = arm_points(c, s)
-        # deltoid over the shoulder joint
+        # trapezius: a slope from the neck down to the shoulder, so the shoulder is not a ball on the chest
+        res(18, 10)
+        tag(ell(T('SKIN_TAN'), (s * 6.2, 0.4, 36.2), (4.6, 3.6, 2.0), rot=(0, -s * 18, 0)), 'SKIN_TAN', f'chest,clavicle_{S}')
+        # deltoid: a teardrop capping the top of the upper arm, along the arm
         res(20, 12)
-        tag(ell(T('SKIN_TAN'), sh + Vector((0, 0, 0.4)), (4.6, 4.4, 4.2)), 'SKIN_TAN', f'chest,clavicle_{S},upper_arm_{S}')
+        tag(_align(ell(T('SKIN_TAN'), sh + d1 * c['delt_down'], c['delt_R']), d1), 'SKIN_TAN', f'chest,clavicle_{S},upper_arm_{S}')
         # upper arm with biceps (front) and triceps (back) along it
         res(18, 10)
         tag(cone(T('SKIN_TAN'), sh, el, 3.4, 2.8), 'SKIN_TAN', f'clavicle_{S},upper_arm_{S},forearm_{S}', cuts=3)
@@ -190,8 +201,10 @@ def _arms(c):
         for a in range(0, 360, 60):
             t = math.radians(a)
             tag(ell(T('SILVER'), cc + (ax * math.cos(t) + ay * math.sin(t)) * 2.4, (0.35, 0.35, 0.35)), 'SILVER', f'forearm_{S}')
-        # palm (thin across x, so it faces the body), four fingers across y, thumb forward
+        # palm (thin across x, so it faces the body); four fingers across y, modelled curled into a fist
+        # (session 27: a bone curl of straight fingers left the flexed hand half open); thumb across the front
         pc = wr + d2 * 1.4
+        n = Vector((-s, 0, 0))
         res(14, 8)
         p = ell(T('SKIN_TAN'), pc, (1.5, 2.0, 2.2))
         p.rotation_mode = 'QUATERNION'; p.rotation_quaternion = Vector((0, 0, -1)).rotation_difference(d2)
@@ -200,8 +213,12 @@ def _arms(c):
         res(10, 6)
         for dy in (-1.0, -0.33, 0.33, 1.0):
             q0 = base + Vector((0, dy * 1.1, 0))
-            capsule(T('SKIN_TAN'), q0, q0 + d2 * (2.2 - abs(dy) * 0.35), 0.55, f'hand_{S},fingers_{S}', ramp='SKIN_TAN')
-        t0 = pc + Vector((0, -1.5, 0.3)); t1 = t0 + (d2 * 0.6 + Vector((0, -1.0, 0))).normalized() * 1.8
+            q1 = q0 + d2 * c['knuckle']
+            q2 = q1 + n * c['curl'] - d2 * c['curl'] * 0.45
+            capsule(T('SKIN_TAN'), q0, q1, 0.6, f'hand_{S},fingers_{S}', ramp='SKIN_TAN')
+            capsule(T('SKIN_TAN'), q1, q2, 0.55, f'hand_{S},fingers_{S}', ramp='SKIN_TAN')
+        t0 = pc + Vector((0, -1.7, 0)) + n * 0.4
+        t1 = base + d2 * (c['knuckle'] * 0.6) + n * (c['curl'] * 0.9) + Vector((0, -0.2, 0))
         capsule(T('SKIN_TAN'), t0, t1, 0.6, f'hand_{S}', ramp='SKIN_TAN')
         if s > 0:
             _horn(c, pc, d2, s)
@@ -315,7 +332,7 @@ def _turn_hand(name, local, target):
     pb.matrix = Matrix.Translation(h) @ q.to_matrix().to_4x4() @ Matrix.Translation(-h) @ M
 
 def idle(t, length):
-    """The cast2 pose: right arm flexed (upper arm out level, forearm up, fist by the head) with a slow biceps pump;
+    """The cast2 pose: right arm flexed (upper arm out level, forearm up, fist by the head; the fist is modelled) with a slow biceps pump;
     left arm holding the horn out to the clown, bulb up; chest out, weight even, a small proud nod."""
     c = CONFIG; p = 2 * math.pi * t / length
     K.move('hips', (0, 0, -0.06 * (1 - math.cos(p))))
@@ -323,8 +340,6 @@ def idle(t, length):
     K.aim('upper_arm_R', (-1.0, 0.05, 0.12)); K.aim('forearm_R', (0.12, -0.15, 1.0))
     K.rotw('forearm_R', (0, 1, 0), 6 * math.sin(p))
     K.aim('hand_R', (0.1, -0.2, 1.0))
-    # fingers curled over into a fist (palm faces the body, +x on the right hand)
-    K.aim('fingers_R', (0.8, -0.1, -0.6))
     K.aim('upper_arm_L', (0.35, -0.55, -0.75)); K.aim('forearm_L', (0.05, -1.0, 0.2 + 0.03 * math.sin(p)))
     K.aim('hand_L', (0.0, -1.0, 0.1))
     _turn_hand('hand_L', (0, 1, 0), c['horn_aim'])
