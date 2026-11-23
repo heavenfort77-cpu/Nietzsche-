@@ -103,6 +103,8 @@
   #photoEdge::after { right: 4px; bottom: 4px; border-left: none; border-top: none; }
   #flash { position: fixed; inset: 0; background: #FFF8EA; opacity: 0; pointer-events: none; z-index: 13; transition: opacity 0.45s ease-out; }
   #flash.on { opacity: 1; transition: none; }
+  /* Shame's pencil void (session 23 batch 3): text over white paper is pencil-dark */
+  body.paper #mwTip, body.paper #mwHud, body.paper #hint { color: #2A2622; text-shadow: none; }
   #mwHud.low { color: #e8735c; }
   #mwHud { position: absolute; right: 120px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
   #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
@@ -295,6 +297,8 @@ void main() {
 uniform sampler2D uMap;
 uniform sampler2D uPaint;
 uniform float uHasPaint;
+uniform float uPaper;
+uniform vec3 uPaperCol;
 uniform vec2 uCell;
 uniform float uPaintAmt;
 uniform float uFlake;
@@ -354,6 +358,8 @@ void main() {
   col += uKeyCol * glint * vSpec * uSpecOn;
   float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col = mix(col, luma * uGradeTint, uGradeAmt);
+  // Shame's pencil void: everyone is paper inside the outline
+  col = mix(col, uPaperCol, uPaper);
   col = mix(col, albedo, step(0.5, uMode) * step(uMode, 1.5));
   vec3 wl = vec3(0.888, 0.831, 0.723);
   vec3 ws = vec3(0.451, 0.381, 0.262);
@@ -386,6 +392,8 @@ uniform float uGloomAmt;
 uniform vec3 uGloomTint;
 uniform vec3 uGradeTint;
 uniform float uGradeAmt;
+uniform float uPaper;
+uniform vec3 uPaperCol;
 varying vec3 vN;
 void main() {
   float f = dot(normalize(vN), uL) * 0.5 + 0.5;
@@ -394,6 +402,7 @@ void main() {
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(c, l * uGloomTint, uGloomAmt);
   c = mix(c, l * uGradeTint, uGradeAmt);
+  c = mix(c, uPaperCol, uPaper);
   gl_FragColor = vec4(c, 1.0);
 }
 </script>
@@ -845,7 +854,7 @@ const N1 = Object.freeze({
   // the style each insecurity brings to the route (the arena is the Light's and always last)
   mwStyleOf: { whisper: 'corridor', stare: 'photo', shame: 'void' },
   // styles built and switched on; a style that is off is never drawn (photo: batch 2, void: batch 3)
-  mwStyles: { corridor: true, photo: true, void: false },
+  mwStyles: { corridor: true, photo: true, void: true },
   // spaces on the route per night (index 0 = night 1), the entry corridor and the arena included
   mwSpaces: [3, 4, 5],
   // figures per space; the arena holds the Light plus this many less one (those that followed him come on top)
@@ -869,6 +878,15 @@ const N1 = Object.freeze({
   photoCol: { floor: '#A88E6A', back: '#7E6649', side: '#6A543B', frame: '#3A2C1E', print: '#C9B48E', prop: '#5A4630', door: '#4E3E2C', doorOpen: '#F2E8D0' },
   // the room's tips: on entry, and when its group is down and the door opens
   photoTip: 'A photograph. When the lens opens, get out of its sight.', photoOpenTip: 'The photo is taken. The pale door is open.',
+  // ----- Shame's pencil void (session 23 batch 3; pitch B: the last episode of Evangelion, the ground is there only because he draws it) -----
+  // centre (x, z) in the Mirror World, radius he can walk m, camera spot (offset from the centre; it turns to keep him, as in the ring), his start and each figure's start (offsets), the drawn door (offset) and its half width m
+  voidRoom: { at: [0, -100], r: 5.6, cam: [0, 5.2, 11.5], start: [0, 3.4], foes: { shame: [2.4, -1.6], whisper: [-3.0, -0.4], stare: [-2.4, -2.6] }, door: [0, -5.2], doorW: 0.55 },
+  // paper (background, fog, the fill of everyone in it), pencil (outlines, the line, the shards), the figures' outline width m
+  voidPaper: '#F3F0E8', voidPencil: '#2A2622', voidOutline: 0.014,
+  // the line he draws: a stroke every step m walked, stroke width m, strokes kept (the oldest is erased first); while Shame reaches for him the line trembles within trembleR m of him by tremble m (its tell)
+  voidLine: { step: 0.1, w: 0.035, n: 420, trembleR: 1.6, tremble: 0.05 },
+  // the void's tips: on entry, and when its group is down and the door is drawn open
+  voidTip: 'White paper. The floor is only where you walk.', voidOpenTip: 'A door is drawn. Walk through it.',
   // the next space's name in the corridor's opening tip
   mwSpaceName: { ring: 'the ring', photo: 'the photographs', void: 'the white' },
   // owner 23 Nov 06:22 item 4 ("all insecurities have hints"): switch, the insecurity he faces shows its hint as one fixed line from its entry until it is down; false = the first sighting tip for tipSecs, as before
@@ -1078,7 +1096,7 @@ const shared = {
   uKeyDir: { value: new THREE.Vector3() }, uKeyCol: { value: new THREE.Color().fromArray(CONFIG.key) }, uFillDir: { value: new THREE.Vector3() },
   uFillCol: { value: new THREE.Color().fromArray(CONFIG.fill) }, uRimCol: { value: new THREE.Color().fromArray(CONFIG.rim) },
   uShadow: { value: new THREE.Color().fromArray(CONFIG.shadow) }, uRimDir: { value: new THREE.Vector3() },
-  uGradeTint: { value: new THREE.Color(1, 1, 1) }, uGradeAmt: { value: 0 }, uSpecOn: { value: 1 }, uMode: { value: 0 }, uTime: { value: 0 },
+  uGradeTint: { value: new THREE.Color(1, 1, 1) }, uGradeAmt: { value: 0 }, uPaper: { value: 0 }, uPaperCol: { value: new THREE.Color(N1.voidPaper) }, uSpecOn: { value: 1 }, uMode: { value: 0 }, uTime: { value: 0 },
 };
 // gloom uniforms, shared by the plates, the room layers and the vignette quad
 const gloomU = { uGloomAmt: { value: 0 }, uGloomTint: { value: new THREE.Color().fromArray(CONFIG.gloomTint) } };
@@ -1779,7 +1797,7 @@ const cast = {};
 const rampMats = {};
 const rampU = {
   uL: { value: new THREE.Vector3().fromArray(N1.lightDir).normalize() }, uBands: { value: new THREE.Vector4().fromArray(N1.bands) },
-  uGradeTint: { value: new THREE.Color(1, 1, 1) }, uGradeAmt: { value: 0 },
+  uGradeTint: { value: new THREE.Color(1, 1, 1) }, uGradeAmt: { value: 0 }, uPaper: { value: 0 }, uPaperCol: { value: new THREE.Color(N1.voidPaper) },
 };
 const refl = { root: null, mixer: null, moodBones: null };
 const mwScene = new THREE.Scene();
@@ -2033,7 +2051,12 @@ function n1Warm() {
   const c = chars.clown;
   mwScene.add(c.root);
   for (const k of ['light', 'whisper', 'stare', 'shame']) mwScene.add(cast[k]);
+  // session 23: the photograph room's lens and cone and the void's outlines, line and door fill compile here too (shown for the compile only)
+  for (const h of NS.castHulls) h.visible = true;
+  NS.voidLine.count = 1; mwScene.add(pool.lens, pool.wedge);
   renderer.compile(mwScene, mwCam);
+  for (const h of NS.castHulls) h.visible = false;
+  NS.voidLine.count = 0; mwScene.remove(pool.lens, pool.wedge);
   for (const k of ['light', 'whisper', 'stare', 'shame']) mwScene.remove(cast[k]);
   // the act's ring, props, hat and broom compile here (hidden props shown for the compile only)
   actScene.add(c.root, cast.child);
@@ -3517,6 +3540,8 @@ function buildMW() {
   const wm = new THREE.Mesh(new THREE.CircleGeometry(N1.stareFlash.range, 24, -Math.PI / 2 - wc, 2 * wc), new THREE.MeshBasicMaterial({ color: '#FFF4DA', transparent: true, opacity: 0.1, depthWrite: false }));
   wm.rotation.x = -Math.PI / 2; pool.wedge.add(wm);
   buildPhoto();
+  NS.mwBgHex = bg.getHex(); NS.shardHex = shardMat.color.getHex();
+  buildVoid();
   mwCam.position.fromArray(N1.mwCamPos);
   buildUnworld();
 }
@@ -3538,6 +3563,69 @@ function buildPhoto() {
   mwScene.add(g);
   g.updateMatrixWorld(true);
   g.traverse((o) => { o.matrixAutoUpdate = false; });
+}
+// Shame's pencil void (session 23 batch 3), box and shape: no floor; the line he draws (one instanced draw, strokes written only when one is added; it trembles in the vertex shader),
+// a door drawn in three pencil strokes with its fill shown when open, and pencil outlines for the cast figures (one shared material, pushed out in view space, shown only in the void)
+const voidU = { uTremble: { value: 0 }, uAt: { value: new THREE.Vector3() }, uTime: null };
+function buildVoid() {
+  voidU.uTime = mwU.uTime;
+  const V = N1.voidRoom, L = N1.voidLine, pencil = new THREE.MeshBasicMaterial({ color: N1.voidPencil });
+  pencil.onBeforeCompile = (sh) => {
+    sh.uniforms.uTremble = voidU.uTremble; sh.uniforms.uAt = voidU.uAt; sh.uniforms.uTime = voidU.uTime;
+    sh.vertexShader = 'uniform float uTremble;\nuniform vec3 uAt;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+      vec3 tp = instanceMatrix[3].xyz;
+      float near = uTremble * (1.0 - smoothstep(0.0, ${L.trembleR.toFixed(2)}, distance(tp.xz, uAt.xz)));
+      float iid = float(gl_InstanceID);
+      transformed.x += sin(uTime * 61.0 + iid * 1.7) * ${L.tremble.toFixed(3)} * near;
+      transformed.z += cos(uTime * 53.0 + iid * 2.3) * ${L.tremble.toFixed(3)} * near;
+      #endif`);
+  };
+  NS.voidLine = new THREE.InstancedMesh(new THREE.BoxGeometry(L.w, 0.004, 1), pencil, L.n);
+  // culled as one: its bounds are the whole walkable disc (strokes are written later, so bounds from the instances would be empty)
+  NS.voidLine.count = 0; NS.voidLine.boundingSphere = new THREE.Sphere(new THREE.Vector3(V.at[0], 0, V.at[1]), V.r + 2);
+  mwScene.add(NS.voidLine);
+  const g = new THREE.Group(), dx = V.at[0] + V.door[0], dz = V.at[1] + V.door[1], w = V.doorW;
+  const stroke = (sx, sy, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, 0.03), pencil); m.position.set(x, y, 0); g.add(m); };
+  stroke(0.035, 2.2, -w, 1.1); stroke(0.035, 2.2, w, 1.1); stroke(2 * w + 0.035, 0.035, 0, 2.2);
+  NS.voidDoorFill = new THREE.Mesh(new THREE.PlaneGeometry(2 * w, 2.2), new THREE.MeshBasicMaterial({ color: '#9FB7BC' }));
+  NS.voidDoorFill.position.set(0, 1.1, -0.02); g.add(NS.voidDoorFill);
+  g.position.set(dx, 0, dz); mwScene.add(g);
+  g.updateMatrixWorld(true); g.traverse((o) => { o.matrixAutoUpdate = false; });
+  // pencil outlines round the static cast figures (the clown keeps his own skinned hull)
+  const hullMat = new THREE.MeshBasicMaterial({ color: N1.voidPencil, side: THREE.BackSide });
+  hullMat.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      mvPosition.xyz += normalize(normalMatrix * normal) * ${N1.voidOutline.toFixed(4)};
+      gl_Position = projectionMatrix * mvPosition;`); };
+  NS.castHulls = [];
+  for (const k of ['whisper', 'stare', 'shame']) {
+    const meshes = [];
+    cast[k].traverse((o) => { if (o.isMesh) meshes.push(o); });
+    for (const o of meshes) { const h = new THREE.Mesh(o.geometry, hullMat); h.position.copy(o.position); h.quaternion.copy(o.quaternion); h.scale.copy(o.scale); h.visible = false; o.parent.add(h); NS.castHulls.push(h); }
+  }
+}
+// the line starts again under him on entering the void: a short stroke where he stands
+const voidTmp = { m: new THREE.Matrix4(), q: new THREE.Quaternion(), p: new THREE.Vector3(), s: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0) };
+function voidLineReset(M) {
+  NS.voidLine.count = 0; NS.voidN = 0;
+  M.lineX = M.x - 0.3; M.lineZ = M.z; voidLineAdd(M.x + 0.3, M.z);
+  M.lineX = M.x; M.lineZ = M.z;
+}
+// a stroke from the last point to (x, z): written into the next slot of the ring of strokes (only here, never per frame)
+function voidLineAdd(x, z) {
+  const M = NS.mw, dx = x - M.lineX, dz = z - M.lineZ, len = Math.hypot(dx, dz) || 0.001, i = NS.voidN % N1.voidLine.n;
+  voidTmp.p.set((x + M.lineX) / 2, 0.005, (z + M.lineZ) / 2); voidTmp.q.setFromAxisAngle(voidTmp.up, Math.atan2(dx, dz)); voidTmp.s.set(1, 1, len + N1.voidLine.w);
+  NS.voidLine.setMatrixAt(i, voidTmp.m.compose(voidTmp.p, voidTmp.q, voidTmp.s));
+  NS.voidLine.instanceMatrix.needsUpdate = true;
+  NS.voidN++; NS.voidLine.count = Math.min(NS.voidN, N1.voidLine.n);
+  M.lineX = x; M.lineZ = z;
+}
+// each frame in the void: a stroke for every step walked; the line under him trembles while Shame reaches for him (its tell)
+function voidLineDraw(M) {
+  if (Math.hypot(M.x - M.lineX, M.z - M.lineZ) >= N1.voidLine.step) voidLineAdd(M.x, M.z);
+  let reach = 0;
+  for (let i = 0; i < foes.length; i++) { const f = foes[i]; if (f.kind === 'shame' && f.alive && f.reach > 0 && !f.cling) reach = 1; }
+  voidU.uTremble.value = reach; voidU.uAt.value.set(M.x, 0, M.z);
 }
 // panel G: shared uniforms for the unworldly backdrop (set from Mask on entering, time each frame)
 const mwU = { uTime: { value: 0 }, uWarp: { value: 0 }, uAmt: { value: 0 }, uGlass: { value: 0 }, uFlashI: { value: -1 }, uFlash: { value: 0 } };
@@ -3702,6 +3790,13 @@ function mwEnterLeg(M) {
     mwCam.position.set(P.at[0] + P.cam[0], P.cam[1], P.at[1] + P.cam[2]);
     NS.photoDoor.material.color.set(N1.photoCol.door);
     tip(N1.photoTip);
+  } else if (leg.style === 'void') {
+    const V = N1.voidRoom;
+    M.x = V.at[0] + V.start[0]; M.z = V.at[1] + V.start[1]; M.yaw = Math.PI; M.lookX = M.x; M.lookZ = M.z;
+    mwCam.position.set(V.at[0] + V.cam[0], V.cam[1], V.at[1] + V.cam[2]);
+    NS.voidDoorFill.visible = false;
+    voidLineReset(M);
+    tip(N1.voidTip);
   } else {
     M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4;
     mwCam.position.fromArray(N1.mwCamPos);
@@ -3710,11 +3805,22 @@ function mwEnterLeg(M) {
 }
 // each space's grade: the photograph room is sepia on the clown and the figures, with the print's border on screen; the rest keep the Mirror's cold grade
 function mwGrade(style) {
-  const p = style === 'photo';
+  const p = style === 'photo', v = style === 'void';
   if (p) shared.uGradeTint.value.fromArray(N1.photoGrade); else shared.uGradeTint.value.setRGB(0.62, 0.78, 0.84);
-  shared.uGradeAmt.value = p ? N1.photoGradeAmt : 0.45;
+  shared.uGradeAmt.value = p ? N1.photoGradeAmt : v ? 0 : 0.45;
   rampU.uGradeTint.value.fromArray(N1.photoGrade); rampU.uGradeAmt.value = p ? N1.photoGradeAmt : 0;
   el.photoEdge.classList.toggle('on', p);
+  mwPaper(v);
+}
+// Shame's pencil void: white paper all round (background and fog), everyone paper inside a pencil outline, pencil shards, dark text; off = the Mirror's own colours
+function mwPaper(on) {
+  if (NS.paperOn === on) return;
+  NS.paperOn = on;
+  shared.uPaper.value = on ? 1 : 0; rampU.uPaper.value = on ? 1 : 0;
+  mwScene.background.set(on ? N1.voidPaper : NS.mwBgHex); mwScene.fog.color.set(on ? N1.voidPaper : NS.mwBgHex);
+  pool.shards[0].m.material.color.set(on ? N1.voidPencil : NS.shardHex);
+  for (const h of NS.castHulls) h.visible = on;
+  document.body.classList.toggle('paper', on);
 }
 // a space's group enters together at their own starts; those that followed him from the space before come too, and none is added twice
 function mwGroupIn(M, group) {
@@ -3728,7 +3834,7 @@ function mwGroupIn(M, group) {
 }
 // its own start, unless that is within mwSpawnClear of him (Shame's start is his entry spot): then the far side of the ring
 function mwStartAt(M, f) {
-  const P = N1.photo, r = M.space === 'photo' && P.foes[f.kind];
+  const P = M.space === 'photo' ? N1.photo : M.space === 'void' ? N1.voidRoom : null, r = P && P.foes[f.kind];
   if (r) { f.x = P.at[0] + r[0]; f.z = P.at[1] + r[1]; return; }
   f.x = f.cfg.at[0]; f.z = f.cfg.at[1];
   if (Math.hypot(f.x - M.x, f.z - M.z) < N1.mwSpawnClear) f.z = -f.z;
@@ -3958,7 +4064,7 @@ function updateMW(dt) {
   // those still to enter count as left: no win and no shard sweep before the last one is down
   if (M.space === 'ring') { alive = mwFoes(M, dt); mwEntry(M, dt, alive); mwShards(M, dt, alive + M.queue.length, true); }
   else if (M.space === 'corridor') { mwCorridor(M, dt); if (foes.length) { alive = mwFoes(M, dt); mwShards(M, dt, 1, false); } }
-  else { alive = mwFoes(M, dt); mwShards(M, dt, alive, false); mwRoomOpen(M, alive); }
+  else { alive = mwFoes(M, dt); mwShards(M, dt, alive, false); mwRoomOpen(M, alive); if (M.space === 'void') voidLineDraw(M); }
   mwGnaw(M, dt, alive);
   mwCamera(M, dt);
   mwHud(M, dt);
@@ -3998,6 +4104,11 @@ function mwClown(M, dt) {
     const P = N1.photo, back = P.at[1] - P.half[1];
     M.x = THREE.MathUtils.clamp(M.x, P.at[0] - P.half[0] + 0.3, P.at[0] + P.half[0] - 0.3); M.z = THREE.MathUtils.clamp(M.z, back + 0.3, P.at[1] + P.half[1]);
     if (M.open && !M.cutting && Math.abs(M.x - P.at[0] - P.doorX) < P.doorW && M.z <= back + 0.35) mwCut();
+  } else if (M.space === 'void') {
+    // no walls on paper, only how far he can walk; the drawn door leads on once it is open
+    const V = N1.voidRoom, ox = M.x - V.at[0], oz = M.z - V.at[1], rr = Math.hypot(ox, oz);
+    if (rr > V.r) { M.x = V.at[0] + ox * V.r / rr; M.z = V.at[1] + oz * V.r / rr; }
+    if (M.open && !M.cutting && Math.abs(M.x - V.at[0] - V.door[0]) < V.doorW && M.z <= V.at[1] + V.door[1] + 0.5) mwCut();
   } else { const rr = Math.hypot(M.x, M.z); if (rr > N1.mwRadius) { M.x *= N1.mwRadius / rr; M.z *= N1.mwRadius / rr; } }
   M.still = moving || M.fall || M.slapT > 0 ? 0 : M.still + dt;
   M.isStill = M.still > N1.stillAfter; M.isMoving = moving;
@@ -4187,8 +4298,9 @@ function mwShards(M, dt, alive, final) {
 function mwRoomOpen(M, alive) {
   if (M.open || alive > 0) return;
   M.open = true;
-  NS.photoDoor.material.color.set(N1.photoCol.doorOpen);
-  tip(N1.photoOpenTip); tone(700, 1400, 0.3, 'triangle', 0.06);
+  if (M.space === 'void') { NS.voidDoorFill.visible = true; tip(N1.voidOpenTip); }
+  else { NS.photoDoor.material.color.set(N1.photoCol.doorOpen); tip(N1.photoOpenTip); }
+  tone(700, 1400, 0.3, 'triangle', 0.06);
 }
 // one fixed spot; the camera turns and zooms to keep him whole (owner requirement 7)
 function mwCamera(M, dt) {
@@ -4242,7 +4354,7 @@ function endMW(result) {
     setTimeout(() => {
       S.running = false; S.mode = 'x';
       el.mwHud.classList.add('hidden'); el.pads.classList.add('hidden'); el.mwTip.textContent = ''; el.hint.textContent = ''; el.hint.classList.remove('padded');
-      shared.uGradeAmt.value = 0; rampU.uGradeAmt.value = 0; el.photoEdge.classList.remove('on'); el.flash.classList.remove('on');
+      shared.uGradeAmt.value = 0; rampU.uGradeAmt.value = 0; el.photoEdge.classList.remove('on'); el.flash.classList.remove('on'); mwPaper(false);
       el.fog.style.opacity = 0;
       nietzscheCard();
     }, N1.fogMs);
