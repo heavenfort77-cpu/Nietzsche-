@@ -10,9 +10,11 @@ CONFIG = dict(
     # a figure with its own clips (CHAR): expected lengths written here too, so a wrong time in the module is caught
     # (the Light: flare is its 0.4 s tell and hit its 0.6 s hold-off, GDD monster table; the Whisper: copy is its 0.4 s tell,
     # N1.whisper.tell in night1.html, then strike where he landed; the Stare: gaze is its 0.4 s tell, N1.stare.tell, and judge
-    # its verdict, every N1.stare.every = 1.0 s)
+    # its verdict, every N1.stare.every = 1.0 s; Shame: reach is its 0.4 s tell, N1.shame.tell, and shaken the 1.0 s stun after
+    # his dodge, N1.shame.stun)
     clips_by_char=dict(light=dict(idle=2.0, flare=0.4, hit=0.6, out=1.0), whisper=dict(idle=2.0, copy=0.4, strike=0.4, hit=0.6, out=1.0),
-                       stare=dict(idle=2.0, gaze=0.4, judge=0.4, hit=0.6, out=1.0)),
+                       stare=dict(idle=2.0, gaze=0.4, judge=0.4, hit=0.6, out=1.0),
+                       shame=dict(idle=2.0, walk=0.8, reach=0.4, cling=1.0, shaken=1.0, hit=0.6, out=1.0)),
     # allowed error: one sampled frame at 30 fps
     clip_tol=1 / 30 + 1e-3,
     # file size ceiling before compression, KB

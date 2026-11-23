@@ -13,7 +13,7 @@ LIMIT_DEG = 4.0
 
 glb = sys.argv[1]
 # looping clips per character when not given (the Light's flare, hit and out play once; so do the Whisper's and the Stare's other clips)
-LOOPS = dict(light=['idle'], whisper=['idle'], stare=['idle'])
+LOOPS = dict(light=['idle'], whisper=['idle'], stare=['idle'], shame=['idle', 'walk', 'cling'])
 clips = sys.argv[2].split(',') if len(sys.argv) > 2 else LOOPS.get(os.environ.get('CHAR', ''), ['idle', 'walk'])
 b = open(glb, 'rb').read()
 n = struct.unpack('<I', b[12:16])[0]
