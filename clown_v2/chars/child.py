@@ -1,11 +1,12 @@
-"""The child (night-1 crew, the one who sees; proposal): same figure as art/cast2 child(), rebuilt for the pipeline
-with the clowns' level of modelled detail: strap shoes with soles, toe caps and brass buckles; ankle socks with a
-turned-down top (the right one slumped in folds); bare legs with knees and a sticking plaster on the left knee; dark
-short trousers under the hem; a wool smock with a yoke seam, a round white collar,
-three brass buttons down the back and a patch pocket with a stub of chalk; sleeves with rolled cuffs; short dark hair
-showing under his father's flat cap, far too big for him (band, seam, peak, button). Bind pose upright with A-pose
-arms; hands clasped behind the back, head turned to his left, is the idle clip. No face paint: crew are not clowns.
-Not shorter than the clown does not apply to him (owner, 22 Nov)."""
+"""The child (night-1 crew, the one who sees; proposal): a girl (owner 23 Nov 22:40), the cast2 child's figure rebuilt
+for the pipeline with the clowns' level of modelled detail: strap shoes with soles, toe caps and brass buckles; a
+knee sock on the left with a turned-down top, the right sock slumped to the ankle in folds; bare legs with knees and
+a crossed sticking plaster on the left knee; a wool smock dress with a round white collar, three brass buttons down
+the back and a patch pocket with a stub of chalk; sleeves with rolled cuffs; dark hair with a fringe, covering the
+ears to the jaw, two plaits down the back tied with red ribbons, under her father's flat cap, far too big for her
+(band, seam, peak, button). Bind pose upright with A-pose arms; hands clasped behind the back, head turned to her
+left, is the idle clip. No face paint: crew are not clowns. Not shorter than the clown does not apply to her
+(owner, 22 Nov)."""
 import math
 from mathutils import Vector
 from chars.common import build, ell, cone, cyl, torus, on_surface, tag, res, T, F, side, capsule, arm_points, humanoid_bones
@@ -48,14 +49,23 @@ CONFIG = dict(
     hand_len=1.4,
     # finger bone length
     finger_len=1.0,
-    # whole figure scaled about the feet after building (his father the stagehand's factor; cast2 child at 1 is about 1.04 m)
+    # whole figure scaled about the feet after building (her father the stagehand's factor; cast2 child at 1 is about 1.04 m)
     size=1.22,
     # smock: top and hem height, top and hem radius, front-to-back squash
     smock_z=(21.2, 9.0), smock_R=(4.7, 6.6), smock_y=0.8,
-    # father's cap: centre, radii (the stagehand's cap, wider than his head by about 1 unit)
+    # father's cap: centre, radii (the stagehand's cap, wider than her head by about 1 unit)
     cap=(0.0, 0.2, 32.2), cap_R=(6.7, 6.4, 2.3),
-    # idle: how far the head turns to his left, degrees (his eyes look the same way)
+    # idle: how far the head turns to her left, degrees (her eyes look the same way)
     look_turn=10.0,
+    # idle arms behind the back: upper arm and forearm directions for the left arm (x mirrored for the right)
+    back_upper=(0.1, 1.0, -0.9), back_fore=(-0.85, 0.5, 0.05),
+    # elbow sphere radius, just outside both sleeve ends (1.35): equal radii baked as a jagged seam (as the strongman's);
+    # 1.22 inside them lost contact with the upper sleeve when the elbow bent (floats-free gate, idle and slap)
+    elbow_R=1.45,
+    # left knee sock top height; plaster strip half length
+    sock_top=5.0, plaster=0.95,
+    # plaits: start and end of each plait down the back (x is mirrored; pressed into the smock back so they stay on when the head turns), links per plait
+    plait_top=(3.3, 3.3, 24.0), plait_end=(3.4, 3.2, 18.6), plait_n=5,
 )
 # head centre and radii as built (cast2)
 H0, R0 = (0, 0, 27.6), (5.6, 5.2, 5.8)
@@ -71,11 +81,11 @@ PAINT_FLATS = ['#F4F4F2']
 PAINT_MIN = None
 # glints: the shoe buckles and the back buttons
 SPEC_RAMPS = ('GOLD',)
-# checks: height range in metres (a child of about eight; the crew's not-shorter rule does not apply)
+# checks: height range in metres (a girl of about eight; the crew's not-shorter rule does not apply)
 CHECK = dict(height=(1.15, 1.40))
 # walk style: short quick steps, arms swinging, a little bounce
 WALK = dict(thigh=20.0, knee=32.0, arm=16.0, bob=0.3, arm_out=18, sway=3)
-# watch is the default (cast2: round eyes looking sideways, straight mouth); say for "...on purpose."
+# watch is the default (eyes to the side, straight mouth); say for "...on purpose."
 EXPR = ['watch', 'say', 'startle', 'frown']
 
 def _grow(before):
@@ -116,12 +126,14 @@ def _legs(c):
         capsule(T('BLACK'), (x - 1.35, -1.3, 1.45), (x + 1.35, -1.3, 1.45), 0.3, B, ramp='BLACK')
         res(12, 6)
         tag(_align(torus(T('GOLD'), (x + s * 1.45, -1.3, 1.45), 0.38, 0.13), (1, 0, 0)), 'GOLD', B)
-        # ankle sock with a turned-down top; the right one has slumped into folds
+        # left: knee sock with a turned-down top; right: slumped to the ankle in folds (the two heights read at play size)
         res(16, 6)
-        tag(cyl(T('WARM_WHITE'), (x, 0, 3.0), 1.35, 2.4), 'WARM_WHITE', B, cuts=2)
         if s > 0:
-            tag(torus(T('WARM_WHITE'), (x, 0, 4.2), 1.35, 0.4), 'WARM_WHITE', B)
+            tag(cyl(T('WARM_WHITE'), (x, 0, 3.3), 1.35, 3.0), 'WARM_WHITE', B, cuts=2)
+            tag(cyl(T('WARM_WHITE'), (x, 0, 4.7), 1.3, c['sock_top'] - 4.4), 'WARM_WHITE', f'shin_{S}', cuts=2)
+            tag(torus(T('WARM_WHITE'), (x, 0, c['sock_top']), 1.32, 0.42), 'WARM_WHITE', f'shin_{S}')
         else:
+            tag(cyl(T('WARM_WHITE'), (x, 0, 3.0), 1.35, 2.4), 'WARM_WHITE', B, cuts=2)
             for z in (2.4, 3.1, 3.8):
                 tag(torus(T('WARM_WHITE'), (x, 0, z), 1.38, 0.3), 'WARM_WHITE', B)
         # bare leg from the sock to under the shorts, knee in the middle
@@ -129,25 +141,17 @@ def _legs(c):
         tag(cyl(T('SKIN'), (x, 0, 6.6), 1.2, 4.8), 'SKIN', f'thigh_{S},shin_{S}', cuts=4)
         res(12, 8)
         tag(ell(T('SKIN'), (x, -0.15, 6.0), (1.32, 1.3, 1.15)), 'SKIN', f'thigh_{S},shin_{S}')
-        # short trouser leg, showing under the smock hem
-        res(18, 6)
-        tag(cyl(T('HAT'), (x, 0, 9.6), 1.75, 2.6), 'HAT', f'hips,thigh_{S}', cuts=1)
-        tag(torus(T('HAT'), (x, 0, 8.35), 1.75, 0.3), 'HAT', f'thigh_{S}')
-    # sticking plaster on the left knee
+    # sticking plaster on the left knee: two crossed strips, pale against the skin
     res(10, 6)
-    tag(ell(T('CANVAS'), (c['leg_x'], -1.38, 6.15), (0.75, 0.22, 0.5), rot=(0, 15, 0)), 'CANVAS', 'thigh_L,shin_L')
-    res(20, 8)
-    tag(ell(T('HAT'), (0, 0, 10.6), (3.9, 3.0, 1.6)), 'HAT', 'hips')
+    for a in (35, -35):
+        tag(ell(T('WARM_WHITE'), (c['leg_x'], -1.3, 6.1), (c['plaster'], 0.24, 0.42), rot=(0, a, 0)), 'WARM_WHITE', 'thigh_L,shin_L')
 
 def _smock(c):
     zt, zh = c['smock_z']; rt, rh = c['smock_R']; ys = c['smock_y']
     # body of the smock with loop cuts so it bends at the waist and the thighs
     res(28, 12)
     tag(cone(T('WOOL'), (0, 0, zt), (0, 0, zh), rt, rh, yscale=ys), 'WOOL', 'hips,spine,chest,thigh_L,thigh_R', cuts=6)
-    # yoke seam across the chest (a hem band and smocking lines read as a hoop and straps on the first render, removed)
-    res(26, 6)
-    tag(torus(T('WOOL'), (0, 0, 18.6), _smock_r(18.6), 0.32, scale=(1, ys, 1)), 'WOOL', 'chest,spine')
-    # patch pocket on his right with a stub of chalk
+    # patch pocket on her right with a stub of chalk
     px, pz = -2.3, 12.8
     py = -ys * math.sqrt(_smock_r(pz) ** 2 - px ** 2)
     res(14, 8)
@@ -174,7 +178,7 @@ def _arms(c):
         tag(ell(T('WOOL'), sh, (1.7, 1.7, 1.7)), 'WOOL', f'chest,clavicle_{S},upper_arm_{S}')
         res(14, 8)
         tag(cone(T('WOOL'), sh, el, 1.5, 1.35), 'WOOL', f'chest,clavicle_{S},upper_arm_{S},forearm_{S}', cuts=3)
-        tag(ell(T('WOOL'), el, (1.35, 1.35, 1.35)), 'WOOL', f'upper_arm_{S},forearm_{S}')
+        tag(ell(T('WOOL'), el, (c['elbow_R'],) * 3), 'WOOL', f'upper_arm_{S},forearm_{S}')
         tag(cone(T('WOOL'), el, wr, 1.35, 1.2), 'WOOL', f'upper_arm_{S},forearm_{S},hand_{S}', cuts=3)
         res(16, 6)
         tag(_align(torus(T('WOOL'), wr - d2 * 0.4, 1.25, 0.4), d2), 'WOOL', f'forearm_{S},hand_{S}')
@@ -193,27 +197,29 @@ def _arms(c):
         capsule(T('SKIN'), t0, t1, 0.3, f'hand_{S}')
 
 def _head(c):
-    # neck, ears, button nose, short dark hair under the cap, the father's flat cap (too big)
+    # neck, button nose, dark hair: a mass over the back and sides covering the ears to the jaw, a fringe under the
+    # peak, two plaits down the back with red ribbons; the father's flat cap (too big)
     res(14, 8)
     tag(ell(T('SKIN'), (0, 0, 21.9), (1.9, 1.9, 1.4)), 'SKIN', 'neck,head')
-    res(12, 8)
-    for s in (-1, 1):
-        tag(ell(T('SKIN'), (s * 5.55, 0.2, 27.2), (0.95, 1.3, 1.6)), 'SKIN', 'head')
-        # hair over the temple, in front of and above the ear
-        res(10, 6)
-        for k, (yy, zz) in enumerate(((-1.6, 29.6), (0.2, 29.9), (1.9, 29.5))):
-            tag(ell(T('HAIR_DARK'), (s * 5.15, yy, zz), (0.95, 1.1, 1.3)), 'HAIR_DARK', 'head')
-    res(14, 8)
     tag(ell(T('SKIN'), (0, on_surface(H0, R0, 0, 26.2, 0.45), 26.2), (0.62, 0.62, 0.72)), 'SKIN', 'head')
-    # back of the head: two rows of short tufts from under the cap down to the nape
-    res(8, 6)
-    for r, (z, rad) in enumerate(((29.6, 5.2), (27.9, 4.9))):
-        for ang in range(-80 + 10 * r, 81, 20):
-            t = math.radians(ang)
-            tag(ell(T('HAIR_DARK'), (rad * math.sin(t), rad * 0.94 * math.cos(t), z), (1.15, 0.85, 1.0)), 'HAIR_DARK', 'head')
-    # three tufts poking out under the peak
-    for xx in (-1.8, 0.2, 1.9):
-        tag(ell(T('HAIR_DARK'), (xx, on_surface(H0, R0, xx, 30.6, 0.3), 30.6), (0.9, 0.55, 0.75), rot=(0, 10 * xx, 0)), 'HAIR_DARK', 'head')
+    res(28, 14)
+    tag(ell(T('HAIR_DARK'), (0, 1.2, 27.4), (5.95, 5.4, 5.1)), 'HAIR_DARK', 'head')
+    res(10, 6)
+    for k, xx in enumerate((-3.4, -2.0, -0.6, 0.8, 2.2, 3.5)):
+        z = 30.5 - 0.15 * abs(xx)
+        tag(ell(T('HAIR_DARK'), (xx, on_surface(H0, R0, xx, z, 0.35), z), (0.95, 0.6, 1.0), rot=(0, -12 + 5 * k, 0)), 'HAIR_DARK', 'head')
+    (tx, ty, tz), (ex, ey, ez), n = c['plait_top'], c['plait_end'], c['plait_n']
+    for s in (-1, 1):
+        res(10, 8)
+        for k in range(n):
+            f = k / (n - 1)
+            q = (s * (tx + (ex - tx) * f + 0.22 * (-1) ** k), ty + (ey - ty) * f, tz + (ez - tz) * f)
+            tag(ell(T('HAIR_DARK'), q, (0.95 - 0.12 * f, 0.85, 1.0), rot=(0, 25 * (-1) ** k, 0)), 'HAIR_DARK', 'neck,chest')
+        # red ribbon bow at the end: two loops and a knot
+        res(10, 6)
+        for a in (1, -1):
+            tag(ell(T('RED'), (s * ex + a * 0.75, ey + 0.35, ez - 0.7), (0.75, 0.3, 0.45), rot=(0, a * 25, 0)), 'RED', 'chest')
+        tag(ell(T('RED'), (s * ex, ey + 0.45, ez - 0.7), (0.35, 0.35, 0.35)), 'RED', 'chest')
     # father's flat cap: crown, seam, peak, button on top
     cx, cy, cz = c['cap']
     res(28, 10)
@@ -240,21 +246,24 @@ def face(expr):
     _grow(before)
 
 def _face(expr):
-    """Watch: big round eyes looking to his left, level brows, straight mouth (cast2: he knows). Say ("...on purpose."):
-    eyes on the clown under lowered lids, a small round mouth. Startle: eyes wider, brows up, mouth open.
-    Frown: brows down and in, eyes to his right, mouth turned down. A faint flush on the cheeks on every face."""
-    look = dict(watch=0.55, say=0.0, startle=0.0, frown=-0.4)[expr]
+    """Dark oval eyes with a glint and two lashes, as the rest of the cast (owner 23 Nov 22:40: the round white eyes
+    went). Watch: eyes set a little to her left, level brows, straight mouth (cast2: she knows). Say ("...on
+    purpose."): eyes on the clown under lowered lids, a small round mouth. Startle: eyes taller, brows up, mouth open.
+    Frown: brows down and in, eyes a little to her right, mouth turned down. A faint flush on the cheeks on every face."""
+    look = dict(watch=0.3, say=0.0, startle=0.0, frown=-0.25)[expr]
     brow = dict(watch=0.0, say=-0.15, startle=0.8, frown=-0.35)[expr]
     knit = dict(watch=0.0, say=0.0, startle=0.0, frown=0.4)[expr]
-    grow = 1.12 if expr == 'startle' else 1.0
+    ez = 1.25 if expr == 'startle' else 1.05
     for s in (-1, 1):
-        x = s * 2.3
-        ell(F('#F4F4F2'), (x, on_surface(H0, R0, x, 27.8, 0.2), 27.8), (1.25 * grow, 0.4, 1.35 * grow))
-        ell(F('#1E1714'), (x + look, on_surface(H0, R0, x + look, 27.7, 0.45), 27.7), (0.75, 0.35, 0.85))
-        ell(F('#F4F4F2'), (x + look - 0.25, on_surface(H0, R0, x + look - 0.25, 28.05, 0.6), 28.05), (0.24, 0.2, 0.24))
+        x = s * 2.3 + look
+        ell(F('#1E1714'), (x, on_surface(H0, R0, x, 27.6, 0.25), 27.6), (0.82, 0.4, ez))
+        ell(F('#F4F4F2'), (x - s * 0.28, on_surface(H0, R0, x - s * 0.28, 28.05, 0.45), 28.05), (0.3, 0.28, 0.3))
+        for k in range(2):
+            z = 28.45 - 0.4 * k
+            ell(F('#1E1714'), (x + s * (0.85 + 0.15 * k), on_surface(H0, R0, x + s * (0.85 + 0.15 * k), z, 0.3), z), (0.38, 0.2, 0.13))
         if expr == 'say':
-            ell(T('SKIN_LID'), (x, on_surface(H0, R0, x, 28.85, 0.32), 28.85), (1.45, 0.5, 0.75))
-        pts = [(1.2, 29.55), (2.2, 29.8), (3.2, 29.7)]
+            ell(T('SKIN_LID'), (x, on_surface(H0, R0, x, 28.6, 0.32), 28.6), (1.15, 0.5, 0.6))
+        pts = [(1.2, 29.4), (2.2, 29.65), (3.2, 29.55)]
         build.arc(F('#4A3426'), [(s * xx, on_surface(H0, R0, s * xx, zz + brow - knit * (2.4 - xx) * 0.5, 0.3), zz + brow - knit * (2.4 - xx) * 0.5)
                                  for xx, zz in pts], (0.45, 0.3, 0.28))
         ell(F('#D49A84'), (s * 3.5, on_surface(H0, R0, s * 3.5, 25.9, 0.1), 25.9), (0.9, 0.25, 0.55))
@@ -270,13 +279,14 @@ def _face(expr):
 def bones(U): return humanoid_bones(CONFIG, U * CONFIG['size'])
 
 def idle(t, length):
-    """Hands clasped behind the back, standing straight, head turned to his left (where his eyes look); a slow
+    """Hands clasped behind the back, standing straight, head turned to her left (where her eyes look); a slow
     breath and a small rock on the heels."""
     c = CONFIG; p = 2 * math.pi * t / length
     K.move('hips', (0, 0.05 * c['size'] * math.sin(p), -0.04 * c['size'] * (1 - math.cos(p))))
     K.rotw('chest', (1, 0, 0), -2.0 + 0.8 * math.sin(p))
     for S, s in (('L', 1), ('R', -1)):
-        K.aim(f'upper_arm_{S}', (s * 0.3, 0.55, -1.0)); K.aim(f'forearm_{S}', (-s * 0.85, 0.5, -0.12))
-        K.aim(f'hand_{S}', (-s * 1.0, 0.25, -0.25))
+        (ux, uy, uz), (fx, fy, fz) = c['back_upper'], c['back_fore']
+        K.aim(f'upper_arm_{S}', (s * ux, uy, uz)); K.aim(f'forearm_{S}', (s * fx, fy, fz))
+        K.aim(f'hand_{S}', (-s * 1.0, 0.1, -0.2))
     K.rotw('head', (0, 0, 1), c['look_turn'])
     K.rotw('head', (1, 0, 0), -2.0 + 1.0 * math.sin(p + 0.5))
