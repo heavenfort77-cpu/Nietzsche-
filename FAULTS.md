@@ -302,3 +302,23 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Where: `web/step0/smoke_night1.cjs`, the `Light: running from it at ...% stick` loop.
 - Fix: the step sets `L.r = lightStartR()`, `L.leaves = 0`, `L.loseT = 0`, `L.tellT = 0` before the run. The 2 s limit and the 8 s run are unchanged. Not covered by this check, as before: running from a Light already grown to its cap.
 - Proof: PASS local desk run 23 Nov after the change: `desk OK Light: running from it at 100% stick escapes it (real play)` and the 60% run, `RESULT night1 smoke 52 of 52 pass`. Not yet seen on CI: the run of the batch 3 commit (run 84).
+
+## F33: the rehearsal's Back button sat under the Full screen button
+- Found: session 24 batch 1, headless drive of night 2 (`Try it` on the scale note, then Back).
+- Probe: FAIL `node web/step0/probe_cover.cjs` before the change: `FAIL desk rehearse: button tryBack covered by fsBtn` (also phone and land, nights 1 and 3: 6 lines); Playwright on the same click: `<button id="fsBtn"> intercepts pointer events`.
+- Cause: `#tryBack` (session 22 batch 3) was placed at top 10px, right 10px, z-index 11; `#fsBtn` sits at top 8px, right 8px, z-index 12, so the Full screen button took every tap meant for Back. Session 22's drive clicked Back by script, which does not test what is on top. Where the browser allows full screen (every real desktop and Android browser), the only way out of a rehearsal after a click inside the cue frame was the Back button (Esc goes to the frame), so the rehearsal could not be left.
+- Class: a control covered by another control, or pushed off screen, in a scene where the player needs it.
+- Sweep: probe `web/step0/probe_cover.cjs`: every visible enabled button's centre must hit that button (a full-screen card, the curtain or the cue frame over the board is meant and allowed) at title, Dazai card, board, note, rehearsal, shop and end card, nights 1 and 3, desk 1280x720, phone 390x844, landscape 844x390: 192 buttons. Found this and F34, nothing else. Not reached by the probe, checked by the CSS instead: walk (`#verb` bottom right), act (`#actSkipBtn` bottom right), Mirror World (`#pads` bottom right, `#mwTip` no pointer events): none shares a scene with another control in its corner; `#fsBtn` is top right in each.
+- Where: `web/step0/night1.html` CSS `#tryBack`.
+- Fix: `#tryBack` moved to top 60px (below the Full screen button's 8 + 44 px).
+- Proof: PASS `RESULT cover probe 192 of 192 buttons reachable` after the change. Mutation (top 10px put back, copy in /tmp/mut): `FAIL desk rehearse: button tryBack covered by fsBtn` ... `RESULT cover probe 186 of 192 buttons reachable`.
+
+## F34: on a phone held sideways the shop's last items and End the night were off screen
+- Found: session 24 batch 1, the F33 sweep (night 3 shop has five items: the acts tried plus the dash).
+- Probe: FAIL `node web/step0/probe_cover.cjs` before the change: `FAIL land shop#n=3: button opt:Dash (Mirror)A covered by none (off screen)` and `FAIL land shop#n=3: button endNight covered by none (off screen)`.
+- Cause: the shop card at the mirror is a left column of one item per row, centred with `justify-content: center` on a fixed full-screen card with no scrolling; at 390 px high, five items and the End button are taller than the screen, so the column ran off the top and bottom and could not be scrolled. Night 1 has two items and fit; nights 2-3 sell more.
+- Class: as F33 (a control pushed off screen in a scene where the player needs it).
+- Sweep: as F33 (same probe run). Every card: `.card` now scrolls when taller than the screen and centres with `safe center` (browsers without it keep plain centring), so no card cuts off its top; only the shop at landscape 844x390 was found off screen.
+- Where: `web/step0/night1.html` CSS `.card`, `.card.see`, `.card.shopAt`, new `@media (orientation: landscape) and (max-height: 500px)`.
+- Fix: cards scroll and centre safely; on short landscape screens the shop's items go two to a row at 24vw, its heading and first line hidden.
+- Proof: PASS `RESULT cover probe 192 of 192 buttons reachable`. Mutation (the landscape media rule made unreachable, copy in /tmp/mut): `FAIL land shop#n=3: button endNight covered by none (off screen)` ... `RESULT cover probe 188 of 192 buttons reachable`.

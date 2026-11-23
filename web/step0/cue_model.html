@@ -147,6 +147,8 @@
       call: ['The whiteface taps a pattern. Tap it back after him, on the drum.', 'The whiteface taps a pattern. Press Space to tap it back after him, on the drum.'],
       trade: ['His turn, then yours. Tap HIT when your ring closes. It gets faster.', 'His turn, then yours. Press Space when your ring closes. It gets faster.']
     },
+    // session 24: added to the hosted line when the whiteface steps in tonight: [touch, desktop]
+    takeLine: ['A crimson ring under a cone hat is the whiteface: tap TAKE when it fits and take the slap.', 'A crimson ring under a cone hat is the whiteface: press K when it fits and take the slap.'],
     // Whiteface interrupts per act for nights 1, 2, 3+
     interruptsPerAct: [0, 1, 2],
     // Night from which take, topper flip and interrupts open
@@ -233,6 +235,8 @@
   const gameParam = (location.search.match(/[?&]game=([a-z]+)/) || [])[1];
   const GAME = GAMES.indexOf(gameParam) >= 0 ? gameParam : CONFIG.game;
   const REHEARSE = /[?&]rehearse=1(&|$)/.test(location.search);
+  // session 24: night1.html passes tonight (?night=1..7); none = the night buttons decide
+  const NIGHT_PARAM = Math.min(7, Math.max(0, parseInt((location.search.match(/[?&]night=(\d+)/) || [])[1] || '0', 10)));
   const MAX_ACTS = Math.max.apply(null, CONFIG.actsPerShow);
   // hold acts use two beats per ring (press and release)
   const MAX_BEATS = MAX_ACTS * Math.max.apply(null, CONFIG.beatsPerChain) * 2;
@@ -1150,8 +1154,13 @@
   function boot() {
     grab();
     // hosted: the one line under the start button says how tonight's timing game is played (CONFIG.gameLines)
-    if (HOSTED) el.hostLine.textContent = CONFIG.gameLines[S.game][window.matchMedia('(pointer: coarse)').matches ? 0 : 1];
+    const touch = window.matchMedia('(pointer: coarse)').matches ? 0 : 1;
+    if (NIGHT_PARAM) S.night = NIGHT_PARAM;
+    // from night 2 the whiteface steps in on the ring and bar games: the host line says how to take his slap (GDD whiteface interrupt)
+    const takes = S.night >= CONFIG.secondButtonFromNight && !S.rehearse && (S.game === 'ring' || S.game === 'bar') && CONFIG.interruptsPerAct[nightIdx()] > 0;
+    if (HOSTED) el.hostLine.textContent = CONFIG.gameLines[S.game][touch] + (takes ? ' ' + CONFIG.takeLine[touch] : '');
     wire();
+    if (NIGHT_PARAM) setNightButton(NIGHT_PARAM);
     onResize();
     setLatency(0);
     showPanels();

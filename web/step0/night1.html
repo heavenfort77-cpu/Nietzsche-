@@ -33,10 +33,11 @@
   @media (orientation: portrait) { #prep { left: 4%; top: auto; bottom: 90px; width: 92%; } }
   #roomBar button { font: inherit; font-weight: 600; min-width: 48px; min-height: 44px; padding: 0 16px; border-radius: 6px; border: 0; background: #2a2f38; color: #d6dbe4; }
   /* ===== night 1 layer ===== */
-  .card { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; box-sizing: border-box; background: #0c0809ee; z-index: 20; }
-  .card.see { background: linear-gradient(#0c080900 40%, #0c0809e6 75%); justify-content: flex-end; padding-bottom: 48px; }
+  /* F34: a card taller than the screen scrolls and never cuts off its top (safe centring; browsers without it keep plain centring) */
+  .card { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-content: safe center; overflow-y: auto; gap: 14px; text-align: center; padding: 24px; box-sizing: border-box; background: #0c0809ee; z-index: 20; }
+  .card.see { background: linear-gradient(#0c080900 40%, #0c0809e6 75%); justify-content: flex-end; justify-content: safe flex-end; padding-bottom: 48px; }
   /* shop at the mirror: the panel sits left of the glass (landscape) or under it (portrait) so the performing reflection stays clear (panel item 5) */
-  .card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }
+  .card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; justify-content: safe center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }
   .card.shopAt > * { max-width: 34vw; }
   .card.shopAt .opts { flex-direction: column; justify-content: flex-start; }
   .card.shopAt .opt { padding: 8px 14px; }
@@ -45,6 +46,14 @@
     .card.shopAt > * { max-width: 100%; }
     .card.shopAt .opts { flex-direction: row; justify-content: center; }
     .card.shopAt h2, .card.shopAt > p:first-of-type, .card.shopAt #keptLine { display: none; }
+  }
+  /* F34: short landscape screens (phone on its side): the shop's items two to a row, the header line and the shop's first line hidden so up to 5 items fit */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 44%, #0c080900 54%); padding: 8px 0 8px 2%; gap: 6px; }
+    .card.shopAt > * { max-width: 50vw; }
+    .card.shopAt .opts { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .card.shopAt .opt { max-width: 24vw; padding: 4px 8px; font-size: 12px; min-height: 44px; }
+    .card.shopAt h2, .card.shopAt > p:first-of-type { display: none; }
   }
   .card .knows { color: #f0d27a; font: 400 18px/1.5 Georgia, serif; }
   .card h2 { margin: 0; font: 600 22px/1.2 Georgia, serif; color: #f0d27a; }
@@ -84,6 +93,8 @@
   #boardActs { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
   #boardActs .note { position: absolute; left: calc(var(--x, 0) * 1px); top: calc(var(--y, 0) * 1px); width: calc(max(44, var(--w, 44)) * 1px); height: calc(max(44, var(--h, 44)) * 1px); transform: translate(-50%, -50%); pointer-events: auto; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; padding: 3px; border: 2px solid transparent; border-radius: 3px; background: none; color: #3a2a1a; font: 600 11px/1.1 Georgia, serif; text-align: center; cursor: pointer; }
   #boardActs .note:hover, #boardActs .note:focus-visible { border-color: #f0d27a; }
+  /* session 24: from night 2 the paper is drawn in the room (behind the clown); the button over it carries the title near the top, clear of his hat */
+  #boardActs .note.paper { align-items: flex-start; padding-top: 12px; font-size: 13px; }
   .card .parchment { background: linear-gradient(#f1e5c8, #e0cda2); color: #2a1d12; border-radius: 4px; padding: 18px 22px; max-width: min(420px, 88vw); box-sizing: border-box; box-shadow: 0 6px 24px #000a; text-align: left; display: flex; flex-direction: column; gap: 10px; }
   .card .parchment h2 { color: #6a1d29; }
   .card .parchment p { font: 16px/1.4 Georgia, serif; }
@@ -119,7 +130,8 @@
   #pads button { width: 72px; height: 64px; border-radius: 32px; border: 0; font: 600 14px system-ui, sans-serif; background: #44666e; color: #e2e3e3; }
   #pads button:disabled { opacity: .4; }
   #cueFrame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; z-index: 10; background: #000; }
-  #tryBack { position: fixed; top: 10px; right: 10px; z-index: 11; min-width: 44px; min-height: 44px; padding: 6px 14px; border-radius: 10px; border: 2px solid #B68C45; background: #3D332D; color: #F2EBDD; font-size: 16px; }
+  /* F33: below the Full screen button (top 8px, 44 px high), which sat on top of it */
+  #tryBack { position: fixed; top: 60px; right: 10px; z-index: 11; min-width: 44px; min-height: 44px; padding: 6px 14px; border-radius: 10px; border: 2px solid #B68C45; background: #3D332D; color: #F2EBDD; font-size: 16px; }
   .card .parchment small.tried { color: #6a1d29; font-weight: 600; }
   #shards { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 320px; min-height: 22px; }
   .shard { width: 14px; height: 20px; background: linear-gradient(135deg, #e2e8ea, #9db5bb 55%, #44666e); clip-path: polygon(50% 0, 100% 40%, 70% 100%, 10% 80%, 0 30%); }
@@ -162,7 +174,7 @@
 <div id="flash"></div>
 <div id="fog">The Mirror</div>
 <div id="curtain"><div class="half hl"></div><div class="half hr"></div><div class="val"></div>
-  <div class="plaque"><h1>The Clown and the Mirror</h1><div>Night 1 &middot; prototype</div><button class="btn" id="start" disabled>Loading...</button><small id="loadState"></small></div></div>
+  <div class="plaque"><h1>The Clown and the Mirror</h1><div id="nightLabel">Night 1 &middot; prototype</div><button class="btn" id="start" disabled>Loading...</button><small id="loadState"></small></div></div>
 <div id="logo" class="card"><svg viewBox="0 0 200 200" aria-label="V">
   <defs><linearGradient id="gw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBD190"/><stop offset="1" stop-color="#DA9F69"/></linearGradient>
   <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9D5D7"/><stop offset=".55" stop-color="#9DB5BB"/><stop offset="1" stop-color="#234249"/></linearGradient></defs>
@@ -622,6 +634,10 @@ const CONFIG = Object.freeze({
     sit: { keys: ['Enter'], mouse: [], label: 'Sit at the mirror' },
     act1: { keys: ['Digit1'], mouse: [], label: 'First act on the board' },
     act2: { keys: ['Digit2'], mouse: [], label: 'Second act on the board' },
+    // session 24: from night 2 the board holds his acts plus the tryout
+    act3: { keys: ['Digit3'], mouse: [], label: 'Third act on the board' },
+    act4: { keys: ['Digit4'], mouse: [], label: 'Fourth act on the board' },
+    act5: { keys: ['Digit5'], mouse: [], label: 'Fifth act on the board' },
     press: { keys: ['KeyE', 'Space', 'Enter'], mouse: [0], label: 'Press his hand to the glass' },
     slap: { keys: ['KeyJ'], mouse: [0], label: 'Slap' },
     pie: { keys: ['KeyK'], mouse: [2], label: 'Throw a pie' },
@@ -631,7 +647,7 @@ const CONFIG = Object.freeze({
   // which actions each scene listens to (the pause card lists these; a check fails if two share a key in one scene)
   bindScenes: {
     title: ['confirm'], paint: ['confirm', 'pause'], walk: ['up', 'down', 'left', 'right', 'interact', 'pause'], room: ['turnL', 'turnR', 'sit', 'pause'],
-    board: ['act1', 'act2', 'pause'], note: ['confirm', 'back'], rehearse: ['back'], mirror: ['press', 'pause'], act: ['pause'], small: ['confirm', 'pause'],
+    board: ['act1', 'act2', 'act3', 'act4', 'act5', 'pause'], note: ['confirm', 'back'], rehearse: ['back'], mirror: ['press', 'pause'], act: ['pause'], small: ['confirm', 'pause'],
     mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'],
   },
   // idle and walk blend time, s
@@ -720,8 +736,29 @@ const CONFIG = Object.freeze({
   flakeBoxMin: [-3.5, 0, -5.0], flakeBoxSize: [7, 4.5, 3.3],
 });
 
+// ===== RUN: the nights so far (session 24 batch 1, build plan row 24.1) =====
+// Carried from night to night in the address hash, so each night is a fresh page and every scene's state is reset by the reload:
+// #n=<night>&m=<Mask>&s=<shards>&b=<acts and abilities bought, dot separated>&t=<acts tried on the board, dot separated>&lo=<times the Light was put out>
+// No hash = night 1. Laughs are not carried: each night's act earns its own (GDD Meters: they come from the crowd, on stage).
+function runLoad() {
+  const r = { n: 1, m: 0, s: 0, b: [], t: [], lo: 0 };
+  try {
+    const q = new URLSearchParams((location.hash || '').slice(1));
+    const int = (k, lo, hi) => { const v = parseInt(q.get(k), 10); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : r[k]; };
+    r.n = int('n', 1, 7); r.m = int('m', 0, 99); r.s = int('s', 0, 999); r.lo = int('lo', 0, 7);
+    const ids = (k) => (q.get(k) || '').split('.').filter((x) => /^[a-z]+$/.test(x));
+    r.b = ids('b'); r.t = ids('t');
+  } catch (e) { /* no readable hash: night 1 */ }
+  return r;
+}
+const RUN = runLoad();
+
 // ===== CONFIG, night 1 (owner, 22 Nov: night-1 prototype in GDD order) =====
 const N1 = Object.freeze({
+  // nights in this build (GDD: at least 3 for the jam build, up to 7); the last one is the final night (lead's default, session 24: night 3)
+  nights: 3,
+  // tonight, from the run (1 when the page has no hash)
+  get night() { return Math.min(RUN.n, this.nights); },
   // night-1 cast GLBs (art/cast2, proposal): material names are palette ramps
   castDir: './assets/cast2/',
   // per-figure GLB urls that override castDir (empty in the repo; the published artifact fills it with its asset urls)
@@ -741,12 +778,13 @@ const N1 = Object.freeze({
   },
   // band edges (deep, shadow, base, light) and the light toward the viewer, view space (build.py light -0.45, -0.72, 0.53 seen from its camera)
   bands: [0, 0.30, 0.55, 0.82], lightDir: [-0.45, 0.53, 0.72],
-  // corridor crew (GDD night loop step 2, panel round 1 D): Blender floor (x, y) metres, rest yaw degrees, the night-1 line (warm), verb
+  // corridor crew (GDD night loop step 2, panel round 1 D): Blender floor (x, y) metres, rest yaw degrees, the night-1 line (warm), verb;
+  // lines: a night's own line (GDD: warm on nights 1-2, polite after; session 24 lead's wording for night 3)
   crew: [
-    { id: 'stagehand', title: 'Stagehand', at: [0.62, 4.9], yaw: -90, line: 'Evening. Full house tonight.' },
-    { id: 'rigger', title: 'Rigger', at: [2.5, 10.9], yaw: -90, line: 'Cable going down. Fall over it, they love that.', verb: 'fall', verbText: 'Pratfall over the cable', across: true, done: 'Neat.' },
-    { id: 'props_girl', title: 'Props', at: [1.5, 9.3], yaw: -120, line: "Your pie. Don't eat it this time.", verb: 'take', verbText: 'Take the pie', done: 'Break a leg.' },
-    { id: 'strongman', title: 'Strongman', at: [1.3, 12.7], yaw: -150, line: 'For luck! Give it a honk.', verb: 'honk', verbText: 'Honk the horn', done: 'HA! Now go get them.' },
+    { id: 'stagehand', title: 'Stagehand', at: [0.62, 4.9], yaw: -90, line: 'Evening. Full house tonight.', lines: { 3: 'Good evening.' } },
+    { id: 'rigger', title: 'Rigger', at: [2.5, 10.9], yaw: -90, line: 'Cable going down. Fall over it, they love that.', lines: { 3: 'Cable is down. You know what to do.' }, verb: 'fall', verbText: 'Pratfall over the cable', across: true, done: 'Neat.' },
+    { id: 'props_girl', title: 'Props', at: [1.5, 9.3], yaw: -120, line: "Your pie. Don't eat it this time.", lines: { 3: 'Your pie.' }, verb: 'take', verbText: 'Take the pie', done: 'Break a leg.' },
+    { id: 'strongman', title: 'Strongman', at: [1.3, 12.7], yaw: -150, line: 'For luck! Give it a honk.', lines: { 3: 'Honk. For luck.' }, verb: 'honk', verbText: 'Honk the horn', done: 'HA! Now go get them.' },
     { id: 'child', title: '', at: [-2.25, 17.0], yaw: 90, line: '', verb: 'trip', verbText: 'Trip', done: '...on purpose.' },
   ],
   // crew collision radius, metres; verb reach from the member (or its anchor), metres; how long the child's words stay, s
@@ -789,7 +827,7 @@ const N1 = Object.freeze({
   // 22 Nov b item 6: the opening at the dressing table: chair (Blender x, y), vanity glass centre (x, y, z) and size (width, height) m, his reflection's side offset (Blender y) and depth past the glass
   vanityChair: [3.2, 0.6], vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9],
   // 22 Nov b item 7: the big mirror shows a pale form of him, darker every night (tint per night 1-7, times his shading's grey); grade amount
-  reflShade: [1.45, 1.25, 1.05, 0.85, 0.65, 0.5, 0.35], reflPale: 0.85, night: 1,
+  reflShade: [1.45, 1.25, 1.05, 0.85, 0.65, 0.5, 0.35], reflPale: 0.85,
   // he presses his right hand to the glass instead of sitting; the reflection presses back (its left), late; hands must meet within this share of the picture height
   pressHand: true, handMeet: 0.06,
   // session 18 batch 2 (owner 22 Nov 20:27): the press is a cut to a close shot at the glass, where his palm and the mirror image's meet for real (switch);
@@ -808,6 +846,10 @@ const N1 = Object.freeze({
   dazai: ['My clowning was my last courtship of humanity.', 'そこで考え出したのは、道化でした。それは、自分の、人間に対する最後の求愛でした。', 'Dazai, No Longer Human (our translation)'],
   // night 1 Nietzsche line: how fruitless it is (owner 22 Nov); Common's translation, public domain
   nietzsche: ['In vain was all our labour.', 'Nietzsche, Thus Spake Zarathustra II, "The Soothsayer" (Common)'],
+  // session 24: the lines for nights 2 and 3 (index 0 = night 1, null = the line above). Dazai: why he clowns (GDD night 1 row, moved to night 2 on 22 Nov; the final row on the last night).
+  // Nietzsche: how fruitless it is (owner 22 Nov); night 2 from the same chapter, Common; the last night uses the GDD's candidate (open decision), Ludovici's 1911 translation, public domain
+  dazaiNights: [null, ['I have lived a life full of shame.', '恥の多い生涯を送って来ました。', 'Dazai, No Longer Human (our translation)'], ['He was a good child, like a god.', '神様みたいないい子でした', 'Dazai, No Longer Human, the madam\'s last words (our translation)']],
+  nietzscheNights: [null, ['All is empty, all is alike, all hath been!', 'Nietzsche, Thus Spake Zarathustra II, "The Soothsayer" (Common)'], ['I refuse to be a saint; I would rather be a clown.', 'Nietzsche, Ecce Homo, "Why I am a Fatality" 1 (Ludovici)']],
   // where the Nietzsche line shows: 'out' = leaving the Mirror World (theme panel 22 Nov: 9 of 12), 'in' = at the big mirror before he goes in, 'both'
   nietzscheAt: 'out',
   // line shown at the mirror before he goes in when nietzscheAt is 'both' (panel: kept in reserve); same chapter, Common
@@ -900,8 +942,13 @@ const N1 = Object.freeze({
   // owner 23 Nov 00:32 "player must know laugh is limited else they will spam": the cost shows on each gag button and in the hint; the Laughs count shows the spend for spendShow s and turns red at lowLaughs or under
   spendShow: 0.7, lowLaughs: 20,
   // shop (prices are glass pieces on the ledge, never numbers)
+  // act: an act from N1.acts, sold once it was tried on the board (NS.tried) or from night `from`; note on the night it was tried, later after;
+  // others (abilities) are always sold. Prices for scale, drill and trade are the lead's starting values (session 24), to tune in play
   shop: [
-    { id: 'sweep', title: 'Spotlight sweep', note: 'Lent tonight. Buy it and it is yours.', price: 6, move: 'slap' },
+    { id: 'sweep', title: 'Spotlight sweep', note: 'Lent tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
+    { id: 'scale', title: 'The talking scale', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
+    { id: 'drill', title: 'Soldier drill', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 7, move: 'lunge', act: true },
+    { id: 'trade', title: 'Tit-for-tat', note: 'Never tried on the board. Buy it and it is yours.', later: 'Never tried on the board. Buy it and it is yours.', price: 8, move: 'slap', act: true, from: 2 },
     { id: 'dash', title: 'Dash (Mirror)', note: 'A dash you buy is a dash the Performer gets.', price: 5, move: 'lunge' },
   ],
   // ----- theme panel fix 2 (owner agreed 22 Nov): the crowd pays most for what hurts him -----
@@ -986,7 +1033,20 @@ const N1 = Object.freeze({
   acts: [
     { id: 'fall', title: 'The deliberate fall', short: 'The fall', line: 'Miss the bar on purpose, land on your backside, bow.', own: 'Yours. It always pays a little.', x: -0.95, game: 'ring' },
     { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Lent tonight, free.', x: 0.95, game: 'hold' },
+    // session 24 (build plan 24.1): the night 2-3 acts; their routine after the cue is the fall's until the art pass (box and shape)
+    { id: 'scale', title: 'The talking scale', short: 'The scale', line: 'Step on the scale. It reads your weight out to the house, worse each time.', game: 'bar' },
+    { id: 'drill', title: 'Soldier drill', short: 'The drill', line: 'The whiteface barks the drill. Copy him, beat for beat.', game: 'call' },
+    { id: 'trade', title: 'Tit-for-tat', short: 'Tit-for-tat', line: 'The neighbour breaks your hat, you break his. Each turn comes back faster.', game: 'trade' },
   ],
+  // tonight's tryout, by night (GDD step 5: the acts he owns plus one unowned tryout each night); an owned one passes to the next in this list
+  tryouts: ['sweep', 'scale', 'drill'],
+  // the note's ownership line from night 2 on: his own act, tonight's tryout
+  ownText: 'Yours.', tryText: 'Tried out tonight, free. Buy it at the mirror and it is yours.',
+  // from night 2 the board is laid out in slots of paper notes (Blender x span m, gap between notes m, note height m) that cover the baked night-1 cards
+  // (cards at x +-0.95, 0.86 x 1.12 m, build_cube.py); the notes stay in the cards' band so the clown in front of the board is never covered (an HTML panel over the whole face hid his head)
+  boardSpan: 2.94, boardGap: 0.03, boardNoteH: 1.16,
+  // the paper notes are drawn in the room, in front of the baked cards and behind the clown (Blender y m): paper colour, the tryout's colour (the sweep card's ochre)
+  boardPaperY: 4.74, paperCol: '#e2dccf', paperTryCol: '#c99a3c',
   noteW: 0.86, noteH: 1.12,
   // owner 23 Nov 09:23 ("when choosing act at board, let player try the timing game and tell them what laugh and mask is"): switch for the note's Try it button and the two meter lines
   tryAct: true,
@@ -1437,7 +1497,7 @@ function enterRoom() {
   // the act pays out: Laughs count up from 0 and the paint thickens by the Mask it added
   const r = S.actPay || CONFIG.actResults[S.result];
   S.laughs = r.laughs; S.mask = r.mask; S.bought = {}; S.carry = [];
-  S.paintFrom = CONFIG.paint; S.paintNow = CONFIG.paint; S.countFrom = 0; S.countNow = 0; S.gainT = 0;
+  S.paintFrom = paintFor(NS.maskStart); S.paintNow = S.paintFrom; S.countFrom = 0; S.countNow = 0; S.gainT = 0;
   S.shownLaughs = -1; S.shownMask = -1;
   for (const p of el.prepBtns) p.off = null;
   showCarry();
@@ -1450,7 +1510,7 @@ function leaveRoom() {
   el.roomBar.classList.add('hidden');
   el.gains.classList.add('hidden');
   showPrep(false);
-  chars.clown.face.material.uniforms.uPaintAmt.value = CONFIG.paint;
+  chars.clown.face.material.uniforms.uPaintAmt.value = paintFor(NS.maskStart);
   el.hint.textContent = `Walk: ${moveLabel()}. Phone: drag anywhere below or beside the picture.`;
 }
 
@@ -1743,6 +1803,7 @@ async function boot() {
     performers.push(p);
   }
   await n1Load();
+  buildBoardPaper();
   placeStart(false);
   fit();
   // warm-up: every shader and texture once under the loading panel (walk, room with the clown and flakes, vignette)
@@ -1790,8 +1851,49 @@ const NS = {
   A: null, gpUsed: {}, fallAxes: [], brav: null, actRate: 1, actSeen: false, slump: null, hatDent: false, clownH: 1.79,
   // act by act: the last act whose segment was played between the cue's acts (-1 = none), the cue page waiting between acts, the result line showing
   cueAct: -1, cueBetween: false, actLine: false,
+  // session 24: tonight and what the run carried in (RUN, from the address hash); acts tried on the board so far; tonight's board and tryout
+  night: N1.night, tried: RUN.t.slice(), acts: null, tryId: '',
 };
+NS.mask = NS.maskStart = RUN.m; NS.shards = RUN.s; NS.bought = RUN.b.slice(); NS.lightOuts = RUN.lo;
+NS.acts = boardActs();
 try { NS.actSeen = localStorage.getItem('n1ActSeen') === '1'; } catch (e) { NS.actSeen = false; }
+// tonight's board (GDD night loop step 5): the fall, the acts he bought, and tonight's tryout (N1.tryouts by night; one he owns passes to the next unowned act)
+function boardActs() {
+  const night = N1.night, own = (id) => id === 'fall' || NS.bought.indexOf(id) >= 0, known = (id) => N1.acts.some((a) => a.id === id);
+  const order = N1.tryouts.slice(night - 1).concat(N1.acts.map((a) => a.id));
+  NS.tryId = order.find((id) => known(id) && !own(id)) || '';
+  if (NS.tryId && NS.tried.indexOf(NS.tryId) < 0) NS.tried.push(NS.tryId);
+  return N1.acts.filter((a) => own(a.id) || a.id === NS.tryId).map((a) => Object.assign({}, a, {
+    own: own(a.id) ? (a.id === 'fall' ? a.own : N1.ownText) : night === 1 && a.own ? a.own : N1.tryText, tryout: a.id === NS.tryId,
+  }));
+}
+// from night 2 tonight's notes are paper planes in the room at the board (built once at load, so the room warm-up compiles them), covering the baked
+// night-1 cards; drawn behind the clown, so his head in front of the board is never covered. The HTML buttons over them stay transparent
+function buildBoardPaper() {
+  if (N1.night < 2) return;
+  const n = NS.acts.length, slot = N1.boardSpan / Math.max(1, n), w = slot - N1.boardGap;
+  const paper = new THREE.MeshBasicMaterial({ color: N1.paperCol, fog: false, toneMapped: false }), tryM = new THREE.MeshBasicMaterial({ color: N1.paperTryCol, fog: false, toneMapped: false });
+  const geo = new THREE.PlaneGeometry(w, N1.boardNoteH);
+  NS.acts.forEach((a, i) => {
+    const m = new THREE.Mesh(geo, a.tryout ? tryM : paper);
+    m.position.set(-N1.boardSpan / 2 + slot * (i + 0.5), N1.boardCardZ, -N1.boardPaperY);
+    m.matrixAutoUpdate = false; m.updateMatrix();
+    roomScene.add(m);
+  });
+}
+// the night's quote: N1.dazaiNights / nietzscheNights for tonight, else the night-1 line
+function quoteFor(k) { const a = N1[k + 'Nights']; return (a && a[N1.night - 1]) || N1[k]; }
+function actTitle(id) { const a = N1.acts.find((x) => x.id === id); return a ? a.title : id; }
+// the next night is a fresh page with the run in the address hash (RUN); start over clears it
+function runNext() {
+  const h = `n=${N1.night + 1}&m=${NS.mask}&s=${NS.shards}&b=${NS.bought.join('.')}&t=${NS.tried.join('.')}&lo=${NS.lightOuts}`;
+  try { location.hash = h; } catch (e) { /* hash refused: the reload starts night 1 */ }
+  location.reload();
+}
+function runRestart() {
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { try { location.hash = ''; } catch (e2) { /* keep */ } }
+  location.reload();
+}
 const crew = [];
 const cast = {};
 const rampMats = {};
@@ -2026,7 +2128,8 @@ async function n1Load() {
     const m = { cd, root, x: cd.at[0], y: cd.at[1], restYaw: deg(cd.yaw), lab: makeLabel(), text: '', lx: -1, ly: -1, done: false, saidT: 0, labelH: root.userData.h + 0.3 };
     // label strings made once (no per-frame string building)
     const who = cd.title ? cd.title + ': ' : '';
-    m.lineText = cd.title && cd.line ? who + cd.line : '';
+    const said = (cd.lines && cd.lines[N1.night]) || cd.line;
+    m.lineText = cd.title && said ? who + said : '';
     m.doneText = cd.done ? who + cd.done : '';
     m.afterText = cd.title && cd.done ? who + cd.done : m.lineText;
     root.position.set(m.x, 0, -m.y); root.rotation.order = 'YXZ'; root.rotation.y = m.restYaw;
@@ -2162,6 +2265,9 @@ function logoOut() {
 }
 setTimeout(logoOut, 2800);
 el.logo.addEventListener('click', logoOut);
+// session 24: tonight on the curtain and the tab
+document.getElementById('nightLabel').textContent = `Night ${N1.night}${N1.night === N1.nights ? ' (the last)' : ''} \u00b7 prototype`;
+document.title = `The Clown and the Mirror: night ${N1.night} (prototype)`;
 function n1Ready() {
   el.start.disabled = false; el.start.textContent = 'Start'; el.loadState.textContent = '';
 }
@@ -2177,7 +2283,7 @@ el.start.addEventListener('click', () => {
   el.hint.textContent = '';
 });
 function showDazai() {
-  const q = N1.dazai;
+  const q = quoteFor('dazai');
   const d = show('dazai', `<div class="quote">"${q[0]}"<small>${q[1]}</small><small>${q[2]}</small></div><button id="goOut">${N1.boardWall ? 'To the act board' : 'Go out to the ring'}</button>`);
   d.querySelector('#goOut').addEventListener('click', goOut);
 }
@@ -2232,24 +2338,28 @@ function toBoard() {
     setFace(chars.clown, 'smile');
     el.boardActs.classList.remove('hidden');
     placeBoardActs();
-    el.hint.textContent = NS.touch ? 'Tap tonight\'s act on the board.' : `Click tonight's act on the board (or press ${keyLabel('act1')} or ${keyLabel('act2')}).`;
+    el.hint.textContent = NS.touch ? 'Tap tonight\'s act on the board.' : `Click tonight's act on the board (or press ${keyLabel('act1')} to ${keyLabel('act' + Math.min(5, NS.acts.length))}).`;
   });
 }
 // buttons over the cards: placed when shown and on resize (not per frame)
 function placeBoardActs() {
   if (el.boardActs.classList.contains('hidden')) return;
   const r = el.canvas.getBoundingClientRect();
-  N1.acts.forEach((a, i) => {
-    const b = el.boardActBtns[i], px = (x, z) => { const v = tmp.set(x, z, -N1.boardCardY).project(roomCam); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
-    const c = px(a.x, N1.boardCardZ), l = px(a.x - N1.noteW / 2, N1.boardCardZ + N1.noteH / 2), q = px(a.x + N1.noteW / 2, N1.boardCardZ - N1.noteH / 2);
+  const px = (x, z) => { const v = tmp.set(x, z, -N1.boardCardY).project(roomCam); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
+  const box = (b, x, z, w, h) => {
+    const c = px(x, z), l = px(x - w / 2, z + h / 2), q = px(x + w / 2, z - h / 2);
     b.style.setProperty('--x', Math.round(c[0])); b.style.setProperty('--y', Math.round(c[1]));
     b.style.setProperty('--w', Math.round(q[0] - l[0])); b.style.setProperty('--h', Math.round(q[1] - l[1]));
-  });
+  };
+  // night 1: the baked cards (a.x); from night 2 tonight's notes in slots over a flat panel that hides the baked cards
+  const slots = N1.night > 1, n = NS.acts.length, slot = N1.boardSpan / Math.max(1, n), w = slot - N1.boardGap;
+  NS.acts.forEach((a, i) => box(el.boardActBtns[i], slots ? -N1.boardSpan / 2 + slot * (i + 0.5) : a.x, N1.boardCardZ, slots ? w : N1.noteW, slots ? N1.boardNoteH : N1.noteH));
 }
 // a note opens as a parchment (22 Nov b item 1): title, the routine in one line, whose it is; Perform it or Back (the loop waits behind it)
 function pickAct(id) {
   if (NS.scene !== 'boardwall') return;
-  const a = N1.acts.find((x) => x.id === id);
+  const a = NS.acts.find((x) => x.id === id);
+  if (!a) return;
   setScene('note'); NS.noteAct = id;
   S.running = false;
   const tried = N1.tryAct && NS.tryLine ? `<small class="tried">${NS.tryLine}</small>` : '';
@@ -2270,7 +2380,7 @@ function tryAct(id) {
   musicDuck(true);
   NS.tryFrame = document.createElement('iframe');
   NS.tryFrame.id = 'cueFrame';
-  NS.tryFrame.src = 'cue_model.html?host=night1&rehearse=1&game=' + a.game;
+  NS.tryFrame.src = 'cue_model.html?host=night1&rehearse=1&night=' + NS.night + '&game=' + a.game;
   document.body.appendChild(NS.tryFrame);
   NS.tryBtn = document.createElement('button');
   NS.tryBtn.id = 'tryBack'; NS.tryBtn.textContent = N1.tryBack;
@@ -2341,7 +2451,7 @@ function openCue() {
   // hosted: the cue page hides its own title, notes and settings and shows one line and its start button (owner's item 4)
   // act by act (owner 23 Nov 08:29) when the act plays in the ring; the crowd card path keeps all acts back to back
   const act = N1.acts.find((x) => x.id === NS.act);
-  NS.cue.src = 'cue_model.html?host=night1' + (N1.actShow ? '&byact=1' : '') + '&game=' + (act ? act.game : 'ring');
+  NS.cue.src = 'cue_model.html?host=night1' + (N1.actShow ? '&byact=1' : '') + '&night=' + NS.night + '&game=' + (act ? act.game : 'ring');
   NS.contCount++;
   document.body.appendChild(NS.cue);
   NS.poll = setInterval(() => {
@@ -2388,7 +2498,7 @@ function actPay() {
   if (h.total > 0 && h.total >= i.actLaughs) r = Math.max(r, 0.6);
   NS.crowd = r >= 0.85 && !i.misses ? 'Standing ovation: on their feet, applause.' : r >= 0.6 ? 'Wave of laughter: the rows rock together.'
     : r >= 0.35 ? 'A few laughs: scattered heads move.' : r > 0 ? 'Silence: the house is still.' : 'Bad: coughs, a phone glow, someone walks out.';
-  NS.laughs = i.actLaughs + h.total; NS.mask = i.mask;
+  NS.laughs = i.actLaughs + h.total; NS.mask = NS.maskStart + i.mask;
   const best = h.best.charAt(0).toUpperCase() + h.best.slice(1);
   // "hardest" only when one hurt alone out-earned the whole act (stranger cold read: the pie 25 vs the act 45 read as a contradiction)
   NS.hurtHead = !h.total ? '' : h.bestN > i.actLaughs ? `They laughed hardest at ${h.best}.` : `${best} got a bigger laugh than a clean beat.`;
@@ -3024,10 +3134,10 @@ if (document.fullscreenEnabled) el.fs.classList.remove('hidden');
 el.fs.addEventListener('click', toggleFs);
 el.resume.addEventListener('click', resumeGame);
 document.addEventListener('fullscreenchange', () => { el.fs.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
-// the notes are made once from N1.acts (projected onto the board when shown)
-for (const a of N1.acts) {
+// the notes are made once from tonight's board, NS.acts (projected onto the board when shown); from night 2 they are paper notes over the baked cards
+for (const a of NS.acts) {
   const b = document.createElement('button');
-  b.className = 'note'; b.dataset.act = a.id; b.textContent = a.short; b.setAttribute('aria-label', a.title);
+  b.className = 'note' + (N1.night > 1 ? ' paper' + (a.tryout ? ' try' : '') : ''); b.dataset.act = a.id; b.textContent = a.short; b.setAttribute('aria-label', a.title);
   b.addEventListener('click', () => pickAct(a.id));
   el.boardActs.appendChild(b); el.boardActBtns.push(b);
 }
@@ -3129,7 +3239,7 @@ function mirrorSetup(kind) {
   refl.root.position.set(rb.x, 0, rb.z);
   refl.root.rotation.y = yaw;
   // the big mirror's reflection is a pale form of him, darker each night; the vanity shows him as he is
-  const sh = N1.reflShade[Math.min(N1.reflShade.length, N1.night) - 1];
+  const sh = N1.reflShade[Math.min(N1.reflShade.length, NS.night) - 1];
   refl.gTint.value.setRGB(sh, sh, sh * 1.04); refl.gAmt.value = vanity ? 0 : N1.reflPale;
   // the way in: his hand to the glass (22 Nov b item 7), the reflection's hand back
   gpStop(c); gpStop(refl);
@@ -3264,7 +3374,7 @@ function updateMirror(dt) {
   if (NS.paintT >= 0 && !NS.painted) {
     NS.paintT += dt;
     const k = Math.min(1, NS.paintT / N1.paintSecs);
-    c.face.material.uniforms.uPaintAmt.value = N1.paintHalf + (CONFIG.paint - N1.paintHalf) * ease(k);
+    c.face.material.uniforms.uPaintAmt.value = N1.paintHalf + (paintFor(NS.maskStart) - N1.paintHalf) * ease(k);
     if (k >= 1) { NS.painted = true; showDazai(); }
   }
   // small win: the wipe eases the paint down, then one real laugh answers it
@@ -3421,7 +3531,7 @@ function pauseGame() {
   if (S.raf) { cancelAnimationFrame(S.raf); S.raf = 0; }
   if (NS.audio && NS.audio.state === 'running') NS.audio.suspend().catch(() => {});
   musicHold(true);
-  const sc = bindScene(), rows = CONFIG.bindScenes[sc].filter((a) => a !== 'pause').map((a) => `<tr><td>${CONFIG.binds[a].label}</td><td>${keyLabel(a, true)}</td></tr>`).join('');
+  const sc = bindScene(), rows = CONFIG.bindScenes[sc].filter((a) => a !== 'pause' && !(/^act\d$/.test(a) && Number(a.slice(3)) > NS.acts.length)).map((a) => `<tr><td>${CONFIG.binds[a].label}</td><td>${keyLabel(a, true)}</td></tr>`).join('');
   el.pauseList.innerHTML = rows + `<tr><td>${CONFIG.binds.pause.label}</td><td>${keyLabel('pause')}</td></tr>`;
   el.pause.classList.remove('hidden');
   NS.pauseShown = sc;
@@ -3445,7 +3555,7 @@ function n1Key(e) {
   if (NS.scene === 'bravado') return true;
   if (NS.scene === 'walk') { if (bound('interact', e.code)) { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (bound('confirm', e.code)) smallPress(); return true; }
-  if (NS.scene === 'boardwall') { const i = bound('act1', e.code) ? 0 : bound('act2', e.code) ? 1 : -1; if (N1.acts[i]) pickAct(N1.acts[i].id); return true; }
+  if (NS.scene === 'boardwall') { let i = -1; for (let k = 0; k < NS.acts.length && k < 5; k++) if (bound('act' + (k + 1), e.code)) i = k; if (NS.acts[i]) pickAct(NS.acts[i].id); return true; }
   if (NS.scene === 'note') { if (bound('confirm', e.code)) performAct(NS.noteAct); else if (bound('back', e.code)) noteBack(); return true; }
   if (S.mode === 'act') return true;
   if (S.mirror === 'entry') {
@@ -3745,7 +3855,7 @@ function enterMW() {
 // Mixer on: the entry corridor, then the styles of tonight's earned insecurities in a mixed order (a check may fix it with NS.routeOrder), the arena last; each space a group of mwGroup different types
 function mwBuildRoute() {
   if (!N1.mwMixer) return N1.mwRoute ? [{ style: 'corridor', group: null }, { style: 'ring', group: null }] : [{ style: 'ring', group: null }];
-  const night = NS.night || 1, earned = mwRoster(), used = [], uses = {}, route = [];
+  const night = NS.night, earned = mwRoster(), used = [], uses = {}, route = [];
   const max = N1.mwSpaces[Math.min(night, N1.mwSpaces.length) - 1], cor = N1.mwRoute && N1.mwStyles.corridor;
   const hostOf = (st) => { for (const k of earned) if (N1.mwStyleOf[k] === st) return k; return ''; };
   let mids = [];
@@ -4365,7 +4475,7 @@ function nietzscheCard() {
   setScene('out');
   const at = NS.nAt;
   if (at !== 'out' && at !== 'both') { afterMirror(); return; }
-  const q = N1.nietzsche;
+  const q = quoteFor('nietzsche');
   const d = show('nietzsche', `<div class="quote">"${q[0]}"<small>${q[1]}</small></div><button id="toKept" class="held">Leave the mirror</button>`);
   const b = d.querySelector('#toKept');
   b.addEventListener('click', afterMirror);
@@ -4455,9 +4565,11 @@ function learnUpdate(dt, v) {
 function shopCard() {
   if (N1.performerLearns && S.mirror !== 'shop') { hideCard(); mirrorSetup('shop'); S.running = true; startLoop(); }
   setScene('shop');
-  const items = N1.shop.map((it) => {
-    const owned = NS.bought.indexOf(it.id) >= 0, can = NS.shards >= it.price;
-    return `<button class="opt" data-id="${it.id}" ${owned || !can || NS.learn ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b>${it.note}<div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
+  // session 24: an act is sold once tried on the board (or from its night); bought acts stay listed as bought
+  const sold = N1.shop.filter((it) => !it.act || NS.tried.indexOf(it.id) >= 0 || (it.from && NS.night >= it.from) || NS.bought.indexOf(it.id) >= 0);
+  const items = sold.map((it) => {
+    const owned = NS.bought.indexOf(it.id) >= 0, can = NS.shards >= it.price, note = it.act && it.id !== NS.tryId && it.later ? it.later : it.note;
+    return `<button class="opt" data-id="${it.id}" ${owned || !can || NS.learn ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b>${note}<div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
   }).join('');
   const d = show('shop', `<h2>The mirror shop</h2><p>The reflection keeps the shop. Prices are glass pieces on the ledge.</p>
     ${NS.keptLine ? `<p id="keptLine">${NS.keptLine}</p>` : ''}<div id="shards">${shardRow(NS.shards)}</div><div class="opts">${items}</div>
@@ -4485,18 +4597,21 @@ function endCard() {
   const knows = N1.performerLearns ? `<p class="knows">${N1.endKnows}<br>${titles.length ? titles.join('<br>') + `<br><small>${N1.endLearned}</small>` : 'nothing bought tonight'}</p>` : '';
   const best = NS.hurt && NS.hurt.bestN > (i.actLaughs || 0) ? NS.hurt.best : 'the act';
   const brief = N1.endBrief ? `<p class="facts">Laughs earned ${NS.laughs} &middot; They laughed hardest at ${best} &middot; Mask ${NS.mask}</p>${NS.smallDone ? `<p>${NS.smallDone}</p>` : ''}` : '';
-  const d = show('end', `<h2>End of night 1</h2>${knows}${brief}${N1.endBrief ? '<details id="endLog"><summary>Details</summary>' : ''}<div class="sum">
+  const d = show('end', `<h2>End of night ${NS.night}</h2>${knows}${brief}${N1.endBrief ? '<details id="endLog"><summary>Details</summary>' : ''}<div class="sum">
     Corridor: jumped the cable ${v.jump ? 'yes' : 'no'}, took the pie ${v.take ? 'yes' : 'no'}, honked the horn ${v.honk ? 'yes' : 'no'}, tripped for the child ${v.trip ? 'yes' : 'no'}<br>
-    Act: ${NS.act === 'fall' ? 'The deliberate fall' : 'Spotlight sweep (lent)'}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
+    Act: ${actTitle(NS.act)}${NS.act === NS.tryId ? ' (tryout)' : ''}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
     Crowd: ${NS.crowd}<br>
     Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}${NS.putOut ? '; the Light put out' : ''}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
     Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>${N1.endBrief ? '</details>' : ''}
-    <button id="again1">Play night 1 again</button>`);
-  d.querySelector('#again1').addEventListener('click', () => location.reload());
+    ${NS.night < N1.nights ? `<button id="nextNight">Go on to night ${NS.night + 1}</button>` : ''}<button id="again1" class="back">Start again from night 1</button>`);
+  // session 24: the next night carries Mask, shards, what he bought, what he tried and the Light's widening (runNext); start over clears the run
+  const nx = d.querySelector('#nextNight');
+  if (nx) nx.addEventListener('click', runNext);
+  d.querySelector('#again1').addEventListener('click', runRestart);
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR };
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });
