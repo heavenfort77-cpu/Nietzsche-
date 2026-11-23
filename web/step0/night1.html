@@ -942,6 +942,9 @@ const N1 = Object.freeze({
   // ----- the act after the cue (owner 22 Nov 13:45, design/PANEL-act-price.md 11 of 12; session 17 order A) -----
   // switch: walk-on, cue, the act's routine at the zoom-out, the beat after, the bow, one-line caption (false = the crowd text card)
   actShow: true,
+  // owner 23 Nov 08:29 ("3 ring show 1 act letting player know success and failure"): after each act's rings its segment plays in the ring
+  // with this one line, by the act's grade (starting wording, owner edits)
+  actResultText: { perfect: 'The act lands.', good: 'The act gets a laugh.', miss: 'The act flops.' },
   // ring radius, tent wall radius, metres; the bank the crowd sits on rises from the curb to this radius and height
   actRingR: 6.5, actWallR: 14, actBankR: 12.5, actBankH: 3.0,
   // the low seat behind the back rows (GDD performance view): camera position and the point it looks at, metres
@@ -1711,6 +1714,8 @@ const NS = {
   contCount: 0, jokes: { echo: false, rigger: false, sniff: false }, riggerT: -1, sniffMood: { tempo: 1, chest: 0, neck: 0, head: 0 }, keptLine: '',
   // the act at the zoom-out: routine state, game-time rate (checks may raise it), seen once (tap skips after), slump for the walk back, dented hat carried, clown height m
   A: null, gpUsed: {}, fallAxes: [], brav: null, actRate: 1, actSeen: false, slump: null, hatDent: false, clownH: 1.79,
+  // act by act: the last act whose segment was played between the cue's acts (-1 = none), the cue page waiting between acts, the result line showing
+  cueAct: -1, cueBetween: false, actLine: false,
 };
 try { NS.actSeen = localStorage.getItem('n1ActSeen') === '1'; } catch (e) { NS.actSeen = false; }
 const crew = [];
@@ -2059,7 +2064,7 @@ function musicHold(on) {
 function show(id, html) {
   hideCard();
   const d = document.createElement('div');
-  d.className = 'card' + (id === 'dazai' || id === 'small' || (id === 'crowd' && N1.actShow) ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
+  d.className = 'card' + (id === 'dazai' || id === 'small' || ((id === 'crowd' || id === 'actLine') && N1.actShow) ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
   d.id = 'card_' + id;
   if (N1.continueCards.indexOf(id) >= 0) NS.contCount++;
   d.innerHTML = html;
@@ -2213,7 +2218,8 @@ function openCue() {
   NS.cue = document.createElement('iframe');
   NS.cue.id = 'cueFrame';
   // hosted: the cue page hides its own title, notes and settings and shows one line and its start button (owner's item 4)
-  NS.cue.src = 'cue_model.html?host=night1';
+  // act by act (owner 23 Nov 08:29) when the act plays in the ring; the crowd card path keeps all acts back to back
+  NS.cue.src = 'cue_model.html?host=night1' + (N1.actShow ? '&byact=1' : '');
   NS.contCount++;
   document.body.appendChild(NS.cue);
   NS.poll = setInterval(() => {
@@ -2223,6 +2229,7 @@ function openCue() {
     // panel item 1: tell the cue page that a fall gets the big laugh tonight
     if (!NS.cue.contentWindow.__cueOpts) NS.cue.contentWindow.__cueOpts = { hurt: N1.hurtPays };
     const i = g.info();
+    if (i.scene === 'actDone' && i.actIndex !== NS.cueAct) { NS.cueAct = i.actIndex; NS.actBeats = g.beats(); actBetween(i); }
     if (i.scene === 'results' && !NS.actInfo) { NS.actInfo = i; NS.actBeats = g.beats(); clearInterval(NS.poll); setTimeout(N1.actShow ? actAfter : crowdCard, 900); }
   }, 250);
 }
@@ -2275,6 +2282,7 @@ function crowdCard() {
 function walkBackGo() {
   hideCard();
   actCueClose();
+  NS.cueAct = -1; NS.cueBetween = false; NS.actLine = false;
   if (S.mode === 'act') actLeave();
   setScene('back');
   S.actPay = { laughs: NS.laughs, mask: NS.mask };
@@ -2502,6 +2510,7 @@ function actFit() {
 function actEnter() {
   const c = chars.clown, ch = cast.child;
   S.mode = 'act'; setScene('act');
+  NS.cueAct = -1; NS.cueBetween = false; NS.actLine = false;
   NS.A = { phase: 'walkon', t: 0, x: N1.walkOnFrom[0], z: N1.walkOnFrom[1], yaw: 0, rx: 0, y: 0, clip: 'idle', clipNow: 'idle', tempo: 1, face: 'smile',
     mood: { tempo: 1, chest: -6, neck: -3, head: -4 }, excite: N1.exciteHouse, spotR: N1.actSpotR, spotX: N1.actSpotAt[0], spotZ: N1.actSpotAt[1], litNow: -1, lit: 1,
     segs: [], seg: 0, sx: 0, sz: 0, srx: 0, sy: 0, fired: {}, peaks: [], flash: 0, shake: 0, fxN: { roll: 0, crash: 0, flash: 0, burst: 0, shake: 0 }, hat: 'real', hatV: new THREE.Vector3(), hatSpin: 0, hatLift: 0, fitH: 0, hold: null, done: false };
@@ -2553,8 +2562,47 @@ function actAfter() {
   actCueClose();
   if (NS.scene !== 'act' || !NS.A) actEnter();
   const A = NS.A;
-  A.segs = actSegments(); A.seg = 0; A.peaks = A.segs.map(() => 0);
+  A.segs = actSegments();
+  // act by act: the acts already played between the cue's acts are not played again; the routine goes on from the next one, then the hold
+  if (NS.cueAct >= 0) {
+    releaseHeld();
+    actSegGo(A, NS.cueAct + 1);
+    el.actSkip.classList.toggle('hidden', !NS.actSeen);
+    return;
+  }
+  A.seg = 0; A.peaks = A.segs.map(() => 0);
   actRoutine();
+}
+// act by act (owner 23 Nov 08:29): the cue page waits between acts; its frame hides (kept: its audio and state) and the ring plays the act just done
+function actBetween(i) {
+  const A = NS.A;
+  NS.cue.classList.add('hidden');
+  NS.cue.blur(); window.focus();
+  releaseHeld();
+  musicDuck(false);
+  NS.cueBetween = true;
+  if (i.actIndex === 0) { actRoutine(); A.peaks = new Array(i.acts).fill(0); }
+  el.actSkip.classList.add('hidden');
+  A.segs = actSegments();
+  actSegGo(A, i.actIndex);
+}
+// play segment n (the act's index) with its one-line result
+function actSegGo(A, n) {
+  A.seg = n; A.phase = 'seg'; A.t = 0;
+  show('actLine', `<p class="knows">${N1.actResultText[A.segs[n]]}</p>`);
+  NS.actLine = true;
+  S.running = true; startLoop();
+}
+// the act's segment is over and the cue page has acts left: the line goes, the loop stops, the cue page shows and starts the next act
+function actCueNext(A) {
+  A.phase = 'cue';
+  S.running = false;
+  releaseHeld();
+  NS.cueBetween = false;
+  musicDuck(true);
+  NS.cue.classList.remove('hidden');
+  NS.cue.contentWindow.focus();
+  NS.cue.contentWindow.__game.nextAct();
 }
 // (re)start the routine from the spot (a returning player can tap to skip it)
 function actRoutine() {
@@ -2655,7 +2703,7 @@ function segSweep(A, i, k, a, peak) {
   }
 }
 function actSeg(A, dt) {
-  const k = Math.min(1, A.t / N1.segSecs), grade = A.segs[A.seg], amt = grade === 'good' ? N1.goodAmt : 1, peak = segPeak(grade), last = A.seg === A.segs.length - 1;
+  const k = Math.min(1, A.t / N1.segSecs), grade = A.segs[A.seg], amt = grade === 'good' ? N1.goodAmt : 1, peak = segPeak(grade), last = !NS.cueBetween && A.seg === A.segs.length - 1;
   if (once(A, 'roll')) { drum(actObj.roll); A.fxN.roll++; }
   if (grade === 'miss') segMiss(A, k, last);
   else if (NS.act === 'sweep') segSweep(A, A.seg % 3, k, amt, peak);
@@ -2664,6 +2712,8 @@ function actSeg(A, dt) {
   if (k >= 0.5) A.peaks[A.seg] = Math.max(A.peaks[A.seg], actU.uExcite.value);
   if (k < 1) return;
   A.seg++; A.t = 0; segStart(A);
+  if (NS.actLine) { hideCard(); NS.actLine = false; }
+  if (NS.cueBetween) { actCueNext(A); return; }
   if (A.seg >= A.segs.length) { A.phase = 'hold'; actHush(); A.excite = 0; }
 }
 // the beat after: the laughter stops, he is alone in the spot with the sad face; the child does not laugh
@@ -2734,6 +2784,7 @@ function actCaption() {
   const A = NS.A;
   if (A.done) return;
   A.done = true; A.phase = 'caption';
+  NS.actLine = false;
   el.actSkip.classList.add('hidden');
   NS.actSeen = true;
   try { localStorage.setItem('n1ActSeen', '1'); } catch (e) { /* storage off */ }
@@ -2744,7 +2795,7 @@ function actCaption() {
 // a returning player skips with the Skip button only (owner 22 Nov 20:27: "should not be skip by any button except skip button"): the routine's end state at once
 function actSkip() {
   const A = NS.A;
-  if (!NS.actSeen || !A || A.done || (A.phase !== 'seg' && A.phase !== 'hold' && A.phase !== 'bow')) return false;
+  if (!NS.actSeen || !A || A.done || NS.cueBetween || (A.phase !== 'seg' && A.phase !== 'hold' && A.phase !== 'bow')) return false;
   actHush();
   A.rx = 0; A.y = 0; A.yaw = 0; A.face = 'smile'; A.mood.chest = 0; A.mood.head = 0; A.excite = 0.2; A.clip = 'idle'; A.hatSpin = 0;
   gpStop(chars.clown);
@@ -3234,12 +3285,16 @@ function bindScene() {
   if (S.room) return 'room';
   return 'walk';
 }
+// held keys and the touch stick are let go (pause, and the cue page hiding or showing between acts)
+function releaseHeld() {
+  keys.clear(); readKeys();
+  if (input.touchId !== -1) { input.touchId = -1; input.tx = 0; input.ty = 0; el.stick.classList.add('hidden'); }
+}
 // ----- pause (Esc): the loop stops, held input is let go, sound waits; the card lists this scene's controls from CONFIG.binds -----
 function pauseGame() {
   if (NS.paused || NS.scene === 'logo' || NS.scene === 'title') return;
   NS.paused = true;
-  keys.clear(); readKeys();
-  if (input.touchId !== -1) { input.touchId = -1; input.tx = 0; input.ty = 0; el.stick.classList.add('hidden'); }
+  releaseHeld();
   if (S.raf) { cancelAnimationFrame(S.raf); S.raf = 0; }
   if (NS.audio && NS.audio.state === 'running') NS.audio.suspend().catch(() => {});
   musicHold(true);
