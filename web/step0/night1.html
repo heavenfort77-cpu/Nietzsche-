@@ -39,25 +39,24 @@
   /* F34: a card taller than the screen scrolls and never cuts off its top (safe centring; browsers without it keep plain centring) */
   .card { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-content: safe center; overflow-y: auto; gap: 14px; text-align: center; padding: 24px; box-sizing: border-box; background: #0c0809ee; z-index: 20; }
   .card.see { background: linear-gradient(#0c080900 40%, #0c0809e6 75%); justify-content: flex-end; justify-content: safe flex-end; padding-bottom: 48px; }
-  /* shop at the mirror: the panel sits left of the glass (landscape) or under it (portrait) so the performing reflection stays clear (panel item 5) */
-  .card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 32%, #0c080900 42%); align-items: flex-start; justify-content: center; justify-content: safe center; text-align: left; gap: 8px; padding: 16px 0 16px 3%; }
-  .card.shopAt > * { max-width: 34vw; }
+  /* shop at the mirror (panel item 5): shopFit() puts the panel in the largest free part of the screen beside, under or over the glass, so the performing
+     reflection is never covered (F35: the fixed left column and the two media rules ran over the glass or off screen with more items) */
+  .card.shopAt { inset: auto; background: #0c0809d9; align-items: flex-start; justify-content: flex-start; text-align: left; gap: 8px; padding: 10px 12px; }
+  /* the panel fades toward the glass, as the fixed column did (side l, r: left or right of it; b, t: under or over it) */
+  .card.shopAt.side-l { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 75%, #0c080900 100%); }
+  .card.shopAt.side-r { background: linear-gradient(270deg, #0c0809e6 0, #0c0809cc 75%, #0c080900 100%); }
+  .card.shopAt.side-b { background: linear-gradient(0deg, #0c0809e6 0, #0c0809cc 75%, #0c080900 100%); align-items: center; text-align: center; }
+  .card.shopAt.side-t { background: linear-gradient(180deg, #0c0809e6 0, #0c0809cc 75%, #0c080900 100%); align-items: center; text-align: center; }
+  .card.shopAt > * { max-width: 100%; }
   .card.shopAt .opts { flex-direction: column; justify-content: flex-start; }
   .card.shopAt .opt { padding: 8px 14px; }
-  @media (orientation: portrait) {
-    .card.shopAt { background: linear-gradient(#0c080900 55%, #0c0809e6 78%); align-items: center; justify-content: flex-end; text-align: center; padding: 0 16px 16px; }
-    .card.shopAt > * { max-width: 100%; }
-    .card.shopAt .opts { flex-direction: row; justify-content: center; }
-    .card.shopAt h2, .card.shopAt > p:first-of-type, .card.shopAt #keptLine { display: none; }
-  }
-  /* F34: short landscape screens (phone on its side): the shop's items two to a row, the header line and the shop's first line hidden so up to 5 items fit */
-  @media (orientation: landscape) and (max-height: 500px) {
-    .card.shopAt { background: linear-gradient(90deg, #0c0809e6 0, #0c0809cc 44%, #0c080900 54%); padding: 8px 0 8px 2%; gap: 6px; }
-    .card.shopAt > * { max-width: 50vw; }
-    .card.shopAt .opts { flex-direction: row; flex-wrap: wrap; gap: 6px; }
-    .card.shopAt .opt { max-width: 24vw; padding: 4px 8px; font-size: 12px; min-height: 44px; }
-    .card.shopAt h2, .card.shopAt > p:first-of-type { display: none; }
-  }
+  /* not all fits: items two to a row, the header lines go */
+  .card.shopAt.tight { gap: 6px; }
+  .card.shopAt.tight .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+  .card.shopAt.tight .opt { padding: 4px 8px; font-size: 12px; min-height: 44px; max-width: none; }
+  .card.shopAt.tight h2, .card.shopAt.tight > p:first-of-type { display: none; }
+  /* still not: each item's note and the long lines go (title and price stay) */
+  .card.shopAt.tighter .opt .note, .card.shopAt.tighter #keptLine, .card.shopAt.tighter #shopSay { display: none; }
   .card .knows { color: #f0d27a; font: 400 18px/1.5 Georgia, serif; }
   .card h2 { margin: 0; font: 600 22px/1.2 Georgia, serif; color: #f0d27a; }
   .card p { margin: 0; max-width: 560px; }
@@ -998,6 +997,8 @@ const N1 = Object.freeze({
   mwNameSecs: 3.5,
   // owner 23 Nov 00:32 "player must know laugh is limited else they will spam": the cost shows on each gag button and in the hint; the Laughs count shows the spend for spendShow s and turns red at lowLaughs or under
   spendShow: 0.7, lowLaughs: 20,
+  // F35 (session 25): the shop panel at the mirror keeps this gap (px) from the glass, and a free part of the screen narrower or lower than shopMinPx is not used for it
+  shopGap: 12, shopMinPx: 150,
   // shop (prices are glass pieces on the ledge, never numbers)
   // act: an act from N1.acts, sold once it was tried on the board (NS.tried) or from night `from`; note on the night it was tried, later after.
   // others (abilities) are always sold. Prices for scale, drill and trade are the lead's starting values (session 24), to tune in play
@@ -3359,6 +3360,7 @@ function sizeCracks() {
   el.cracks.width = Math.round(w * dpr); el.cracks.height = Math.round(h * dpr);
   el.cracks.style.width = w + 'px'; el.cracks.style.height = h + 'px';
   drawCracks();
+  if (S.mirror === 'shop') shopFit();
 }
 window.addEventListener('resize', () => { if (S.mirror) sizeCracks(); });
 function renderReflection() {
@@ -5030,6 +5032,24 @@ function learnUpdate(dt, v) {
   refl.root.position.x = rb.x - rb.fx * off; refl.root.position.z = rb.z - rb.fz * off;
   return Math.min(v, 1 - NS.reflUp);
 }
+// F35 (session 25): the shop panel goes in the largest free part of the screen left of, right of, under or over the glass (NS.mrect in canvas px,
+// offset by the canvas box when the picture is letterboxed), so it never covers the reflection; when its content does not fit there, items go two to a row,
+// then the notes and long lines go. Runs when the shop card is drawn and on resize, never per frame.
+function shopFit() {
+  const d = NS.card;
+  if (!d || d.id !== 'card_shop' || !d.classList.contains('shopAt')) return;
+  const cb = renderer.domElement.getBoundingClientRect(), m = NS.mrect, vw = window.innerWidth, vh = window.innerHeight, gap = N1.shopGap;
+  const gl = cb.left + m[0], gt = cb.top + S.h - m[1] - m[3], gr = gl + m[2], gb = gt + m[3];
+  const regs = [[0, 0, gl - gap, vh, 'l'], [gr + gap, 0, vw - gr - gap, vh, 'r'], [0, gb + gap, vw, vh - gb - gap, 'b'], [0, 0, vw, gt - gap, 't']];
+  let best = null;
+  for (const r of regs) if (r[2] >= N1.shopMinPx && r[3] >= N1.shopMinPx && (!best || r[2] * r[3] > best[2] * best[3])) best = r;
+  if (!best) best = [0, 0, vw, vh, 'b'];
+  d.style.left = best[0] + 'px'; d.style.top = best[1] + 'px'; d.style.width = best[2] + 'px'; d.style.height = best[3] + 'px';
+  for (const s of 'lrbt') d.classList.toggle('side-' + s, best[4] === s);
+  d.classList.remove('tight', 'tighter');
+  if (d.scrollHeight > d.clientHeight + 1) d.classList.add('tight');
+  if (d.scrollHeight > d.clientHeight + 1) d.classList.add('tighter');
+}
 function shopCard() {
   if (N1.performerLearns && S.mirror !== 'shop') { hideCard(); mirrorSetup('shop'); S.running = true; startLoop(); }
   setScene('shop');
@@ -5037,7 +5057,7 @@ function shopCard() {
   const sold = N1.shop.filter((it) => !it.act || NS.tried.indexOf(it.id) >= 0 || (it.from && NS.night >= it.from) || NS.bought.indexOf(it.id) >= 0);
   const items = sold.map((it) => {
     const owned = NS.bought.indexOf(it.id) >= 0, can = NS.shards >= it.price, note = it.act && it.id !== NS.tryId && it.later ? it.later : it.note;
-    return `<button class="opt" data-id="${it.id}" ${owned || !can || NS.learn ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b>${note}<div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
+    return `<button class="opt" data-id="${it.id}" ${owned || !can || NS.learn ? 'disabled' : ''}><b>${it.title}${owned ? ' (bought)' : ''}</b><span class="note">${note}</span><div class="shards price">${shardRow(it.price, 'price')}</div></button>`;
   }).join('');
   const d = show('shop', `<h2>The mirror shop</h2><p>The reflection keeps the shop. Prices are glass pieces on the ledge.</p>
     ${NS.keptLine ? `<p id="keptLine">${NS.keptLine}</p>` : ''}<div id="shards">${shardRow(NS.shards)}</div><div class="opts">${items}</div>
@@ -5054,6 +5074,7 @@ function shopCard() {
     shopCard();
   }));
   d.querySelector('#endNight').addEventListener('click', endCard);
+  shopFit();
 }
 function endCard() {
   setScene('end');

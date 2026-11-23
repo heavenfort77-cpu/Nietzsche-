@@ -60,7 +60,8 @@ const MUTS = {
   pale: ['night1.html', 'reflPale: 0.85,\n', 'reflPale: 0,\n'],
   press: ['night1.html', '  if (press && NS.press) pressMeasure();', ''],
   // owner's phone play 22 Nov 19:38 (panel 22 Nov c, session 18)
-  vanitylow: ['night1.html', 'vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9],', 'vanityGlass: [4.83, 0, 1.55], vanitySize: [1.3, 1.1],'],
+  // F37: the session 18 values (glass 1.55 m, 1.1 m high) now still hold his face (seat and framing changed since), so the mutation lifts the glass clear above it
+  vanitylow: ['night1.html', 'vanityGlass: [4.83, 0, 1.20], vanitySize: [1.3, 0.9],', 'vanityGlass: [4.83, 0, 1.95], vanitySize: [1.3, 0.7],'],
   bravado: ['night1.html', '  bravado: true,', '  bravado: false,'],
   bravrefl: ['night1.html', "  const lag = S.mirror === 'entry' ? N1.reflLag : 0, want", '  const lag = N1.reflLag, want'],
   // owner 22 Nov 20:27 (session 18 batch 2): the big mirror is a true mirror, the press a close shot where the palms meet
@@ -118,7 +119,8 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       fs.appendFileSync(process.env.TRANSCRIPT, `\n=== ${sc.n} after: ${name}\n${t}\n`);
     };
     let until = false;
-    const step = async (name, fn) => { if (until) return; if (process.env.UNTIL && name.indexOf(process.env.UNTIL) >= 0) until = true; nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); if (/Timeout/.test(e.message)) console.log('    why: ' + String(e.message).split('\n').slice(1, 9).join(' | ').slice(0, 700)); } await seen(name).catch(() => {}); };
+    // THROTTLE=<n> (probe use): from the step whose name holds THROTTLE_AT (default 'fog into the Mirror World') the page's CPU runs n times slower, as on a slow CI runner
+    const step = async (name, fn) => { if (until) return; if (+process.env.THROTTLE > 1 && name.indexOf(process.env.THROTTLE_AT || 'fog into the Mirror World') >= 0) { const cdp = await ctx.newCDPSession(pg); await cdp.send('Emulation.setCPUThrottlingRate', { rate: +process.env.THROTTLE }); } if (process.env.UNTIL && name.indexOf(process.env.UNTIL) >= 0) until = true; nAll++; try { await fn(); const s = await pg.evaluate(() => window.__night && window.__night.NS.scene); nOk++; console.log(sc.n, 'OK  ', name, '| scene', s); } catch (e) { console.log(sc.n, 'FAIL', name, String(e.message).split('\n')[0]); if (/Timeout/.test(e.message)) console.log('    why: ' + String(e.message).split('\n').slice(1, 9).join(' | ').slice(0, 700)); } await seen(name).catch(() => {}); };
     const shot = (n) => pg.screenshot({ path: `${OUT}/${sc.n}_${n}.png` });
     await pg.goto(url);
     // session 25: this journey keeps the corridor-then-ring route (route mixer with no rooms); smoke_nights.cjs checks the rooms, nights 2-3 and the ending
@@ -500,11 +502,16 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     // steering away from the spot and round the ring, for 8 s of game time; it may spend at most 2 s of it inside the spot
     for (const drag of [1, 0.6]) await step(`Light: running from it at ${drag * 100}% stick escapes it (real play)`, async () => {
       await pg.evaluate((drag) => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.M.x = L.spotX; N.M.z = L.spotZ + 0.3; L.r = N.lightStartR(); L.leaves = 0; L.loseT = 0; L.tellT = 0; L.inT = 0; L.loses = 0; window.__runT0 = N.M.t; N.M.laughs = Math.max(N.M.laughs, 300);
-        window.__runBot = setInterval(() => { const M = N.M, dx = M.x - L.spotX, dz = M.z - L.spotZ, d = Math.hypot(dx, dz) || 1, r = Math.hypot(M.x, M.z) || 1;
+        // F36: the run measures the Light alone; the ring's other figures (route mixer: a group, plus followers from the corridor) are taken out of play for it and put back after,
+        // so a Shame that the steps before left clinging (wall-clock sleeps leave different game time on a slow runner) cannot slow him
+        window.__parked = N.foes.filter((f) => f.alive && f !== L); for (const f of window.__parked) { f.alive = false; f.cling = false; f.reach = 0; }
+        window.__runDiag = { fallT: 0, cling: 0, hurts: 0, lastT: N.M.t, lastH: 0, near: 9 };
+        window.__runBot = setInterval(() => { const D = window.__runDiag, gt = N.M.t - D.lastT; D.lastT = N.M.t; if (N.M.fall) D.fallT += gt; if (N.foes.some((f) => f.kind === 'shame' && f.alive && f.cling)) D.cling += gt; if ((N.M.hurtT || 0) > D.lastH + 0.1) D.hurts++; D.lastH = N.M.hurtT || 0; for (const f of N.foes) if (f.alive && f !== L) D.near = Math.min(D.near, Math.hypot(f.x - N.M.x, f.z - N.M.z));
+          const M = N.M, dx = M.x - L.spotX, dz = M.z - L.spotZ, d = Math.hypot(dx, dz) || 1, r = Math.hypot(M.x, M.z) || 1;
           let ax = dx / d * 0.6 - M.z / r * 0.8, az = dz / d * 0.6 + M.x / r * 0.8; const n = Math.hypot(ax, az) || 1; N.input.tx = ax / n * drag; N.input.ty = -az / n * drag; }, 30); }, drag);
       await pg.waitForFunction(() => window.__night.M.t - window.__runT0 >= 8 || window.__night.M.over, null, { timeout: 120000 });
-      const r = await pg.evaluate(() => { clearInterval(window.__runBot); const N = window.__night; N.input.tx = 0; N.input.ty = 0; const L = N.foes.find((f) => f.kind === 'light'); return { inT: L.inT, t: N.M.t - window.__runT0, r: L.r, over: N.M.over, loses: L.loses }; });
-      console.log('    run', drag, ': inside the spot', r.inT.toFixed(2), 's of', r.t.toFixed(1), 's, spot r', r.r);
+      const r = await pg.evaluate(() => { clearInterval(window.__runBot); const N = window.__night; for (const f of window.__parked || []) f.alive = true; window.__parked = null; N.input.tx = 0; N.input.ty = 0; const L = N.foes.find((f) => f.kind === 'light'); const D = window.__runDiag; return { inT: L.inT, t: N.M.t - window.__runT0, r: L.r, over: N.M.over, loses: L.loses, fallT: +D.fallT.toFixed(2), cling: +D.cling.toFixed(2), hurts: D.hurts, near: +D.near.toFixed(2) }; });
+      console.log('    run', drag, ': inside the spot', r.inT.toFixed(2), 's of', r.t.toFixed(1), 's, spot r', r.r, '| fallen', r.fallT, 's, Shame clung', r.cling, 's, hurt', r.hurts, 'x, nearest other figure', r.near, 'm');
       if (r.over || r.inT > 2) throw new Error('caught by the Light ' + JSON.stringify(r));
       // F24: running at full stick the Light chases, then loses him (lightChase), at least once in 8 s
       if (drag === 1 && r.loses < 1) throw new Error('the Light never lost him ' + JSON.stringify(r));
