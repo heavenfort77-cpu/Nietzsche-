@@ -97,7 +97,7 @@
   #gnaw.drain { opacity: 1; }
   #mwHud.low { color: #e8735c; }
   #mwHud { position: absolute; right: 120px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
-  #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; white-space: pre-line; }
+  #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
   /* session 18 batch 2: the act is skipped only by this button (owner 22 Nov 20:27); full screen where the browser allows it */
   #actSkipBtn { position: fixed; right: 16px; bottom: 24px; min-width: 88px; min-height: 48px; border-radius: 24px; border: 1px solid #cfaa4e; background: #1e1714cc; color: #e9d9b0; font: 600 15px system-ui, sans-serif; z-index: 7; }
   #fsBtn { position: fixed; right: 8px; top: 8px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 22px; border: 0; background: #1e1714b3; color: #e9d9b0; font: 600 13px system-ui, sans-serif; z-index: 12; }
@@ -3892,12 +3892,12 @@ function mwHud(M, dt) {
   if (M.tipT <= 0 && (M.tip || M.tips.length)) { M.tip = M.tips.shift() || ''; M.tipT = M.tip ? N1.tipSecs : 0; }
   mwTipShow(M);
 }
-// the tip element: the fixed line (the fight's name at entry, then the hint of the insecurity he faces) with the passing tip under it; DOM written on change only
+// the tip element, one line in the previous version's style (owner 23 Nov 08:12 "use the style in previous version"): a passing tip takes the line for its tipSecs, then the fixed line (the fight's name at entry, then the hint of the insecurity he faces) comes back; DOM written on change only
 function mwTipShow(M) {
   const fixed = N1.mwNameText && M.t < N1.mwNameSecs ? N1.mwNameText : N1.mwHints && M.face ? N1.mwHint[M.face.kind] : '';
   if (fixed === M.fixed && M.tip === M.tipDom) return;
   M.fixed = fixed; M.tipDom = M.tip;
-  el.mwTip.textContent = fixed && M.tip ? fixed + '\n' + M.tip : fixed || M.tip;
+  el.mwTip.textContent = M.tip || fixed;
 }
 function endMW(result) {
   const M = NS.mw;
