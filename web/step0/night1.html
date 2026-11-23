@@ -830,6 +830,24 @@ const N1 = Object.freeze({
   mwOrder: ['light', 'stare', 'shame', 'whisper'],
   // pause between one going down and the next entering, s (no gnaw meanwhile; the gnaw's warning restarts at the entry)
   mwEnterSecs: 1.0,
+  // owner 23 Nov 09:23 (route mixer, session 23 batch 1): the Mirror World is a route of spaces in 2.5D styles mixed each night, always ending in the arena; each space holds a group of different types, never one alone and never one type. Switch: false = corridor then ring as before (mwOneAtATime decides the ring)
+  mwMixer: true,
+  // the style each insecurity brings to the route (the arena is the Light's and always last)
+  mwStyleOf: { whisper: 'corridor', stare: 'photo', shame: 'void' },
+  // styles built and switched on; a style that is off is never drawn (photo: batch 2, void: batch 3)
+  mwStyles: { corridor: true, photo: false, void: false },
+  // spaces on the route per night (index 0 = night 1), the entry corridor and the arena included
+  mwSpaces: [3, 4, 5],
+  // figures per space; the arena holds the Light plus this many less one (those that followed him come on top)
+  mwGroup: 2,
+  // when the night earned too few types, the partners come from this list, in order
+  mwPartners: ['whisper', 'shame', 'stare'],
+  // nearest-figure hint: the fixed line switches to another figure only when that one is this much nearer, m
+  mwHintSwitch: 0.6,
+  // a group figure never enters closer to him than this, m (it starts on the far side instead)
+  mwSpawnClear: 2.5,
+  // the next space's name in the corridor's opening tip
+  mwSpaceName: { ring: 'the ring', photo: 'the photographs', void: 'the white' },
   // owner 23 Nov 06:22 item 4 ("all insecurities have hints"): switch, the insecurity he faces shows its hint as one fixed line from its entry until it is down; false = the first sighting tip for tipSecs, as before
   mwHints: true,
   // the hint of each insecurity (the owner edits the wording; "dodge" is the Mirror pratfall, see CONFIG.binds.fall.label)
@@ -3550,6 +3568,7 @@ function addFoe(kind) {
   if (kind === 'light') { f.spotX = 0; f.spotZ = -3; mwScene.remove(pool.glint); mwScene.add(pool.beam, pool.spot, pool.rim); pool.beam.material.opacity = 0.14; pool.spot.material.opacity = 0.32; pool.rim.material.opacity = N1.lightRimOp; }
   mwScene.add(root);
   foes.push(f);
+  if (NS.mw) NS.mw.met.push(kind);
 }
 function enterMW() {
   const c = chars.clown;
@@ -3570,23 +3589,82 @@ function enterMW() {
   const falls = NS.hurt ? NS.hurt.falls : 0;
   NS.mw = { gnawLvl: 0, gnawed: 0, gnawTold: false, spent: 0, spentT: 0, hudSp: 0, costTold: false, x: 0, z: 4.2, yaw: Math.PI, laughs: NS.laughs, shown: '', t: 0, still: 0, moving: false, fall: null, slapT: -1, cd: 0, pieOn: false, pieX: 0, pieZ: 0, pieDX: 0, pieDZ: 0, pieD: 0,
     splashT: -1, hurtT: 0, shards: 0, over: '', winT: 0, tip: '', tipT: 0, tips: [], fovNow: 40, lookX: 0, lookZ: 4, hudL: -1, hudP: -1, hudS: -1,
-    space: 'ring', cuts: 0, cutting: false, queue: [], enterT: 0, face: null, fixed: '', tipDom: '' };
+    space: 'ring', cuts: 0, cutting: false, queue: [], enterT: 0, face: null, fixed: '', tipDom: '', route: null, leg: 0, group: null, met: [], beaten: [] };
   el.mwTip.textContent = '';
-  // panel G: night 1 starts in the mirror corridor; the ring (and its constructs) comes after one cut at the door
-  if (N1.mwRoute) {
-    const M = NS.mw;
-    M.space = 'corridor'; M.x = N1.mwCorStart[0]; M.z = N1.mwCorStart[1]; M.lookX = M.x * 0.5; M.lookZ = (M.z + N1.mwCorDoor) / 2;
-    mwCam.position.fromArray(N1.mwCorCam);
-    tip('The mirror corridor. The way to the ring is the pale door.');
-    mwBag();
-  } else { mwCam.position.fromArray(N1.mwCamPos); mwRingFoes(); }
   for (const s of pool.shards) { s.on = false; mwScene.remove(s.m); }
+  // panel G and the route mixer: the route's first space (the mirror corridor when mwRoute is on); a cut at each exit to the next, the arena last
+  NS.mw.route = mwBuildRoute();
+  mwEnterLeg(NS.mw);
   el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch); el.hint.classList.toggle('padded', NS.touch);
   el.shotName.textContent = '';
   el.hint.textContent = NS.touch ? 'Stick: move. Gags cost Laughs. Stand still and they gnaw.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap -${N1.slap.cost}. ${keyLabel('pie', true)}: pie -${N1.pie.cost}. ${keyLabel('fall')}: ${CONFIG.binds.fall.label.toLowerCase()} -${N1.fall.cost}. Laughs are all you have. Stand still and they gnaw.`;
   el.padSlap.textContent = `SLAP -${N1.slap.cost}`; el.padPie.textContent = `PIE -${N1.pie.cost}`; el.padFall.textContent = `${CONFIG.binds.fall.label.toUpperCase()} -${N1.fall.cost}`;
   setPrompt('');
   S.running = true; startLoop();
+}
+// owner 23 Nov 09:23 (route mixer): tonight's route of spaces. Mixer off: the corridor (mwRoute) then the ring, groups null = the earlier rules (bag of marbles, mwRingFoes).
+// Mixer on: the entry corridor, then the styles of tonight's earned insecurities in a mixed order (a check may fix it with NS.routeOrder), the arena last; each space a group of mwGroup different types
+function mwBuildRoute() {
+  if (!N1.mwMixer) return N1.mwRoute ? [{ style: 'corridor', group: null }, { style: 'ring', group: null }] : [{ style: 'ring', group: null }];
+  const night = NS.night || 1, earned = mwRoster(), used = [], route = [];
+  const max = N1.mwSpaces[Math.min(night, N1.mwSpaces.length) - 1];
+  // the group: its host first, then earned types not yet met on this route, then earned ones again, then the partner list; never the Light, never a type twice
+  const pick = (host, n) => {
+    const g = host ? [host] : [];
+    const order = earned.filter((k) => used.indexOf(k) < 0).concat(earned, N1.mwPartners);
+    for (const k of order) { if (g.length >= n) break; if (k !== 'light' && g.indexOf(k) < 0) g.push(k); }
+    for (const k of g) if (used.indexOf(k) < 0) used.push(k);
+    return g;
+  };
+  const hostOf = (st) => { for (const k of earned) if (N1.mwStyleOf[k] === st) return k; return ''; };
+  if (N1.mwRoute && N1.mwStyles.corridor) route.push({ style: 'corridor', group: pick(hostOf('corridor'), N1.mwGroup) });
+  let mids = [];
+  for (const k of earned) { const st = N1.mwStyleOf[k]; if (st && st !== 'corridor' && N1.mwStyles[st] && mids.indexOf(st) < 0) mids.push(st); }
+  if (NS.routeOrder) mids = NS.routeOrder.filter((st) => mids.indexOf(st) >= 0);
+  else for (let i = mids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const x = mids[i]; mids[i] = mids[j]; mids[j] = x; }
+  for (const st of mids) { if (route.length >= max - 1) break; route.push({ style: st, group: pick(hostOf(st), N1.mwGroup) }); }
+  route.push({ style: 'ring', group: ['light'].concat(pick('', N1.mwGroup - 1)) });
+  return route;
+}
+// into the route's current space: its fixed camera spot, his start, and its group (the corridor's come out of the glass as he walks)
+function mwEnterLeg(M) {
+  const leg = M.route[M.leg], next = M.route[M.leg + 1];
+  M.space = leg.style; M.group = leg.group; M.fall = null;
+  if (leg.style === 'corridor') {
+    M.x = N1.mwCorStart[0]; M.z = N1.mwCorStart[1]; M.yaw = Math.PI; M.lookX = M.x * 0.5; M.lookZ = (M.z + N1.mwCorDoor) / 2;
+    mwCam.position.fromArray(N1.mwCorCam);
+    tip(`The mirror corridor. The way to ${N1.mwSpaceName[next ? next.style : 'ring']} is the pale door.`);
+    mwBag(leg.group);
+    return;
+  }
+  M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4;
+  mwCam.position.fromArray(N1.mwCamPos);
+  if (leg.group) mwGroupIn(M, leg.group); else mwRingFoes();
+}
+// a space's group enters together at their own starts; those that followed him from the space before come too, and none is added twice
+function mwGroupIn(M, group) {
+  M.queue.length = 0; M.enterT = 0;
+  for (const f of foes) if (f.alive) mwStartAt(M, f);
+  for (const k of group) {
+    if (foes.some((f) => f.kind === k && f.alive)) continue;
+    addFoe(k); const f = foes[foes.length - 1]; mwFeed(f); f.pop = 0.4; mwStartAt(M, f);
+  }
+  M.still = 0;
+}
+// its own start, unless that is within mwSpawnClear of him (Shame's start is his entry spot): then the far side of the ring
+function mwStartAt(M, f) {
+  f.x = f.cfg.at[0]; f.z = f.cfg.at[1];
+  if (Math.hypot(f.x - M.x, f.z - M.z) < N1.mwSpawnClear) f.z = -f.z;
+}
+// at a cut: the fallen leave the space (their models are free for a later space), the standing follow with their tells and grabs dropped
+function mwLeaveLeg() {
+  for (let i = foes.length - 1; i >= 0; i--) {
+    const f = foes[i];
+    if (f.alive) { f.tell = 0; f.reach = 0; f.cling = false; f.gazeT = 0; f.judgeT = 0; f.stun = 0; continue; }
+    if (f.dark) continue;
+    mwScene.remove(f.root); f.root.position.y = 0; foes.splice(i, 1);
+  }
+  mwScene.remove(pool.ring);
 }
 // night 1: the Light always; the act's own monster; results add the Stare (a Perfect) and Shame (a miss)
 // owner 23 Nov 06:22 (N1.mwOneAtATime): only the first is here on entry; the rest wait in M.queue in N1.mwOrder and mwEntry brings each when the one before is down
@@ -3636,8 +3714,9 @@ function mwRoster() {
 }
 function mwFeed(f) { const falls = NS.hurt ? NS.hurt.falls : 0; if (f.kind === 'whisper') { f.hp += falls * N1.whisperFeed.hp; f.speedMul = 1 + falls * N1.whisperFeed.speed; } }
 // bag of marbles (22 Nov b item 2): tonight's constructs plus blanks, shuffled; a check may fix the order with NS.bagOrder
-function mwBag() {
-  const M = NS.mw, r = mwRoster();
+// route mixer: the corridor's group goes in the bag instead of the roster, and every one of them comes out
+function mwBag(group) {
+  const M = NS.mw, r = group ? group.slice() : mwRoster();
   if (!r.length) r.push('whisper');
   const bag = r.concat(Array(N1.bagBlanks).fill(''));
   for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const x = bag[i]; bag[i] = bag[j]; bag[j] = x; }
@@ -3648,10 +3727,12 @@ function mwCorridor(M, dt) {
   const rows = N1.corRows;
   while (M.row < rows && M.z < NS.corPanels[M.row].z) {
     const r = M.row++;
-    if (r === 0 || M.broke || M.brk || !M.bag.length) continue;
+    if (r === 0 || (M.broke && !M.group) || M.brk || !M.bag.length) continue;
     const m = M.bag.pop(); M.drawn.push(m || 'blank');
-    if (m) { const side = M.x > 0 ? -1 : 1, i = (side < 0 ? 0 : rows) + r; M.brk = { kind: m, t: 0, i, x: NS.corPanels[i].x * 0.85, z: NS.corPanels[i].z }; mwU.uFlashI.value = i; tone(1500, 600, 0.25, 'sawtooth', 0.05); }
+    if (m) mwBreak(M, m, r);
   }
+  // route mixer: at the door, those still in the bag break out of the last mirror, one after the other
+  if (M.group && !M.brk && M.z <= N1.mwCorDoor + 0.3) for (let i = 0; i < M.bag.length; i++) if (M.bag[i]) { const m = M.bag[i]; M.bag.splice(i, 1); M.drawn.push(m); mwBreak(M, m, rows - 1); break; }
   if (!M.brk) return;
   M.brk.t += dt;
   mwU.uFlash.value = 0.5 + 0.5 * Math.sin(M.brk.t * 40);
@@ -3661,16 +3742,29 @@ function mwCorridor(M, dt) {
   tone(2600, 300, 0.35, 'square', 0.07);
   addFoe(b.kind); const f = foes[foes.length - 1]; f.x = b.x; f.z = b.z; f.pop = 0.4; mwFeed(f);
 }
-// the one cut of the route: corridor door -> the ring's fixed spot
+// a mirror of row r on the far side from him flashes and cracks (the tell), then the construct bursts out of it
+function mwBreak(M, kind, r) {
+  const rows = N1.corRows, side = M.x > 0 ? -1 : 1, i = (side < 0 ? 0 : rows) + r;
+  M.brk = { kind, t: 0, i, x: NS.corPanels[i].x * 0.85, z: NS.corPanels[i].z }; mwU.uFlashI.value = i; tone(1500, 600, 0.25, 'sawtooth', 0.05);
+}
+// the corridor's group is not all out of the glass yet (mixer only): the door holds
+function mwGroupLeft(M) {
+  if (!M.group) return false;
+  if (M.brk) return true;
+  for (let i = 0; i < M.bag.length; i++) if (M.bag[i]) return true;
+  return false;
+}
+// a cut of the route: this space's exit -> the next space's fixed spot (cuts only between spaces, never inside a fight)
 function mwCut() {
   const M = NS.mw;
   M.cutting = true;
   fadeThen(N1.mwCutMs, () => {
-    M.space = 'ring'; M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4; M.cuts++; M.cutting = false; M.fall = null;
-    // F25: the corridor's tip belongs to the corridor (it stayed on screen in the ring)
-    M.tip = ''; M.tipT = 0; M.tips.length = 0; mwTipShow(M);
-    mwCam.position.fromArray(N1.mwCamPos);
-    mwRingFoes();
+    M.cuts++; M.cutting = false;
+    // F25: a space's tip belongs to that space (the corridor's stayed on screen in the ring)
+    M.tip = ''; M.tipT = 0; M.tips.length = 0;
+    if (M.group) mwLeaveLeg();
+    M.leg++; mwEnterLeg(M);
+    mwTipShow(M);
   });
 }
 function mwDrain(n) { const M = NS.mw; if (M.over) return; M.laughs -= n; if (M.laughs <= 0) { M.laughs = 0; endMW('lose'); } }
@@ -3750,7 +3844,7 @@ function killFoe(f) {
   f.alive = false;
   // A4: the Light is put out, never beaten: no sinking, the dark lamp stays with a glint on its lens
   if (f.kind === 'light') { f.dark = true; f.clickT = 0; NS.lightOuts++; mwScene.remove(pool.beam, pool.spot, pool.rim); mwScene.add(pool.glint); }
-  else f.sink = 0.6;
+  else { f.sink = 0.6; NS.mw.beaten.push(f.kind); }
   dropShards(f.kind === 'light' ? f.spotX : f.x, f.kind === 'light' ? f.spotZ : f.z, f.cfg.shards);
   tone(1600, 600, 0.35, 'triangle', 0.07);
 }
@@ -3816,7 +3910,7 @@ function mwClown(M, dt) {
   }
   if (M.space === 'corridor') {
     M.x = THREE.MathUtils.clamp(M.x, -N1.mwCorX, N1.mwCorX); M.z = THREE.MathUtils.clamp(M.z, N1.mwCorZ[1], N1.mwCorZ[0]);
-    if (M.z <= N1.mwCorDoor && !M.cutting) mwCut();
+    if (M.z <= N1.mwCorDoor && !M.cutting) { if (mwGroupLeft(M)) M.z = N1.mwCorDoor + 0.01; else mwCut(); }
   } else { const rr = Math.hypot(M.x, M.z); if (rr > N1.mwRadius) { M.x *= N1.mwRadius / rr; M.z *= N1.mwRadius / rr; } }
   M.still = moving || M.fall || M.slapT > 0 ? 0 : M.still + dt;
   M.isStill = M.still > N1.stillAfter; M.isMoving = moving;
@@ -3946,14 +4040,16 @@ function mwShame(M, f, dt, dx, dz, d) {
   f.reach = 0; f.x += dx / d * f.cfg.speed * dt; f.z += dz / d * f.cfg.speed * dt;
 }
 function mwFoes(M, dt) {
-  let alive = 0, face = null;
+  let alive = 0, best = null, bd = 1e9;
   for (let fi = 0; fi < foes.length; fi++) {
     const f = foes[fi];
     if (!f.alive) { if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt); continue; }
     alive++;
-    if (!face) face = f;
     if (!f.seen) { f.seen = true; if (!N1.mwHints) tip(TIPS[f.kind]); }
     const dx = M.x - f.x, dz = M.z - f.z, d = Math.hypot(dx, dz) || 0.001;
+    // nearest-figure hint: the Light is as near as its lamp or its spot, whichever is nearer
+    f.near = f.kind === 'light' ? Math.min(d, Math.hypot(M.x - f.spotX, M.z - f.spotZ)) : d;
+    if (f.near < bd) { bd = f.near; best = f; }
     if (f.kind === 'light') mwLight(M, f, dt);
     else if (f.kind === 'whisper') mwWhisper(M, f, dt, dx, dz, d);
     else if (f.kind === 'stare') mwStare(M, f, dt, dx, dz, d);
@@ -3963,8 +4059,9 @@ function mwFoes(M, dt) {
     f.root.position.set(f.x, 0, f.z);
     f.root.rotation.y = f.yaw;
   }
-  // the one he faces (the first standing): its hint shows in mwTipShow
-  M.face = face;
+  // the one he faces (route mixer: the nearest standing; it changes only when another is mwHintSwitch nearer): its hint shows in mwTipShow
+  const cur = M.face && M.face.alive ? M.face : null;
+  M.face = !cur || (best && best !== cur && best.near < cur.near - N1.mwHintSwitch) ? best : cur;
   return alive;
 }
 function mwShards(M, dt, alive) {
@@ -4020,7 +4117,8 @@ function endMW(result) {
   NS.result = result;
   const kept = result === 'win' ? M.shards : Math.floor(M.shards / 2);
   NS.shards += kept; NS.mwKept = kept; NS.mwTime = M.t; NS.mwLaughs = Math.ceil(M.laughs);
-  NS.beaten = foes.filter((f) => !f.alive && !f.dark).map((f) => f.kind); NS.putOut = foes.some((f) => f.dark); NS.met = foes.map((f) => f.kind);
+  // route mixer: the fallen leave foes at each cut, so who he met and beat is kept on M
+  NS.beaten = M.beaten.slice(); NS.putOut = foes.some((f) => f.dark); NS.met = M.met.slice();
   M.gnawLvl = 0; el.gnaw.className = ''; gnawSound(0);
   setTimeout(() => {
     el.fog.style.opacity = 1;
@@ -4169,7 +4267,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly)
-window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR };
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });
