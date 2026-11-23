@@ -1,0 +1,32 @@
+PASS route: Chrome draws WebGL on the GPU, not in software | {"vendor":"Google Inc. (Apple)","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple Paravirtual device, Unspecified Version)"}
+FAIL 1080p desktop (1920x1024, default tier, AO on): frame p95 <= 20 ms | {"median":17.9,"p95":62.3,"max":170.6}
+FAIL retina laptop (1800x1055, default tier, AO on): frame p95 <= 20 ms | {"median":16.2,"p95":28.8,"max":173.2}
+FAIL 1440p desktop (2560x1384, default tier, AO on): frame p95 <= 20 ms | {"median":25.7,"p95":53.1,"max":73.4}
+PASS 1080p desktop AO on: p95 not worse than the control page in the same job | {"page":62.3,"controlBefore":50.2,"controlAfter":36,"noise":14.2,"limit":69.42}
+FAIL 1080p desktop AO off: p95 not worse than the control page in the same job | {"page":29,"controlBefore":17.3,"controlAfter":21,"noise":3.7,"limit":26.8}
+PASS retina laptop AO on: p95 not worse than the control page in the same job | {"page":28.8,"controlBefore":30.9,"controlAfter":41,"noise":10.1,"limit":55.2}
+PASS retina laptop AO off: p95 not worse than the control page in the same job | {"page":38.9,"controlBefore":36,"controlAfter":32.9,"noise":3.1,"limit":42.7}
+PASS 1440p desktop AO on: p95 not worse than the control page in the same job | {"page":53.1,"controlBefore":50.5,"controlAfter":54.5,"noise":4,"limit":63.95}
+PASS 1440p desktop AO off: p95 not worse than the control page in the same job | {"page":30.1,"controlBefore":30.3,"controlAfter":48.6,"noise":18.3,"limit":71.76}
+PASS timing sees GPU work: AO on costs more than AO off at every setup | [6.6,4.8,10.9]
+frame times, ms (each frame waited for on the real GPU):
+  control.html 1080p desktop  1920x1024  AO on   median 17.3  p95 50.2  max 127
+  control.html 1080p desktop  1920x1024  AO off  median 10.5  p95 17.3  max 87.6
+  control.html retina laptop  1800x1055  AO on   median 16  p95 30.9  max 79.9
+  control.html retina laptop  1800x1055  AO off  median 11.5  p95 36  max 61.9
+  control.html 1440p desktop  2560x1384  AO on   median 25.5  p95 50.5  max 107
+  control.html 1440p desktop  2560x1384  AO off  median 14.6  p95 30.3  max 88.4
+  index.html   1080p desktop  1920x1024  AO on   median 17.9  p95 62.3  max 170.6
+  index.html   1080p desktop  1920x1024  AO off  median 11.3  p95 29  max 56.5
+  index.html   retina laptop  1800x1055  AO on   median 16.2  p95 28.8  max 173.2
+  index.html   retina laptop  1800x1055  AO off  median 11.4  p95 38.9  max 74.8
+  index.html   1440p desktop  2560x1384  AO on   median 25.7  p95 53.1  max 73.4
+  index.html   1440p desktop  2560x1384  AO off  median 14.8  p95 30.1  max 52.9
+  control.html 1080p desktop  1920x1024  AO on   median 17.3  p95 36  max 63.9
+  control.html 1080p desktop  1920x1024  AO off  median 11  p95 21  max 45
+  control.html retina laptop  1800x1055  AO on   median 16.6  p95 41  max 129.6
+  control.html retina laptop  1800x1055  AO off  median 12.1  p95 32.9  max 99.2
+  control.html 1440p desktop  2560x1384  AO on   median 26.3  p95 54.5  max 113.3
+  control.html 1440p desktop  2560x1384  AO off  median 15.4  p95 48.6  max 102.8
+PASS no page or console errors | []
+RESULT gpu 8 of 12 pass

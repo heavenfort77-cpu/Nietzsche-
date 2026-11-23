@@ -1,0 +1,5 @@
+PASS mutation zerolight -> "7. lights" fires | FAIL 7. lights <= 1, none at intensity 0, no lit (Standard/Physical/Lambert/Phong) materials | {"lights":1,"zero":1,"lit":[]}
+PASS mutation latefetch -> "9. no requests during play" fires | FAIL 9. no requests during play | ["http://localhost:36387/assets/ring_layout.json","http://localhost:36387/assets/ring_layout.json","http:/
+PASS mutation hudevery -> "10. per frame" fires | FAIL 10. per frame: HUD written only when its text changes, at most every 0.5 s, no matchMedia calls | {"frames":60,"seconds":226.06,"hudWri
+PASS mutation mmframe -> "10. per frame" fires | FAIL 10. per frame: HUD written only when its text changes, at most every 0.5 s, no matchMedia calls | {"frames":60,"seconds":225.46,"hudWri
+RESULT perf mutations 4 of 4 fired
