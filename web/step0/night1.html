@@ -109,6 +109,8 @@
   #pads button { width: 72px; height: 64px; border-radius: 32px; border: 0; font: 600 14px system-ui, sans-serif; background: #44666e; color: #e2e3e3; }
   #pads button:disabled { opacity: .4; }
   #cueFrame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; z-index: 10; background: #000; }
+  #tryBack { position: fixed; top: 10px; right: 10px; z-index: 11; min-width: 44px; min-height: 44px; padding: 6px 14px; border-radius: 10px; border: 2px solid #B68C45; background: #3D332D; color: #F2EBDD; font-size: 16px; }
+  .card .parchment small.tried { color: #6a1d29; font-weight: 600; }
   #shards { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 320px; min-height: 22px; }
   .shard { width: 14px; height: 20px; background: linear-gradient(135deg, #e2e8ea, #9db5bb 55%, #44666e); clip-path: polygon(50% 0, 100% 40%, 70% 100%, 10% 80%, 0 30%); }
   .shards.price { display: flex; gap: 4px; margin-top: 6px; }
@@ -610,7 +612,7 @@ const CONFIG = Object.freeze({
   // which actions each scene listens to (the pause card lists these; a check fails if two share a key in one scene)
   bindScenes: {
     title: ['confirm'], paint: ['confirm', 'pause'], walk: ['up', 'down', 'left', 'right', 'interact', 'pause'], room: ['turnL', 'turnR', 'sit', 'pause'],
-    board: ['act1', 'act2', 'pause'], note: ['confirm', 'back'], mirror: ['press', 'pause'], act: ['pause'], small: ['confirm', 'pause'],
+    board: ['act1', 'act2', 'pause'], note: ['confirm', 'back'], rehearse: ['back'], mirror: ['press', 'pause'], act: ['pause'], small: ['confirm', 'pause'],
     mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'],
   },
   // idle and walk blend time, s
@@ -880,7 +882,7 @@ const N1 = Object.freeze({
   // the track files, by key
   musicFiles: { cold: 'music/cold_tea_and_morning_light.mp3', waltz: 'music/the_trapeze_waltz.mp3', weight: 'music/the_weight_of_remaining.mp3' },
   // the track each scene plays; a scene not listed keeps the track already playing (backstage: cold tea; walk to the ring and the act: the waltz; walk back, Mirror World, shop and end: the weight)
-  musicScene: { paint: 'cold', bravado: 'cold', boardwall: 'cold', note: 'cold', walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight', mw: 'weight', out: 'weight', small: 'weight', kept: 'weight', shop: 'weight', end: 'weight' },
+  musicScene: { paint: 'cold', bravado: 'cold', boardwall: 'cold', note: 'cold', rehearse: 'cold', walk: 'waltz', board: 'waltz', act: 'waltz', back: 'weight', mw: 'weight', out: 'weight', small: 'weight', kept: 'weight', shop: 'weight', end: 'weight' },
   // music volume, 0-1 (laughs, horn and the cue sit on top)
   musicVol: 0.55,
   // share of musicVol per scene, a scene not listed plays at 1 (owner 22 Nov 23:08: softer in the room and the Mirror World; read as the music level)
@@ -927,6 +929,15 @@ const N1 = Object.freeze({
     { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Lent tonight, free.', x: 0.95, game: 'hold' },
   ],
   noteW: 0.86, noteH: 1.12,
+  // owner 23 Nov 09:23 ("when choosing act at board, let player try the timing game and tell them what laugh and mask is"): switch for the note's Try it button and the two meter lines
+  tryAct: true,
+  // the note's words (GDD Meters): the Try it button, Laughs and Mask lines, the rehearsal result ({n} rings landed of {m}), the Back button over the rehearsal
+  tryLabel: 'Try it', tryBack: 'Back to the board',
+  laughsLine: 'Laughs: what the crowd gives you. In the mirror they are your health, and every gag spends them.',
+  maskLine: 'Mask: paint that stays on his real face. Each perfect beat adds some. More Mask, a harder mirror.',
+  tryResult: 'Rehearsal: {n} of {m} landed. Nothing counted.',
+  // how long the rehearsal's last result stays before the note comes back, ms
+  tryHoldMs: 1600,
   // ----- panel G (owner 22 Nov 11:22 items 2 and 4, agreed 15:58): Mirror World night 1 = the mirror corridor, then the ring; unworldly by Mask -----
   // switch (false = straight into the ring); corridor half width m, z from its start to its door end, fixed camera spot, his start (x, z)
   // 22 Nov b item 2: corridor half width 1.2 -> 2.2 m
@@ -1700,6 +1711,8 @@ async function boot() {
 // board, act (the cue page in an overlay), crowd, walk back, room, mirror entry, Mirror World, Nietzsche line, shop, end card.
 const n1 = true;
 const NS = {
+  // the act note's rehearsal (owner 23 Nov 09:23): its frame, Back button, poll, timer, and the result line shown on the note
+  tryFrame: null, tryBtn: null, tryPoll: 0, tryTimer: 0, tryLine: '', noteAct: '',
   scene: 'logo', verbs: { fall: false, take: false, honk: false, trip: false }, pies: 0, lightOuts: 0, act: '', actInfo: null, crowd: '',
   laughs: 0, mask: 0, shards: 0, bought: [], anim: null, audio: null, verbM: null, unit: 0.03, touch: false, mouse: new THREE.Vector2(),
   // where the Nietzsche line shows this run (from N1.nietzscheAt; checks may set it)
@@ -2174,14 +2187,56 @@ function pickAct(id) {
   const a = N1.acts.find((x) => x.id === id);
   setScene('note'); NS.noteAct = id;
   S.running = false;
-  const d = show('note', `<div class="parchment"><h2>${a.title}</h2><p>${a.line}</p><small>${a.own}</small><div class="row"><button id="perform">Perform it</button><button id="noteBack" class="back">Back</button></div></div>`);
+  const tried = N1.tryAct && NS.tryLine ? `<small class="tried">${NS.tryLine}</small>` : '';
+  const meters = N1.tryAct ? `<small>${N1.laughsLine}</small><small>${N1.maskLine}</small>` : '';
+  const tryBtn = N1.tryAct ? `<button id="tryAct" class="back">${N1.tryLabel}</button>` : '';
+  const d = show('note', `<div class="parchment"><h2>${a.title}</h2><p>${a.line}</p><small>${a.own}</small>${meters}${tried}<div class="row"><button id="perform">Perform it</button>${tryBtn}<button id="noteBack" class="back">Back</button></div></div>`);
   d.querySelector('#perform').addEventListener('click', () => performAct(id));
+  if (N1.tryAct) d.querySelector('#tryAct').addEventListener('click', () => tryAct(id));
   d.querySelector('#noteBack').addEventListener('click', noteBack);
 }
-function noteBack() { if (NS.scene !== 'note') return; hideCard(); setScene('boardwall'); S.running = true; startLoop(); }
+function noteBack() { if (NS.scene !== 'note') return; NS.tryLine = ''; hideCard(); setScene('boardwall'); S.running = true; startLoop(); }
+// owner 23 Nov 09:23: Try it runs the act's own timing game as a rehearsal (cue page ?rehearse=1: one act, no Laughs or Mask, misses never end it);
+// its result line goes on the note, which comes back after it (or at once with Back / Esc)
+function tryAct(id) {
+  if (NS.scene !== 'note') return;
+  const a = N1.acts.find((x) => x.id === id);
+  hideCard(); setScene('rehearse');
+  musicDuck(true);
+  NS.tryFrame = document.createElement('iframe');
+  NS.tryFrame.id = 'cueFrame';
+  NS.tryFrame.src = 'cue_model.html?host=night1&rehearse=1&game=' + a.game;
+  document.body.appendChild(NS.tryFrame);
+  NS.tryBtn = document.createElement('button');
+  NS.tryBtn.id = 'tryBack'; NS.tryBtn.textContent = N1.tryBack;
+  NS.tryBtn.addEventListener('click', tryEnd);
+  document.body.appendChild(NS.tryBtn);
+  NS.tryPoll = setInterval(() => {
+    let g = null;
+    try { g = NS.tryFrame.contentWindow.__game; } catch (e) { g = null; }
+    if (!g) return;
+    const i = g.info();
+    if (i.scene !== 'results') return;
+    clearInterval(NS.tryPoll); NS.tryPoll = 0;
+    const rings = i.game === 'hold' ? i.beatCount / 2 : i.beatCount;
+    NS.tryLine = N1.tryResult.replace('{n}', i.perfects + i.goods).replace('{m}', rings);
+    NS.tryTimer = setTimeout(tryEnd, N1.tryHoldMs);
+  }, 250);
+}
+// the rehearsal's frame, button, poll and timer go; the note comes back
+function tryEnd() {
+  if (NS.scene !== 'rehearse') return;
+  if (NS.tryPoll) { clearInterval(NS.tryPoll); NS.tryPoll = 0; }
+  if (NS.tryTimer) { clearTimeout(NS.tryTimer); NS.tryTimer = 0; }
+  if (NS.tryFrame) { NS.tryFrame.src = 'about:blank'; NS.tryFrame.remove(); NS.tryFrame = null; }
+  if (NS.tryBtn) { NS.tryBtn.remove(); NS.tryBtn = null; }
+  musicDuck(false);
+  setScene('boardwall');
+  pickAct(NS.noteAct);
+}
 function performAct(id) {
   if (NS.scene !== 'note') return;
-  NS.act = id;
+  NS.act = id; NS.tryLine = '';
   el.boardActs.classList.add('hidden');
   S.running = true; startLoop();
   walkOut();
@@ -3279,6 +3334,7 @@ function bindScene() {
   if (NS.scene === 'title' || NS.scene === 'logo') return 'title';
   if (NS.scene === 'paint' || NS.scene === 'bravado') return 'paint';
   if (NS.scene === 'note') return 'note';
+  if (NS.scene === 'rehearse') return 'rehearse';
   if (NS.scene === 'boardwall') return 'board';
   if (NS.scene === 'small') return 'small';
   if (S.mode === 'act') return 'act';
@@ -3315,6 +3371,7 @@ function resumeGame() {
 }
 function n1Key(e) {
   if (NS.paused) { if (!e.repeat && (bound('pause', e.code) || bound('confirm', e.code))) resumeGame(); return true; }
+  if (NS.scene === 'rehearse') { if (!e.repeat && bound('back', e.code)) tryEnd(); return true; }
   if (bound('pause', e.code) && !e.repeat && NS.scene !== 'note' && NS.scene !== 'logo' && NS.scene !== 'title') { pauseGame(); return true; }
   if (e.repeat) return NS.scene !== 'walk' && NS.scene !== 'back' && NS.scene !== 'room' && NS.scene !== 'mw';
   if (NS.scene === 'logo') { logoOut(); return true; }

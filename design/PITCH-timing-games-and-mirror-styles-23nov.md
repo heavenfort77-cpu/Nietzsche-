@@ -63,8 +63,8 @@ Night 1 would then be: corridor (Whisper breaking out), ring (Light), photograph
 
 | Session.batch | Scope | File |
 | --- | --- | --- |
-| 22.2 | Five timing games and the rehearsal mode in the cue page; the board passes each act's game | `cue_model.html`, `night1.html` |
-| 22.3 | Board: "Try it" on each act note (rehearsal), Laughs and Mask explained there | `night1.html` |
+| 22.2 | DONE (2809d67): five timing games and the rehearsal mode in the cue page; the board passes each act's game | `cue_model.html`, `night1.html` |
+| 22.3 | DONE (2809d67+1): board "Try it" on each act note (rehearsal), Laughs and Mask explained there | `night1.html` |
 | 23.1 | Mirror World route mixer: a night is a list of spaces in styles, ending in the arena; groups of two or more types per space; nearest-figure hint | `night1.html` |
 | 23.2 | The Stare's photograph room (box-and-shape: one fixed shot, sepia grade in the post pass, flash tell 0.6 s) | `night1.html` |
 | 23.3 | Shame's pencil void (outline only, floor line drawn as he walks) | `night1.html` |

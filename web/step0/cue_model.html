@@ -706,7 +706,7 @@
     const hits = S.perfects + S.goods;
     const total = S.game === 'hold' ? S.beatCount / 2 : S.beatCount;
     let s = (S.rehearse ? CONFIG.rehearsalBanner + '\n' : '') + 'Night ' + S.night + ': ' + (S.endReason === 'complete' ? 'act complete' : 'act ended, ' + S.endReason) + '\n\n';
-    s += 'Laughs +' + S.actLaughs + ' (total ' + S.laughs + ')   Mask ' + S.mask + '\n';
+    if (!S.rehearse) s += 'Laughs +' + S.actLaughs + ' (total ' + S.laughs + ')   Mask ' + S.mask + '\n';
     s += 'Perfect ' + S.perfects + '  Good ' + S.goods + '  Miss ' + S.misses + '  of ' + total + ' beats\n';
     if (S.takeBeats) s += 'Slaps taken ' + S.takes + ' of ' + S.takeBeats + '\n';
     if (S.flips) s += 'Upside-down grins ' + S.flips + '\n';
