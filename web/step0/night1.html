@@ -95,6 +95,14 @@
   #gnaw { position: fixed; inset: 0; pointer-events: none; opacity: 0; z-index: 14; background: radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(4, 10, 14, 0.88)); transition: opacity 0.2s linear; }
   #gnaw.warn { opacity: 0.55; }
   #gnaw.drain { opacity: 1; }
+  /* the Stare's photograph room (session 23 batch 2): a print's cream border and corner mounts over the fixed shot; the flash is a white sheet that fades */
+  #photoEdge { position: absolute; inset: 0; pointer-events: none; display: none; border: 14px solid #EFE6D2; box-shadow: inset 0 0 0 2px #6B5A40, inset 0 0 90px rgba(58, 40, 22, 0.6); }
+  #photoEdge.on { display: block; }
+  #photoEdge::before, #photoEdge::after { content: ''; position: absolute; width: 30px; height: 30px; border: 3px solid #2B2116; }
+  #photoEdge::before { left: 4px; top: 4px; border-right: none; border-bottom: none; }
+  #photoEdge::after { right: 4px; bottom: 4px; border-left: none; border-top: none; }
+  #flash { position: fixed; inset: 0; background: #FFF8EA; opacity: 0; pointer-events: none; z-index: 13; transition: opacity 0.45s ease-out; }
+  #flash.on { opacity: 1; transition: none; }
   #mwHud.low { color: #e8735c; }
   #mwHud { position: absolute; right: 120px; top: 8px; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; color: #c9d5d7; }
   #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
@@ -126,6 +134,7 @@
   <div class="label hidden" id="label0"></div>
   <div class="label hidden" id="label1"></div>
   <canvas id="cracks"></canvas>
+  <div id="photoEdge"></div>
   <div id="mwHud" class="hidden"></div>
   <div id="gains" class="hidden">Laughs <span id="laughsN">0</span> &middot; Mask <span id="maskN">0</span><div id="carry"></div></div>
 </div></div>
@@ -148,6 +157,7 @@
 <button id="fsBtn" class="hidden" aria-label="Full screen">Full screen</button>
 <div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">DODGE</button></div>
 <div id="gnaw"></div>
+<div id="flash"></div>
 <div id="fog">The Mirror</div>
 <div id="curtain"><div class="half hl"></div><div class="half hr"></div><div class="val"></div>
   <div class="plaque"><h1>The Clown and the Mirror</h1><div>Night 1 &middot; prototype</div><button class="btn" id="start" disabled>Loading...</button><small id="loadState"></small></div></div>
@@ -835,7 +845,7 @@ const N1 = Object.freeze({
   // the style each insecurity brings to the route (the arena is the Light's and always last)
   mwStyleOf: { whisper: 'corridor', stare: 'photo', shame: 'void' },
   // styles built and switched on; a style that is off is never drawn (photo: batch 2, void: batch 3)
-  mwStyles: { corridor: true, photo: false, void: false },
+  mwStyles: { corridor: true, photo: true, void: false },
   // spaces on the route per night (index 0 = night 1), the entry corridor and the arena included
   mwSpaces: [3, 4, 5],
   // figures per space; the arena holds the Light plus this many less one (those that followed him come on top)
@@ -846,6 +856,19 @@ const N1 = Object.freeze({
   mwHintSwitch: 0.6,
   // a group figure never enters closer to him than this, m (it starts on the far side instead)
   mwSpawnClear: 2.5,
+  // ----- the Stare's photograph room (session 23 batch 2; pitch B: the three photographs that open No Longer Human) -----
+  // room centre (x, z) in the Mirror World, well clear of the ring and the corridor; half width and half depth m; his start, the fixed camera spot (room coordinates), aim height m, field of view degrees;
+  // where each figure starts (room coordinates; he starts left of the Stare so his back never hides it from the fixed camera); the exit door on the back wall: centre x (room), half width m
+  photo: { at: [0, -46], half: [4.2, 3.0], start: [-1.0, 2.2], cam: [0, 2.7, 7.4], lookH: 1.0, fov: 44, foes: { stare: [1.4, -2.2], whisper: [-3.0, -0.6], shame: [3.0, -0.8] }, doorX: 3.1, doorW: 0.5 },
+  // the Stare as a camera in that room: it aims (turn degrees/s); every s after the last flash, once it has him in its cone (half angle degrees), the lens opens for tell s with a whine and its aim locks; then the flash:
+  // caught in the cone within range m costs judge Laughs (a dodge through it is safe); the frame freezes for freeze s
+  stareFlash: { turn: 70, every: 2.2, cone: 26, tell: 0.6, range: 9, judge: 8, freeze: 0.3 },
+  // the room's sepia grade: tint (r, g, b) and amount, on the clown and on the figures
+  photoGrade: [1.0, 0.84, 0.62], photoGradeAmt: 0.75,
+  // the room's colours: floor, backdrop wall, side walls, picture frames, prints, studio props, door shut, door open
+  photoCol: { floor: '#A88E6A', back: '#7E6649', side: '#6A543B', frame: '#3A2C1E', print: '#C9B48E', prop: '#5A4630', door: '#4E3E2C', doorOpen: '#F2E8D0' },
+  // the room's tips: on entry, and when its group is down and the door opens
+  photoTip: 'A photograph. When the lens opens, get out of its sight.', photoOpenTip: 'The photo is taken. The pale door is open.',
   // the next space's name in the corridor's opening tip
   mwSpaceName: { ring: 'the ring', photo: 'the photographs', void: 'the white' },
   // owner 23 Nov 06:22 item 4 ("all insecurities have hints"): switch, the insecurity he faces shows its hint as one fixed line from its entry until it is down; false = the first sighting tip for tipSecs, as before
@@ -1026,6 +1049,7 @@ const S = {
 // test hook: read by the headless checks
 window.__walk = S;
 const el = {
+  photoEdge: document.getElementById('photoEdge'), flash: document.getElementById('flash'),
   actSkip: document.getElementById('actSkipBtn'), fs: document.getElementById('fsBtn'),
   pause: document.getElementById('pauseCard'), pauseList: document.getElementById('pauseList'), resume: document.getElementById('resumeBtn'),
   canvas: document.getElementById('gl'), frame: document.getElementById('frame'), shotName: document.getElementById('shotName'),
@@ -3486,8 +3510,34 @@ function buildMW() {
   pool.pie = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), new THREE.MeshBasicMaterial({ color: '#F4F4F2' }));
   const shardGeo = new THREE.OctahedronGeometry(0.13), shardMat = new THREE.MeshBasicMaterial({ color: '#C9D5D7' });
   for (let i = 0; i < 16; i++) { const m = new THREE.Mesh(shardGeo, shardMat); m.scale.set(0.7, 1.4, 0.7); pool.shards.push({ m, on: false, x: 0, z: 0 }); }
+  // the Stare's lens (opens during its tell) and its cone on the floor (a sector centred on +z, turned by the group's yaw)
+  pool.lens = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: '#FFF4DA', side: THREE.DoubleSide, fog: false }));
+  const wc = deg(N1.stareFlash.cone);
+  pool.wedge = new THREE.Group();
+  const wm = new THREE.Mesh(new THREE.CircleGeometry(N1.stareFlash.range, 24, -Math.PI / 2 - wc, 2 * wc), new THREE.MeshBasicMaterial({ color: '#FFF4DA', transparent: true, opacity: 0.1, depthWrite: false }));
+  wm.rotation.x = -Math.PI / 2; pool.wedge.add(wm);
+  buildPhoto();
   mwCam.position.fromArray(N1.mwCamPos);
   buildUnworld();
+}
+// the Stare's photograph room (session 23 batch 2), box and shape: a studio floor, a backdrop wall with the three photographs, side walls, a stool and a palm on a stand, the exit door; built once, matrices frozen
+function buildPhoto() {
+  const P = N1.photo, C = N1.photoCol, W = P.half[0], D = P.half[1], H = 4.8, g = new THREE.Group();
+  const mat = (c) => new THREE.MeshBasicMaterial({ color: c });
+  const box = (w, h, d, c, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); g.add(m); return m; };
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(2 * W + 2, 2 * D + 6), mat(C.floor)); floor.rotation.x = -Math.PI / 2; floor.position.z = 2; g.add(floor);
+  box(2 * W + 2, H, 0.2, C.back, 0, H / 2, -D - 0.1);
+  box(0.2, H, 2 * D + 6, C.side, -W - 0.1, H / 2, 1.5); box(0.2, H, 2 * D + 6, C.side, W + 0.1, H / 2, 1.5);
+  // the three photographs (child, schoolboy, the face with no expression): frames with blank prints
+  for (let i = 0; i < 3; i++) { const x = -2.4 + i * 1.6; box(1.0, 1.3, 0.06, C.frame, x, 2.6, -D + 0.04); box(0.8, 1.1, 0.07, C.print, x, 2.6, -D + 0.06); }
+  box(0.5, 0.06, 0.5, C.prop, -2.6, 0.6, -1.4); box(0.06, 0.6, 0.06, C.prop, -2.6, 0.3, -1.4);
+  box(0.4, 0.9, 0.4, C.prop, 2.0, 0.45, -2.3);
+  const palm = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.1, 7), mat(C.side)); palm.position.set(2.0, 1.45, -2.3); g.add(palm);
+  NS.photoDoor = box(2 * P.doorW, 2.1, 0.08, C.door, P.doorX, 1.05, -D + 0.05);
+  g.position.set(P.at[0], 0, P.at[1]);
+  mwScene.add(g);
+  g.updateMatrixWorld(true);
+  g.traverse((o) => { o.matrixAutoUpdate = false; });
 }
 // panel G: shared uniforms for the unworldly backdrop (set from Mask on entering, time each frame)
 const mwU = { uTime: { value: 0 }, uWarp: { value: 0 }, uAmt: { value: 0 }, uGlass: { value: 0 }, uFlashI: { value: -1 }, uFlash: { value: 0 } };
@@ -3563,7 +3613,7 @@ function buildUnworld() {
 function lightStartR() { return N1.light.spotR * (1 + N1.lightWiden * NS.lightOuts); }
 function addFoe(kind) {
   const cfg = N1[kind], root = cast[kind];
-  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: kind === 'light' ? lightStartR() : 0, hits: 0, stunT: 0, dark: false, clickT: 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0 };
+  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: kind === 'light' ? lightStartR() : 0, hits: 0, stunT: 0, dark: false, clickT: 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0, ph: 0, phT: 0 };
   root.position.set(f.x, 0, f.z); root.rotation.set(0, 0, 0); root.scale.setScalar(1); root.visible = true;
   if (kind === 'light') { f.spotX = 0; f.spotZ = -3; mwScene.remove(pool.glint); mwScene.add(pool.beam, pool.spot, pool.rim); pool.beam.material.opacity = 0.14; pool.spot.material.opacity = 0.32; pool.rim.material.opacity = N1.lightRimOp; }
   mwScene.add(root);
@@ -3575,8 +3625,9 @@ function enterMW() {
   S.room = false; S.mirror = null; S.mode = 'mw'; S.ended = false;
   setScene('mw');
   for (const f of foes) mwScene.remove(f.root);
-  mwScene.remove(pool.rim, pool.glint);
+  mwScene.remove(pool.rim, pool.glint, pool.lens, pool.wedge);
   foes.length = 0;
+  el.flash.classList.remove('on');
   mwScene.add(c.root, c.blob);
   c.root.rotation.set(0, Math.PI, 0);
   setGloom(0);
@@ -3606,23 +3657,29 @@ function enterMW() {
 // Mixer on: the entry corridor, then the styles of tonight's earned insecurities in a mixed order (a check may fix it with NS.routeOrder), the arena last; each space a group of mwGroup different types
 function mwBuildRoute() {
   if (!N1.mwMixer) return N1.mwRoute ? [{ style: 'corridor', group: null }, { style: 'ring', group: null }] : [{ style: 'ring', group: null }];
-  const night = NS.night || 1, earned = mwRoster(), used = [], route = [];
-  const max = N1.mwSpaces[Math.min(night, N1.mwSpaces.length) - 1];
-  // the group: its host first, then earned types not yet met on this route, then earned ones again, then the partner list; never the Light, never a type twice
-  const pick = (host, n) => {
-    const g = host ? [host] : [];
-    const order = earned.filter((k) => used.indexOf(k) < 0).concat(earned, N1.mwPartners);
-    for (const k of order) { if (g.length >= n) break; if (k !== 'light' && g.indexOf(k) < 0) g.push(k); }
-    for (const k of g) if (used.indexOf(k) < 0) used.push(k);
-    return g;
-  };
+  const night = NS.night || 1, earned = mwRoster(), used = [], uses = {}, route = [];
+  const max = N1.mwSpaces[Math.min(night, N1.mwSpaces.length) - 1], cor = N1.mwRoute && N1.mwStyles.corridor;
   const hostOf = (st) => { for (const k of earned) if (N1.mwStyleOf[k] === st) return k; return ''; };
-  if (N1.mwRoute && N1.mwStyles.corridor) route.push({ style: 'corridor', group: pick(hostOf('corridor'), N1.mwGroup) });
   let mids = [];
   for (const k of earned) { const st = N1.mwStyleOf[k]; if (st && st !== 'corridor' && N1.mwStyles[st] && mids.indexOf(st) < 0) mids.push(st); }
   if (NS.routeOrder) mids = NS.routeOrder.filter((st) => mids.indexOf(st) >= 0);
   else for (let i = mids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const x = mids[i]; mids[i] = mids[j]; mids[j] = x; }
-  for (const st of mids) { if (route.length >= max - 1) break; route.push({ style: st, group: pick(hostOf(st), N1.mwGroup) }); }
+  mids = mids.slice(0, Math.max(0, max - 1 - (cor ? 1 : 0)));
+  const ahead = mids.map(hostOf);
+  // the group: its host first, then earned types not yet met that host no space ahead, then any earned not yet met, then earned ones again (least met first), then the partner list; never the Light, never a type twice
+  const pick = (host, n) => {
+    const g = host ? [host] : [];
+    const fresh = earned.filter((k) => used.indexOf(k) < 0);
+    const again = earned.slice().sort((a, b) => (uses[a] || 0) - (uses[b] || 0));
+    // with a host still ahead, unearned partners stand in before that host is spent early
+    const stand = ahead.length ? N1.mwPartners.filter((k) => ahead.indexOf(k) < 0 && earned.indexOf(k) < 0) : [];
+    const order = fresh.filter((k) => ahead.indexOf(k) < 0).concat(stand, fresh, again, N1.mwPartners);
+    for (const k of order) { if (g.length >= n) break; if (k !== 'light' && g.indexOf(k) < 0) g.push(k); }
+    for (const k of g) { if (used.indexOf(k) < 0) used.push(k); uses[k] = (uses[k] || 0) + 1; }
+    return g;
+  };
+  if (cor) route.push({ style: 'corridor', group: pick(hostOf('corridor'), N1.mwGroup) });
+  for (const st of mids) { ahead.shift(); route.push({ style: st, group: pick(hostOf(st), N1.mwGroup) }); }
   route.push({ style: 'ring', group: ['light'].concat(pick('', N1.mwGroup - 1)) });
   return route;
 }
@@ -3630,6 +3687,7 @@ function mwBuildRoute() {
 function mwEnterLeg(M) {
   const leg = M.route[M.leg], next = M.route[M.leg + 1];
   M.space = leg.style; M.group = leg.group; M.fall = null;
+  mwGrade(leg.style);
   if (leg.style === 'corridor') {
     M.x = N1.mwCorStart[0]; M.z = N1.mwCorStart[1]; M.yaw = Math.PI; M.lookX = M.x * 0.5; M.lookZ = (M.z + N1.mwCorDoor) / 2;
     mwCam.position.fromArray(N1.mwCorCam);
@@ -3637,9 +3695,26 @@ function mwEnterLeg(M) {
     mwBag(leg.group);
     return;
   }
-  M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4;
-  mwCam.position.fromArray(N1.mwCamPos);
+  M.winT = 0; M.open = false;
+  if (leg.style === 'photo') {
+    const P = N1.photo;
+    M.x = P.at[0] + P.start[0]; M.z = P.at[1] + P.start[1]; M.yaw = Math.PI; M.lookX = P.at[0]; M.lookZ = P.at[1];
+    mwCam.position.set(P.at[0] + P.cam[0], P.cam[1], P.at[1] + P.cam[2]);
+    NS.photoDoor.material.color.set(N1.photoCol.door);
+    tip(N1.photoTip);
+  } else {
+    M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.lookX = 0; M.lookZ = 4;
+    mwCam.position.fromArray(N1.mwCamPos);
+  }
   if (leg.group) mwGroupIn(M, leg.group); else mwRingFoes();
+}
+// each space's grade: the photograph room is sepia on the clown and the figures, with the print's border on screen; the rest keep the Mirror's cold grade
+function mwGrade(style) {
+  const p = style === 'photo';
+  if (p) shared.uGradeTint.value.fromArray(N1.photoGrade); else shared.uGradeTint.value.setRGB(0.62, 0.78, 0.84);
+  shared.uGradeAmt.value = p ? N1.photoGradeAmt : 0.45;
+  rampU.uGradeTint.value.fromArray(N1.photoGrade); rampU.uGradeAmt.value = p ? N1.photoGradeAmt : 0;
+  el.photoEdge.classList.toggle('on', p);
 }
 // a space's group enters together at their own starts; those that followed him from the space before come too, and none is added twice
 function mwGroupIn(M, group) {
@@ -3653,6 +3728,8 @@ function mwGroupIn(M, group) {
 }
 // its own start, unless that is within mwSpawnClear of him (Shame's start is his entry spot): then the far side of the ring
 function mwStartAt(M, f) {
+  const P = N1.photo, r = M.space === 'photo' && P.foes[f.kind];
+  if (r) { f.x = P.at[0] + r[0]; f.z = P.at[1] + r[1]; return; }
   f.x = f.cfg.at[0]; f.z = f.cfg.at[1];
   if (Math.hypot(f.x - M.x, f.z - M.z) < N1.mwSpawnClear) f.z = -f.z;
 }
@@ -3664,7 +3741,8 @@ function mwLeaveLeg() {
     if (f.dark) continue;
     mwScene.remove(f.root); f.root.position.y = 0; foes.splice(i, 1);
   }
-  mwScene.remove(pool.ring);
+  mwScene.remove(pool.ring, pool.lens, pool.wedge);
+  for (const sh of pool.shards) if (sh.on) { sh.on = false; mwScene.remove(sh.m); NS.mw.shards++; }
 }
 // night 1: the Light always; the act's own monster; results add the Stare (a Perfect) and Shame (a miss)
 // owner 23 Nov 06:22 (N1.mwOneAtATime): only the first is here on entry; the rest wait in M.queue in N1.mwOrder and mwEntry brings each when the one before is down
@@ -3845,6 +3923,7 @@ function killFoe(f) {
   // A4: the Light is put out, never beaten: no sinking, the dark lamp stays with a glint on its lens
   if (f.kind === 'light') { f.dark = true; f.clickT = 0; NS.lightOuts++; mwScene.remove(pool.beam, pool.spot, pool.rim); mwScene.add(pool.glint); }
   else { f.sink = 0.6; NS.mw.beaten.push(f.kind); }
+  if (f.kind === 'stare') mwScene.remove(pool.lens, pool.wedge);
   dropShards(f.kind === 'light' ? f.spotX : f.x, f.kind === 'light' ? f.spotZ : f.z, f.cfg.shards);
   tone(1600, 600, 0.35, 'triangle', 0.07);
 }
@@ -3869,14 +3948,17 @@ const TIPS = {
 };
 function updateMW(dt) {
   const M = NS.mw;
+  // the photograph's flash freezes the frame: no game time passes, the white sheet fades when it ends
+  if (M.freezeT > 0) { M.freezeT -= dt; if (M.freezeT <= 0) el.flash.classList.remove('on'); return; }
   M.t += dt; if (M.cd > 0) M.cd -= dt;
   mwU.uTime.value += dt;
   mwClown(M, dt);
   mwPie(M, dt);
   let alive = 0;
   // those still to enter count as left: no win and no shard sweep before the last one is down
-  if (M.space === 'ring') { alive = mwFoes(M, dt); mwEntry(M, dt, alive); mwShards(M, dt, alive + M.queue.length); }
-  else { mwCorridor(M, dt); if (foes.length) { alive = mwFoes(M, dt); mwShards(M, dt, 1); } }
+  if (M.space === 'ring') { alive = mwFoes(M, dt); mwEntry(M, dt, alive); mwShards(M, dt, alive + M.queue.length, true); }
+  else if (M.space === 'corridor') { mwCorridor(M, dt); if (foes.length) { alive = mwFoes(M, dt); mwShards(M, dt, 1, false); } }
+  else { alive = mwFoes(M, dt); mwShards(M, dt, alive, false); mwRoomOpen(M, alive); }
   mwGnaw(M, dt, alive);
   mwCamera(M, dt);
   mwHud(M, dt);
@@ -3911,6 +3993,11 @@ function mwClown(M, dt) {
   if (M.space === 'corridor') {
     M.x = THREE.MathUtils.clamp(M.x, -N1.mwCorX, N1.mwCorX); M.z = THREE.MathUtils.clamp(M.z, N1.mwCorZ[1], N1.mwCorZ[0]);
     if (M.z <= N1.mwCorDoor && !M.cutting) { if (mwGroupLeft(M)) M.z = N1.mwCorDoor + 0.01; else mwCut(); }
+  } else if (M.space === 'photo') {
+    // the room's walls; the back wall's door leads on once it is open
+    const P = N1.photo, back = P.at[1] - P.half[1];
+    M.x = THREE.MathUtils.clamp(M.x, P.at[0] - P.half[0] + 0.3, P.at[0] + P.half[0] - 0.3); M.z = THREE.MathUtils.clamp(M.z, back + 0.3, P.at[1] + P.half[1]);
+    if (M.open && !M.cutting && Math.abs(M.x - P.at[0] - P.doorX) < P.doorW && M.z <= back + 0.35) mwCut();
   } else { const rr = Math.hypot(M.x, M.z); if (rr > N1.mwRadius) { M.x *= N1.mwRadius / rr; M.z *= N1.mwRadius / rr; } }
   M.still = moving || M.fall || M.slapT > 0 ? 0 : M.still + dt;
   M.isStill = M.still > N1.stillAfter; M.isMoving = moving;
@@ -4032,6 +4119,27 @@ function mwStare(M, f, dt, dx, dz, d) {
   f.judgeT -= dt;
   if (f.judgeT <= 0) { f.judgeT = f.cfg.every; mwHurt(f.cfg.judge); f.pop = 0.15; }
 }
+// the Stare in its photograph room is a camera: it aims; once it has him in its cone and stareFlash.every s have passed, the lens opens for the tell with a whine and its aim locks
+// (the cone shows on the floor); then the flash: caught in the cone costs Laughs (mwHurt: a dodge is safe), the frame freezes
+function mwStareFlash(M, f, dt, dx, dz, d) {
+  const c = N1.stareFlash;
+  f.phT += dt;
+  if (f.ph === 0) {
+    const want = Math.atan2(dx, dz), diff = Math.atan2(Math.sin(want - f.yaw), Math.cos(want - f.yaw));
+    f.yaw += Math.sign(diff) * Math.min(Math.abs(diff), deg(c.turn) * dt);
+    if (f.phT >= c.every && Math.abs(diff) < deg(c.cone)) { f.ph = 1; f.phT = 0; tone(1100, 3800, c.tell, 'sine', 0.05); mwScene.add(pool.lens, pool.wedge); }
+    return;
+  }
+  const k = Math.min(1, f.phT / c.tell), h = f.root.userData.h || 1.1;
+  pool.lens.position.set(f.x + Math.sin(f.yaw) * 0.32, h * 0.8, f.z + Math.cos(f.yaw) * 0.32); pool.lens.rotation.y = f.yaw; pool.lens.scale.setScalar(0.04 + 0.18 * k);
+  pool.wedge.position.set(f.x, 0.03, f.z); pool.wedge.rotation.y = f.yaw; pool.wedge.children[0].material.opacity = 0.08 + 0.3 * k;
+  if (f.phT < c.tell) return;
+  const off = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - f.yaw), Math.cos(Math.atan2(dx, dz) - f.yaw)));
+  if (off < deg(c.cone) && d < c.range) mwHurt(c.judge);
+  f.ph = 0; f.phT = 0; f.pop = 0.2; M.freezeT = c.freeze;
+  el.flash.classList.add('on'); tone(2800, 400, 0.08, 'square', 0.09);
+  mwScene.remove(pool.lens, pool.wedge);
+}
 function mwShame(M, f, dt, dx, dz, d) {
   f.yaw = Math.atan2(dx, dz);
   if (f.stun > 0) { f.stun -= dt; return; }
@@ -4052,7 +4160,7 @@ function mwFoes(M, dt) {
     if (f.near < bd) { bd = f.near; best = f; }
     if (f.kind === 'light') mwLight(M, f, dt);
     else if (f.kind === 'whisper') mwWhisper(M, f, dt, dx, dz, d);
-    else if (f.kind === 'stare') mwStare(M, f, dt, dx, dz, d);
+    else if (f.kind === 'stare') { if (M.space === 'photo') mwStareFlash(M, f, dt, dx, dz, d); else mwStare(M, f, dt, dx, dz, d); }
     else if (f.kind === 'shame') mwShame(M, f, dt, dx, dz, d);
     if (f.pop > 0) f.pop -= dt;
     f.root.scale.setScalar(1 + Math.max(0, f.pop) * 0.9);
@@ -4064,7 +4172,8 @@ function mwFoes(M, dt) {
   M.face = !cur || (best && best !== cur && best.near < cur.near - N1.mwHintSwitch) ? best : cur;
   return alive;
 }
-function mwShards(M, dt, alive) {
+// shards: walked over, or swept to him once nobody stands; only the arena (final) ends the Mirror World
+function mwShards(M, dt, alive, final) {
   let left = 0;
   for (const s of pool.shards) {
     if (!s.on) continue;
@@ -4072,16 +4181,24 @@ function mwShards(M, dt, alive) {
     s.m.rotation.y += dt * 2;
     if (Math.hypot(M.x - s.x, M.z - s.z) < 0.7 || (alive === 0 && M.winT > 1.2)) { s.on = false; mwScene.remove(s.m); M.shards++; tone(1800, 2400, 0.08, 'sine', 0.05); }
   }
-  if (alive === 0 && !M.over) { M.winT += dt; if (M.winT > 1.5 && left === 0) endMW('win'); }
+  if (alive === 0 && !M.over) { M.winT += dt; if (final && M.winT > 1.5 && left === 0) endMW('win'); }
+}
+// a room's group is down: its pale door opens (once), the only way on; cuts only between spaces, never inside a fight
+function mwRoomOpen(M, alive) {
+  if (M.open || alive > 0) return;
+  M.open = true;
+  NS.photoDoor.material.color.set(N1.photoCol.doorOpen);
+  tip(N1.photoOpenTip); tone(700, 1400, 0.3, 'triangle', 0.06);
 }
 // one fixed spot; the camera turns and zooms to keep him whole (owner requirement 7)
 function mwCamera(M, dt) {
-  const k = 1 - Math.exp(-N1.mwCamLerp * dt), cor = M.space === 'corridor';
-  const tx = cor ? M.x * 0.5 : M.x, tz = cor ? (M.z + N1.mwCorDoor) / 2 : M.z;
+  const k = 1 - Math.exp(-N1.mwCamLerp * dt), cor = M.space === 'corridor', ph = M.space === 'photo';
+  // the photograph room is one fixed shot: aim and field of view never move
+  const tx = ph ? N1.photo.at[0] : cor ? M.x * 0.5 : M.x, tz = ph ? N1.photo.at[1] : cor ? (M.z + N1.mwCorDoor) / 2 : M.z;
   M.lookX += (tx - M.lookX) * k; M.lookZ += (tz - M.lookZ) * k;
-  mwTmp.look.set(M.lookX, cor ? N1.mwCorLookH : N1.mwLookH, M.lookZ);
+  mwTmp.look.set(M.lookX, ph ? N1.photo.lookH : cor ? N1.mwCorLookH : N1.mwLookH, M.lookZ);
   const cd = mwCam.position.distanceTo(mwTmp.look);
-  const fov = cor ? N1.mwCorFov : THREE.MathUtils.clamp(2 * THREE.MathUtils.radToDeg(Math.atan(N1.mwFrame / cd)), N1.mwFovMin, N1.mwFovMax);
+  const fov = ph ? N1.photo.fov : cor ? N1.mwCorFov : THREE.MathUtils.clamp(2 * THREE.MathUtils.radToDeg(Math.atan(N1.mwFrame / cd)), N1.mwFovMin, N1.mwFovMax);
   M.fovNow += (fov - M.fovNow) * k;
   if (Math.abs(mwCam.fov - M.fovNow) > 0.01) { mwCam.fov = M.fovNow; mwCam.updateProjectionMatrix(); }
   mwCam.lookAt(mwTmp.look); mwCam.updateMatrixWorld();
@@ -4125,7 +4242,7 @@ function endMW(result) {
     setTimeout(() => {
       S.running = false; S.mode = 'x';
       el.mwHud.classList.add('hidden'); el.pads.classList.add('hidden'); el.mwTip.textContent = ''; el.hint.textContent = ''; el.hint.classList.remove('padded');
-      shared.uGradeAmt.value = 0;
+      shared.uGradeAmt.value = 0; rampU.uGradeAmt.value = 0; el.photoEdge.classList.remove('on'); el.flash.classList.remove('on');
       el.fog.style.opacity = 0;
       nietzscheCard();
     }, N1.fogMs);
