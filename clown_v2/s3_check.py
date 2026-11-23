@@ -1,6 +1,6 @@
 """Step 3 checks: per clip, sample frames and measure edge stretch and whether parts that touch at rest
 come apart (a gap = torn look). Also renders a pose sheet (3/4 view) for each clip.
-Run: python3 -I s3_check.py <dir with rigged.blend> [--clips=idle,walk] [--sheet]"""
+Run: python3 -I s3_check.py <dir with rigged.blend> [--clips=idle,walk] [--sheet] [--fit-only: stop after the sheet frame gate]"""
 import os, sys, json, math
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 # approved art scripts (build.py, render3d.py, palette.py); set APPROVED to override
@@ -18,6 +18,8 @@ CONFIG = dict(
     stretch_max=1.6,
     # frames sampled per clip
     samples=8,
+    # pose sheets: smallest gap kept between the figure and the frame edge, as a fraction of the frame
+    sheet_margin=0.02,
 )
 D = sys.argv[1]
 G = []
@@ -117,7 +119,39 @@ if '--sheet' in sys.argv:
     render3d.stage('clown')
     sc.cycles.samples = 10; sc.render.resolution_x = sc.render.resolution_y = 320; sc.cycles.device = 'CPU'
     # pose sheets: clip and view yaw (a figure with its own clips names its own in SHEET)
-    for name, yaw in getattr(C, 'SHEET', (('idle', -35), ('walk', -70), ('slap', -35))):
+    SHEETS = getattr(C, 'SHEET', (('idle', -35), ('walk', -70), ('slap', -35)))
+    # session 30: sheet frame fitted to the figure. Tall figures (the Light 2.19 m, the Whisper 2.08 m) were cut off at the
+    # approved scale 1/0.03; the scale shrinks only when a sampled frame leaves the margin, so figures that fit keep the approved framing
+    from bpy_extras.object_utils import world_to_camera_view
+    figs = [o for o in sc.objects if o.type == 'MESH' and o.parent is arm and not o.hide_render]
+    def sheet_extent():
+        # largest distance of any vertex from the frame centre at the sides and top over every sampled sheet frame (0.5 = on the
+        # frame edge). The bottom only has to stay inside the frame: the approved camera puts the floor in front of the feet near
+        # the bottom edge (the Light's front tripod foot at 0.005 of the frame), so a margin there would shrink every figure
+        dg = bpy.context.evaluated_depsgraph_get(); worst = 0.0
+        for name, yaw in SHEETS:
+            piv.rotation_euler = (0, 0, math.radians(yaw)); act = bpy.data.actions[name]; arm.animation_data.action = act
+            f0, f1 = act.frame_range
+            for k in range(6):
+                sc.frame_set(int(round(f0 + (f1 - f0) * k / 5))); dg = bpy.context.evaluated_depsgraph_get()
+                for o in figs:
+                    ev = o.evaluated_get(dg); me = ev.to_mesh(); mw = ev.matrix_world
+                    for v in me.vertices:
+                        p = world_to_camera_view(sc, co_, mw @ v.co); worst = max(worst, abs(p.x - 0.5), p.y - 0.5, edge - p.y)
+                    ev.to_mesh_clear()
+        return worst
+    edge = 0.5 - CONFIG['sheet_margin']
+    # SHEET_FIT=0 is the gate's mutation (cast job, the Light): no fitting, so the gate must FAIL
+    for _ in range(6 if os.environ.get('SHEET_FIT', '1') != '0' else 0):
+        ext = sheet_extent()
+        if ext <= edge: break
+        piv.scale = tuple(s * edge / ext * 0.98 for s in piv.scale)
+    else:
+        ext = sheet_extent()
+    gate('pose sheets: figure inside the frame on every sampled frame', ext <= edge,
+         f'extent {ext:.3f} of {edge:.3f}, scale x{piv.scale[0] * 0.03:.3f} of the approved')
+    if '--fit-only' in sys.argv: sys.exit(0)
+    for name, yaw in SHEETS:
         piv.rotation_euler = (0, 0, math.radians(yaw))
         act = bpy.data.actions[name]; arm.animation_data.action = act
         f0, f1 = act.frame_range; frames = []

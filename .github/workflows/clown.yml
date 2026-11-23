@@ -349,7 +349,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        char: [whiteface, performer, stagehand]
+        # session 30: the eight v2 figures of the art pass (crew and constructs, all approved but Shame)
+        char: [whiteface, performer, stagehand, rigger, props_girl, strongman, child, light, whisper, stare, shame]
     env:
       CHAR: ${{ matrix.char }}
     steps:
@@ -375,12 +376,14 @@ jobs:
           python -I s3_check.py $O --sheet | tee -a log.txt
           if [ "$CHAR" = whiteface ]; then python -I mutate_shell.py $O | tee -a log.txt; fi
           if [ "$CHAR" = stagehand ]; then CHAR=whiteface python -I s2_build.py out_mutpaint > /dev/null; CHAR=whiteface python -I mutate_paint_empty.py out_mutpaint | tee -a log.txt; fi
+          # mutation of the sheet frame gate: unfitted, the Light's lamp leaves the frame, so the gate must FAIL
+          if [ "$CHAR" = light ]; then SHEET_FIT=0 python -I s3_check.py $O --sheet --fit-only | grep 'pose sheets' > mut.txt || true; if grep -q '^FAIL' mut.txt; then echo "PASS mutation sheetfit caught: $(cat mut.txt)"; else echo "FAIL mutation sheetfit not caught: $(cat mut.txt)"; fi | tee -a log.txt; fi
           mkdir -p ../cast_out/$CHAR
           cp log.txt $O/*.glb $O/*.png $O/*.jpg $O/*.gif $O/gates_*.json ../cast_out/$CHAR/
           ! grep -q '^FAIL' log.txt
       - name: Side-by-side with the approved model (same camera, lights, scale)
-        # crew have no approved 3D model to compare with
-        if: matrix.char != 'stagehand'
+        # only the whiteface and the Performer have an approved 3D model to compare with (crew and constructs have none)
+        if: matrix.char == 'whiteface' || matrix.char == 'performer'
         run: |
           python -I art/3_blender_3d/render3d.py $CHAR > /dev/null
           cd clown_v2 && O=out_${CHAR} && mkdir -p sbs
