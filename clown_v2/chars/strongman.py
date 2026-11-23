@@ -57,6 +57,14 @@ CONFIG = dict(
     delt_down=1.4, delt_R=(3.9, 3.7, 4.4),
     # fist: finger length to the knuckle, and how far the curled finger tips turn back toward the palm
     knuckle=1.3, curl=1.4,
+    # biceps: how far forward of the upper arm's line it sits, and its radii (across, across, along)
+    bicep_out=1.7, bicep_R=(2.9, 2.9, 3.4),
+    # idle flex: upper arm direction, its roll so the bicep faces up (degrees), forearm direction (armature space)
+    flex_upper=(-1.0, 0.3, 0.15), flex_roll=90.0, flex_fore=(-0.1, 0.3, 1.0),
+    # back hair: row heights (z), how far round from the back each row reaches (degrees), tuft spacing, tuft radii
+    hair=dict(rows=(39.4, 40.5, 41.6, 42.7, 43.8), reach=72.0, step=16.0, tuft=(1.25, 0.65, 0.9)),
+    # shoulder strap width and thickness (fraction of the width)
+    strap_w=1.9, strap_flat=0.35,
     # idle: where the bulb end of the horn points (armature space; up and toward the clown)
     horn_aim=(0.0, -0.35, 1.0),
 )
@@ -91,6 +99,13 @@ def _grow(before):
 def _align(o, d):
     """Turn an object made along z so its z axis runs along d."""
     o.rotation_mode = 'QUATERNION'; o.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(Vector(d))
+    return o
+
+def _frame(o, d, nrm):
+    """Turn an object made along z so z runs along d and its local y (the thin side) faces nrm."""
+    from mathutils import Matrix
+    z = Vector(d).normalized(); y = Vector(nrm) - z * Vector(nrm).dot(z); y.normalize(); x = y.cross(z)
+    o.rotation_mode = 'QUATERNION'; o.rotation_quaternion = Matrix((x, y, z)).transposed().to_quaternion()
     return o
 
 def body():
@@ -145,14 +160,27 @@ def _torso(c):
     # scoop neck: bare chest showing above the singlet
     res(20, 10)
     tag(ell(T('SKIN_TAN'), (0, on_surface(TC, TR, 0, 34.4, -1.9), 34.4), (4.6, 2.2, 3.0)), 'SKIN_TAN', 'chest')
-    # crimson shoulder straps over the top of the chest, front to back
+    # crimson shoulder straps: from the chest front, up over the trapezius slope and down the back in one run
+    # (session 27: straps ending under the trapezius showed as red pegs)
     res(10, 6)
+    tc, tr = (6.2, 0.4, 36.2), (4.6 + 0.35, 3.6 + 0.35, 2.0 + 0.35)
     for s in (-1, 1):
+        x = 5.4; q = math.sqrt(max(1 - ((x - tc[0]) / tr[0]) ** 2, 0.0))
+        over = [(s * x, tc[1] + tr[1] * q * math.sin(math.radians(a)), tc[2] + tr[2] * q * math.cos(math.radians(a)))
+                for a in (-90, -60, -30, 0, 30, 60, 90)]
         f = (s * 5.0, on_surface(TC, TR, s * 5.0, 33.0, 0.3), 33.0)
-        t = (s * 5.6, 0.0, 37.0)
         b = (s * 5.0, -f[1], 33.0)
-        capsule(T('CRIMSON'), f, t, 0.9, 'chest', ramp='CRIMSON')
-        capsule(T('CRIMSON'), t, b, 0.9, 'chest', ramp='CRIMSON')
+        run = [f] + over + [b]
+        # flat band: one flattened cylinder per stretch, its thin axis along the surface normal, ends overlapping
+        nrm = [Vector(((x0 - TC[0]) / TR[0] ** 2, (y0 - TC[1]) / TR[1] ** 2, (z0 - TC[2]) / TR[2] ** 2)) for x0, y0, z0 in run[:1]]
+        nrm += [Vector(((x0 - tc[0]) / tr[0] ** 2, (y0 - tc[1]) / tr[1] ** 2, (z0 - tc[2]) / tr[2] ** 2)) for x0, y0, z0 in over]
+        nrm += [Vector(((b[0] - TC[0]) / TR[0] ** 2, (b[1] - TC[1]) / TR[1] ** 2, (b[2] - TC[2]) / TR[2] ** 2))]
+        res(16, 6)
+        for (pa, na), (pb, nb) in zip(zip(run, nrm), zip(run[1:], nrm[1:])):
+            pa, pb = Vector(pa), Vector(pb); d = pb - pa
+            o = cyl(T('CRIMSON'), (pa + pb) / 2, c['strap_w'] / 2, d.length + 0.6, scale=(1, c['strap_flat'], 1))
+            _frame(o, d, (na + nb).normalized())
+            tag(o, 'CRIMSON', 'chest')
     # wide leather belt with rivets, gold buckle frame and prong
     res(32, 6)
     tag(torus(T('SHOE'), (0, 0, 17.6), 8.6, 1.0, scale=(1, 0.74, 1)), 'SHOE', 'hips,spine')
@@ -184,11 +212,12 @@ def _arms(c):
         res(18, 10)
         tag(cone(T('SKIN_TAN'), sh, el, 3.4, 2.8), 'SKIN_TAN', f'clavicle_{S},upper_arm_{S},forearm_{S}', cuts=3)
         res(16, 10)
-        tag(_align(ell(T('SKIN_TAN'), sh + d1 * (c['upper_len'] * 0.55) + Vector((0, -1.3, 0)), (2.4, 2.4, 3.2)), d1),
+        tag(_align(ell(T('SKIN_TAN'), sh + d1 * (c['upper_len'] * 0.55) + Vector((0, -c['bicep_out'], 0)), c['bicep_R']), d1),
             'SKIN_TAN', f'upper_arm_{S}')
         tag(_align(ell(T('SKIN_TAN'), sh + d1 * (c['upper_len'] * 0.45) + Vector((0, 1.2, 0)), (2.3, 2.3, 3.0)), d1),
             'SKIN_TAN', f'upper_arm_{S}')
-        tag(ell(T('SKIN_TAN'), el, (2.8, 2.8, 2.8)), 'SKIN_TAN', f'upper_arm_{S},forearm_{S}')
+        # elbow: smaller than both arm ends (a 2.8 sphere matched them and the coinciding surfaces baked as a jagged seam)
+        tag(ell(T('SKIN_TAN'), el, (2.5, 2.5, 2.5)), 'SKIN_TAN', f'upper_arm_{S},forearm_{S}')
         # forearm, thick at the elbow
         res(16, 8)
         tag(cone(T('SKIN_TAN'), el, wr, 2.8, 2.1), 'SKIN_TAN', f'upper_arm_{S},forearm_{S},hand_{S}', cuts=3)
@@ -248,21 +277,21 @@ def _horn(c, pc, d2, s):
     tag(_align(cyl(T('BLACK'), bend + dirb * (c['bell_len'] - 0.35), c['bell_R'] * 0.8, 0.3), dirb), 'BLACK', 'hand_L')
 
 def _head():
+    c_hair = CONFIG['hair']
     # ears, broad nose, horseshoe of dark hair at the back, handlebar moustache with curled tips
     res(12, 8)
     for s in (-1, 1):
         tag(ell(T('SKIN_TAN'), (s * 5.9, -0.1, 44.0), (1.0, 1.3, 1.7)), 'SKIN_TAN', 'head')
-        # side hair above the ear, running back
-        res(12, 8)
-        tag(ell(T('BLACK'), (s * 5.3, 1.7, 45.6), (0.9, 2.6, 1.5)), 'BLACK', 'head')
-    # horseshoe of short dark hair round the back, two rows of small tufts hugging the skull
-    res(10, 8)
-    for z, k in ((42.8, 1.0), (44.2, 0.9)):
+    # horseshoe of short dark hair low round the back, ending behind the ears (session 27: a band over the ears read
+    # as headphones): rows of tufts from the nape up, flat against the skull, offset row to row, a patch not a band
+    res(8, 6)
+    for row, z in enumerate(c_hair['rows']):
         q = math.sqrt(max(1 - ((z - H0[2]) / R0[2]) ** 2, 0.0))
-        for a in range(-95, 100, 19):
+        a0 = -c_hair['reach'] + (row % 2) * c_hair['step'] / 2
+        for a in range(int(a0), int(c_hair['reach']) + 1, int(c_hair['step'])):
             t = math.radians(a)
-            p = (R0[0] * q * math.sin(t) * 0.98, H0[1] + R0[1] * q * math.cos(t) * 0.98, z)
-            tag(ell(T('BLACK'), p, (1.15 * k, 1.15 * k, 1.0 * k)), 'BLACK', 'head')
+            p = (R0[0] * q * math.sin(t), H0[1] + R0[1] * q * math.cos(t), z)
+            tag(ell(T('BLACK'), p, c_hair['tuft'], rot=(0, 0, -a)), 'BLACK', 'head')
     res(16, 10)
     tag(ell(T('SKIN_TAN'), (0, on_surface(H0, R0, 0, 43.0, 0.8), 43.0), (1.5, 1.3, 1.6)), 'SKIN_TAN', 'head')
     for s in (-1, 1):
@@ -337,7 +366,11 @@ def idle(t, length):
     c = CONFIG; p = 2 * math.pi * t / length
     K.move('hips', (0, 0, -0.06 * (1 - math.cos(p))))
     K.rotw('chest', (1, 0, 0), -4 + 0.8 * math.sin(p))
-    K.aim('upper_arm_R', (-1.0, 0.05, 0.12)); K.aim('forearm_R', (0.12, -0.15, 1.0))
+    # upper arm out level and a little back, rolled so the bicep faces up; forearm straight up beside the head,
+    # so the fist stays clear of the face (session 27: the fist covered the face from the side)
+    ua = c['flex_upper']
+    K.aim('upper_arm_R', ua); K.rotw('upper_arm_R', ua, c['flex_roll'])
+    K.aim('forearm_R', c['flex_fore'])
     K.rotw('forearm_R', (0, 1, 0), 6 * math.sin(p))
     K.aim('hand_R', (0.1, -0.2, 1.0))
     K.aim('upper_arm_L', (0.35, -0.55, -0.75)); K.aim('forearm_L', (0.05, -1.0, 0.2 + 0.03 * math.sin(p)))
