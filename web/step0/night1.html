@@ -789,7 +789,8 @@ const N1 = Object.freeze({
   crew: [
     { id: 'stagehand', title: 'Stagehand', at: [0.62, 4.9], yaw: -90, line: 'Evening. Full house tonight.', lines: { 3: 'Good evening.' } },
     { id: 'rigger', title: 'Rigger', at: [2.5, 10.9], yaw: -90, line: 'Cable going down. Fall over it, they love that.', lines: { 3: 'Cable is down. You know what to do.' }, verb: 'fall', verbText: 'Pratfall over the cable', across: true, done: 'Neat.' },
-    { id: 'props_girl', title: 'Props', at: [1.5, 9.3], yaw: -120, line: "Your pie. Don't eat it this time.", lines: { 3: 'Your pie.' }, verb: 'take', verbText: 'Take the pie', done: 'Break a leg.' },
+    // props girl yaw -13 (was -120, back to the wings camera): side-on to the wings camera, facing the clown's way in with the pie held out (owner 23 Nov 21:01 "turn her side way")
+    { id: 'props_girl', title: 'Props', at: [1.5, 9.3], yaw: -13, line: "Your pie. Don't eat it this time.", lines: { 3: 'Your pie.' }, verb: 'take', verbText: 'Take the pie', done: 'Break a leg.' },
     { id: 'strongman', title: 'Strongman', at: [1.3, 12.7], yaw: -150, line: 'For luck! Give it a honk.', lines: { 3: 'Honk. For luck.' }, verb: 'honk', verbText: 'Honk the horn', done: 'HA! Now go get them.' },
     { id: 'child', title: '', at: [-2.25, 17.0], yaw: 90, line: '', verb: 'trip', verbText: 'Trip', done: '...on purpose.' },
   ],
