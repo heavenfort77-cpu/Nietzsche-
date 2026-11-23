@@ -152,7 +152,7 @@ A small arena seen from a high three-quarter camera: the same ring as the stage,
 
 **The rule (owner, 22 Nov 2026): insecurity is only beaten by acting.** Standing still is never the answer. While any insecurity is up and he does nothing (no move, no gag), every figure is on him: the screen edge darkens at once and a whisper rises; after a 1.0 s warning his Laughs drain at 2 per second, climbing by 1 per second each second up to 8 per second. Any move, slap, pie or pratfall clears it. Once every insecurity is down nothing gnaws.
 
-**Open problem (player feedback relayed by the owner, 23 Nov 2026):** "in the mirror I also don't know what to do." Earlier cold reads said the same: nothing says what the figures are, what each button does to them, or what winning looks like. Not solved yet.
+**Insecurities one at a time, each with its hint (owner, 23 Nov 2026: decided 06:22, "use the style now" 08:08).** Answer to the player feedback "in the mirror I also don't know what to do". On entry one line says what he is fighting ("These are his insecurities. Face each one."). Only one insecurity is in the room at a time, the Light first, then the Stare, Shame and the Whisper (only those the act earned); the next enters when the one before is down. The one he faces shows its hint as one fixed line until it is down: Light "Three gags on its lamp.", Stare "Hit it from the side.", Shame "Dodge to shake it off.", Whisper "Step past it. Stay on your feet." No count of figures left (owner, 23 Nov). His pratfall is called "Dodge" to the player; the animation stays a pratfall. This is the style for every night. Built in session 21 batch 1 (commit 649273b): `mwOneAtATime`, `mwOrder`, `mwHints`, `mwHint`, `mwNameText` in `night1.html` CONFIG.
 
 **Controls**
 
@@ -358,5 +358,5 @@ Gameplay systems (cue, meters, crowd, shop, combat, final night) are built along
 - [ ] The ending: what is seen and heard after each of the two choices.
 - [ ] The Neighbour, the Double and the Spotlight gag: new answers under the acting rule (their old ones were "do nothing").
 - [ ] The Performer's attack for each buyable act, and its tell.
-- [ ] Practice for the timing cue before the show, and what tells a new player what to do in the Mirror World (player feedback, 23 Nov 2026).
+- [ ] Practice for the timing cue before the show (player feedback, 23 Nov 2026): built as short acts of 3 rings and one ring that closes by itself (session 21 batch 1), not yet approved. The Mirror World half is decided (above).
 - [ ] Still differing from later owner decisions (session 12 list, 22 Nov; not yet decided for this doc): walk back look (built: gloom and flakes), into the mirror (next sample: he stands, reflection cracks, fog), Mirror World camera and 2.5D sets (OWNER-REQUIREMENTS.md section 7), performers met in the wings.
