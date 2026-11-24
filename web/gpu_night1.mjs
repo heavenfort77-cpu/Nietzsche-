@@ -2,6 +2,10 @@
 // gpu_measure.mjs times web/game/index.html (the earlier ring page); this times night1's heaviest scenes with the same method: each frame is the
 // game's own update for 1/60 s plus its draw, waited for on the GPU (one pixel read back), so the time is the frame's real cost (CPU and GPU).
 // The pixel-ratio watcher is not called while timing (tier locked at its default, rule 31). Owner requirement 2: p95 at most 16.7 ms.
+// Session 30 (rule 28, profile first): each frame is split into CPU (update plus the draw calls' submission, JS) and GPU wait (the pixel read back
+// after it); the control page step0/gpu_control.html (an empty WebGL frame at the same size) is timed before and after each setup in the same job,
+// so a miss is the page's only when it is slower than the control; frames over the budget are listed; a sampling CPU profile of each scene at
+// 1080p prints the top functions by self time.
 // Usage: node gpu_night1.mjs <web/step0 dir>; EXTRA_ARGS='--use-angle=swiftshader' for a local dry run (software: correctness and counts only).
 import http from 'http'; import fs from 'fs'; import path from 'path';
 import puppeteer from 'puppeteer-core';
@@ -20,6 +24,10 @@ const CONFIG = {
   budgetMs: 16.7,
   // draw-call and triangle budgets for the heaviest scene (rules 32, 24)
   maxCalls: 500, maxTris: 500000,
+  // CPU profile: sampling interval (microseconds) and functions printed per scene
+  profUs: 200, profTop: 10,
+  // frames over the budget listed per scene and setup (the rest are counted)
+  longList: 6,
 };
 const root = process.argv[2] || 'step0';
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.json': 'application/json', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg', '.wasm': 'application/wasm' };
@@ -39,6 +47,24 @@ p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.
 let pass = 0, fail = 0;
 function gate(name, ok, info) { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name} | ${typeof info === 'string' ? info : JSON.stringify(info)}`); }
 const stats = (t) => { const s = [...t].sort((x, y) => x - y); const q = (v) => s[Math.min(s.length - 1, Math.floor(v * s.length))]; return { median: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), max: +s[s.length - 1].toFixed(2) }; };
+// one timed frame loop in the page: run(k) is the frame, then one pixel is read back; returns total, CPU (until the read) and GPU wait (the read)
+const LOOP = `(run, gl, n, warm) => { const px = new Uint8Array(4), tot = [], cpu = [], gpu = [];
+  for (let k = 0; k < n + warm; k++) { const t0 = performance.now(); run(k); const t1 = performance.now(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t2 = performance.now();
+    if (k >= warm) { tot.push(t2 - t0); cpu.push(t1 - t0); gpu.push(t2 - t1); } }
+  return { tot, cpu, gpu }; }`;
+const split = (r) => { const long = []; r.tot.forEach((v, k) => { if (v > CONFIG.budgetMs) long.push({ k, ms: +v.toFixed(1), cpu: +r.cpu[k].toFixed(1), gpu: +r.gpu[k].toFixed(1) }); });
+  return { ...stats(r.tot), cpuP95: stats(r.cpu).p95, gpuP95: stats(r.gpu).p95, long: long.length, longCpu: long.filter((f) => f.cpu >= f.gpu).length, list: long.slice(0, CONFIG.longList) }; };
+async function control(label) {
+  await p.goto(`http://localhost:${srv.address().port}/gpu_control.html`, { waitUntil: 'load' });
+  await p.waitForFunction(() => window.__ctl);
+  const r = await p.evaluate(`(${LOOP})((k) => window.__ctl.frame(), window.__ctl.gl, ${CONFIG.frames}, ${CONFIG.warm})`);
+  const px = await p.evaluate(() => window.__ctl.px());
+  return { scene: 'control (empty)', setup: label, px, ...split(r) };
+}
+// capability lines (lesson: check what the test machine supports first): GPU timer queries, parallel shader compile
+async function caps() {
+  return p.evaluate(() => { const g = document.createElement('canvas').getContext('webgl2'); return g ? { timerQuery: !!g.getExtension('EXT_disjoint_timer_query_webgl2'), parallelCompile: !!g.getExtension('KHR_parallel_shader_compile') } : null; });
+}
 
 // the scenes, each set up on a fresh page: the ring of the Mirror World with its group (the arena), the act at the zoom-out, the shop at the mirror (room plus reflection pass)
 const SCENES = {
@@ -58,9 +84,10 @@ const SCENES = {
 };
 const want = { 'mirror world ring': 'mw', 'act': 'act', 'mirror shop': 'room' };
 const rows = [];
-let routeOk = null;
-for (const [w, h, sf, label] of CONFIG.setups) for (const [scene, setup] of Object.entries(SCENES)) {
+let routeOk = null, capsLine = null;
+for (const [w, h, sf, label] of CONFIG.setups) for (const [scene, setup] of [['control before', null], ...Object.entries(SCENES), ['control after', null]]) {
   await p.setViewport({ width: w, height: h, deviceScaleFactor: sf, isMobile: /phone/.test(label), hasTouch: /phone/.test(label) });
+  if (!setup) { const c = await control(label); c.scene = scene; rows.push(c); continue; }
   await p.goto(`http://localhost:${srv.address().port}/night1.html`, { waitUntil: 'load' });
   await p.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame);
   if (routeOk === null) {
@@ -70,32 +97,49 @@ for (const [w, h, sf, label] of CONFIG.setups) for (const [scene, setup] of Obje
     else gate('route: Chrome draws WebGL on the GPU, not in software', routeOk, gl);
   }
   await p.evaluate(setup);
-  const r = await p.evaluate((n, warm) => {
-    const N = window.__night, W = window.__walkTest, R = W.renderer, t = [];
-    // the game's own loop stops; each timed frame is one update and one draw, then one pixel read back (waits for the GPU)
-    N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; }
-    // every pass of a frame counted (the mirror's reflection is a second render)
-    const gl = R.getContext(), px = new Uint8Array(4), auto = R.info.autoReset; R.info.autoReset = false;
-    let calls = 0, tris = 0;
-    for (let k = 0; k < n + warm; k++) {
-      const t0 = performance.now();
-      R.info.reset(); N.stepFrame(1 / 60);
-      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-      const ms = performance.now() - t0;
-      if (k >= warm) { t.push(ms); calls = Math.max(calls, R.info.render.calls); tris = Math.max(tris, R.info.render.triangles); }
-    }
-    R.info.autoReset = auto;
-    const c = R.domElement;
-    return { t, calls, tris, mode: N.S.mode, room: !!N.S.room, px: `${c.width}x${c.height}`, dpr: R.getPixelRatio() };
-  }, CONFIG.frames, CONFIG.warm);
-  const st = stats(r.t), mode = r.mode === 'mw' || r.mode === 'act' ? r.mode : r.room ? 'room' : r.mode;
+  if (!capsLine) { capsLine = await caps(); console.log('capabilities | ' + JSON.stringify(capsLine)); }
+  // the game's own loop stops; each timed frame is one update and one draw, then one pixel read back (waits for the GPU);
+  // every pass of a frame counted (the mirror's reflection is a second render)
+  await p.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } window.__cnt = { calls: 0, tris: 0, auto: R.info.autoReset }; R.info.autoReset = false; });
+  const lr = await p.evaluate(`(${LOOP})((k) => { const N = window.__night, R = window.__walkTest.renderer; R.info.reset(); N.stepFrame(1 / 60); if (k >= ${CONFIG.warm}) { window.__cnt.calls = Math.max(window.__cnt.calls, R.info.render.calls); window.__cnt.tris = Math.max(window.__cnt.tris, R.info.render.triangles); } }, window.__walkTest.renderer.getContext(), ${CONFIG.frames}, ${CONFIG.warm})`);
+  const r = await p.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer, c = R.domElement; R.info.autoReset = window.__cnt.auto; return { calls: window.__cnt.calls, tris: window.__cnt.tris, mode: N.S.mode, room: !!N.S.room, px: `${c.width}x${c.height}`, dpr: R.getPixelRatio() }; });
+  const st = split(lr), mode = r.mode === 'mw' || r.mode === 'act' ? r.mode : r.room ? 'room' : r.mode;
   rows.push({ scene, setup: label, ...st, calls: r.calls, tris: r.tris, px: r.px, dpr: r.dpr });
   gate(`${label} ${scene}: still in the scene after ${CONFIG.frames + CONFIG.warm} frames`, mode === want[scene], { mode });
   gate(`${label} ${scene} (${r.px}, pixel ratio ${r.dpr}): draw calls <= ${CONFIG.maxCalls}, triangles <= ${CONFIG.maxTris}`, r.calls <= CONFIG.maxCalls && r.tris <= CONFIG.maxTris, { calls: r.calls, tris: r.tris });
-  if (!process.env.EXTRA_ARGS) gate(`${label} ${scene}: frame p95 <= ${CONFIG.budgetMs} ms`, st.p95 <= CONFIG.budgetMs, st);
+  if (!process.env.EXTRA_ARGS) gate(`${label} ${scene}: frame p95 <= ${CONFIG.budgetMs} ms`, st.p95 <= CONFIG.budgetMs, { median: st.median, p95: st.p95, max: st.max, cpuP95: st.cpuP95, gpuP95: st.gpuP95 });
 }
-console.log('night1 frame times, ms (update for 1/60 s plus draw, each waited for on the GPU):');
-for (const r of rows) console.log(`  ${r.setup.padEnd(16)} ${r.scene.padEnd(18)} ${r.px.padEnd(10)} median ${r.median}  p95 ${r.p95}  max ${r.max}  calls ${r.calls}  tris ${r.tris}`);
+console.log('night1 frame times, ms (update for 1/60 s plus draw, each waited for on the GPU; cpu = until the read back, gpu = the read back):');
+for (const r of rows) console.log(`  ${r.setup.padEnd(16)} ${r.scene.padEnd(18)} ${r.px.padEnd(10)} median ${r.median}  p95 ${r.p95}  max ${r.max}  cpu p95 ${r.cpuP95}  gpu p95 ${r.gpuP95}  over ${CONFIG.budgetMs}: ${r.long} (cpu-led ${r.longCpu})${r.calls !== undefined ? `  calls ${r.calls}  tris ${r.tris}` : ''}`);
+console.log(`frames over ${CONFIG.budgetMs} ms (first ${CONFIG.longList} per row: frame index, total, cpu, gpu):`);
+for (const r of rows) if (r.list.length) console.log(`  ${r.setup} | ${r.scene} | ` + r.list.map((f) => `#${f.k} ${f.ms} (${f.cpu} / ${f.gpu})`).join(', '));
+// the control's own noise: a page that is the scene's cost only when slower than the empty frame at the same size, before and after
+if (!process.env.EXTRA_ARGS) for (const [, , , label] of CONFIG.setups) {
+  const c = rows.filter((r) => r.setup === label && /^control/.test(r.scene)), worst = Math.max(...c.map((r) => r.p95));
+  gate(`${label}: control page (empty WebGL frame) p95 <= ${CONFIG.budgetMs} ms, so this runner can show the budget`, worst <= CONFIG.budgetMs, c.map((r) => ({ [r.scene]: { median: r.median, p95: r.p95, max: r.max } })));
+}
+// CPU profile per scene at the first setup (a separate pass, so sampling does not touch the timings above): top functions by self time
+{
+  const [w, h, sf, label] = CONFIG.setups[0];
+  for (const [scene, setup] of Object.entries(SCENES)) {
+    await p.setViewport({ width: w, height: h, deviceScaleFactor: sf });
+    await p.goto(`http://localhost:${srv.address().port}/night1.html`, { waitUntil: 'load' });
+    await p.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame);
+    await p.evaluate(setup);
+    await p.evaluate(() => { const N = window.__night; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } });
+    const cdp = await p.createCDPSession();
+    await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: CONFIG.profUs }); await cdp.send('Profiler.start');
+    await p.evaluate(`(${LOOP})((k) => window.__night.stepFrame(1 / 60), window.__walkTest.renderer.getContext(), ${CONFIG.frames}, ${CONFIG.warm})`);
+    const { profile } = await cdp.send('Profiler.stop'); await cdp.detach();
+    const dt = profile.timeDeltas, cnt = new Map(), byId = new Map(profile.nodes.map((nd) => [nd.id, nd]));
+    for (let i = 0; i < profile.samples.length; i++) cnt.set(profile.samples[i], (cnt.get(profile.samples[i]) || 0) + (dt[i] || 0));
+    const self = new Map(); let all = 0;
+    for (const [id, us] of cnt) { const cf = byId.get(id).callFrame, key = `${cf.functionName || '(anonymous)'} ${cf.url.split('/').pop()}:${cf.lineNumber + 1}`; self.set(key, (self.get(key) || 0) + us); all += us; }
+    const top = [...self].sort((a, b) => b[1] - a[1]).slice(0, CONFIG.profTop);
+    console.log(`profile ${label} ${scene}: ${(all / 1000).toFixed(0)} ms sampled over ${CONFIG.frames + CONFIG.warm} frames; top self time:`);
+    for (const [k, us] of top) console.log(`  ${(us / 1000).toFixed(1).padStart(7)} ms  ${(100 * us / all).toFixed(1).padStart(5)}%  ${k}`);
+  }
+}
 gate('no page or console errors', errs.length === 0, errs.slice(0, 3));
 console.log(`RESULT gpu night1 ${pass} of ${pass + fail} pass`);
 await b.close(); srv.close();

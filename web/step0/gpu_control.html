@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU control page (empty WebGL frame)</title>
+<style>
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<script>
+// Session 30: the control page for gpu_night1.mjs (rule 28, first rung of the ladder of controls): the same canvas size and pixel ratio as
+// night1.html at the default tier, and a frame that only clears it. Timed the same way as the game (frame, then one pixel read back),
+// in the same job, it gives the runner's own frame time and noise; a night1 frame slower than this is the page's cost.
+const CONFIG = {
+  // pixel ratio cap of night1.html's default tier (rule 31)
+  maxDpr: 1.25,
+  // clear colour (any; nothing else is drawn)
+  clear: [0.05, 0.04, 0.06, 1],
+};
+const cv = document.getElementById('gl');
+const gl = cv.getContext('webgl2', { antialias: false, powerPreference: 'high-performance' });
+function fit() {
+  const d = Math.min(CONFIG.maxDpr, window.devicePixelRatio || 1);
+  cv.width = Math.round(cv.clientWidth * d); cv.height = Math.round(cv.clientHeight * d);
+  gl.viewport(0, 0, cv.width, cv.height);
+}
+fit();
+gl.clearColor(...CONFIG.clear);
+// one frame: clear only (the timing loop reads one pixel back after it, as for night1)
+function frame() { gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
+window.__ctl = { gl, frame, px: () => `${cv.width}x${cv.height}`, dpr: () => Math.min(CONFIG.maxDpr, window.devicePixelRatio || 1) };
+</script>
+</body>
+</html>
