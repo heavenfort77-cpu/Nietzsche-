@@ -3333,6 +3333,9 @@ function buildReflection() {
   refl.root = skelClone(c.root);
   refl.root.traverse((o) => o.layers.set(1));
   c.root.traverse((o) => o.layers.enable(1));
+  // the clown's skeletons (drawn in both passes): renderReflection skips their second update
+  NS.reflSkels = []; c.root.traverse((o) => { if (o.isSkinnedMesh && !NS.reflSkels.includes(o.skeleton)) NS.reflSkels.push(o.skeleton); });
+  NS.reflSkelUp = NS.reflSkels.map((k) => k.update);
   refl.mixer = new THREE.AnimationMixer(refl.root);
   refl.idle = refl.mixer.clipAction(c.idle.getClip()).play();
   refl.walk = refl.mixer.clipAction(c.walkClip);
@@ -3434,13 +3437,19 @@ function sizeCracks() {
   if (S.mirror === 'shop') shopFit();
 }
 window.addEventListener('resize', () => { if (S.mirror) sizeCracks(); });
+// session 32: cause: three.js counts each render() as a new frame, so the reflection pass updated the clown's skeleton again and re-uploaded his bone
+// texture after the room pass had drawn with it (run 122 ladder: 1440p 10.7 -> 7.9 ms, 1080p 8.0 -> 6.7 without it). His bones do not move between the
+// two passes, so his skeletons skip that second update (NS.reflSkels, built once); the reflection's own skeleton still updates once, in this pass.
+const skelNoop = () => {};
 function renderReflection() {
-  const r = NS.mrect;
+  const r = NS.mrect, k = NS.reflSkels;
   renderer.setScissorTest(true);
   renderer.setScissor(r[0], r[1], r[2], r[3]);
   renderer.clearDepth();
   roomCam.layers.set(1);
+  for (let i = 0; i < k.length; i++) k[i].update = skelNoop;
   renderer.render(roomScene, roomCam);
+  for (let i = 0; i < k.length; i++) k[i].update = NS.reflSkelUp[i];
   roomCam.layers.set(0);
   renderer.setScissorTest(false);
 }
