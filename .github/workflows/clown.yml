@@ -324,6 +324,8 @@ jobs:
         env:
           # control page timed in the same job (same VM): the game page before session 8 batch 2 (same page as run 10)
           GPU_CONTROL_SHA: 1356a358e24548d96980a71d27d54d520cb17962
+          # session 31: night1 shop A/B against the page before the warm-up draw (session 31 batch 2)
+          NIGHT1_PREV_SHA: b08b829c1eac7878d4ad9c9b344f60cebb0bdc01
         run: |
           bash web/ci_setup.sh
           git fetch -q --depth=1 origin "$GPU_CONTROL_SHA"
@@ -333,7 +335,8 @@ jobs:
           node gpu_measure.mjs game index.html control.html 2>&1 | tee -a gpu.txt || rc=1
           # session 25: the game the owner plays (night1.html), its heaviest scenes, owner requirement 2 budget 16.7 ms
           bash step0/cube25d/setup.sh
-          node gpu_night1.mjs step0 2>&1 | tee -a gpu.txt || rc=1
+          git fetch -q --depth=1 origin "$NIGHT1_PREV_SHA" && git show FETCH_HEAD:web/step0/night1.html > step0/night1_prev.html
+          NIGHT1_PREV=night1_prev.html node gpu_night1.mjs step0 2>&1 | tee -a gpu.txt || rc=1
           [ "${rc:-0}" = 0 ]
       - uses: actions/upload-artifact@v4
         if: always()

@@ -29,13 +29,19 @@ const CONFIG = {
   // frames over the budget listed per scene and setup (the rest are counted)
   longList: 6,
   // probe pass (session 31, rule 28): [setup, scene, part ladder on/off]; the run 118 misses (1440p shop, retina ring) and the act's long frame #26-27
-  probes: [['1440p desktop', 'mirror shop', true], ['retina laptop', 'mirror world ring', true], ['1080p desktop', 'act', false]],
+  probes: [['1440p desktop', 'mirror shop', true], ['1080p desktop', 'mirror shop', false], ['retina laptop', 'mirror world ring', true], ['1080p desktop', 'act', false]],
   // probe pass: frames listed per probe (over the budget, or something linked, first used, uploaded or first drawn)
   probeList: 12,
   // part ladder: frames settled, then frames timed, with one part of the scene hidden
   ladderWarm: 10, ladderFrames: 60,
   // part ladder: parts printed per level (largest saving first); groups opened one level down
   ladderTop: 12, ladderOpen: 2,
+  // reflection ladder in every shop probe: rounds of the four variants (base, no reflection pass, its clearDepth skipped, its scissor off) interleaved
+  reflRounds: 5,
+  // shop A/B (session 31): this page against the previous one (env NIGHT1_PREV, a file in the step0 dir), alternated in the same job
+  abSetups: ['1080p desktop', '1440p desktop'],
+  // shop A/B: rounds per page, frames timed per round (after the warm frames)
+  abRounds: 4, abFrames: 120,
 };
 const root = process.argv[2] || 'step0';
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.json': 'application/json', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg', '.wasm': 'application/wasm' };
@@ -182,6 +188,8 @@ const PROBE = `(() => {
   const O3 = Object.getPrototypeOf(Object.getPrototypeOf(W.scene)), ob = O3.onBeforeRender;
   O3.onBeforeRender = function (...a) { mark(this); return ob.apply(this, a); };
   const hookOwn = (s) => s.traverse((o) => { if (Object.prototype.hasOwnProperty.call(o, 'onBeforeRender') && !o.__probeHook) { const f = o.onBeforeRender; o.__probeHook = 1; o.onBeforeRender = function (...a) { mark(this); return f.apply(this, a); }; } });
+  { const o = R.clearDepth.bind(R); R.clearDepth = () => { if (!P.noClearDepth) o(); }; }
+  { const o = R.setScissorTest.bind(R); R.setScissorTest = (v) => o(P.noScissor ? false : v); }
   const orig = R.render.bind(R);
   R.render = (s, c) => {
     const L = c.layers.mask;
@@ -246,10 +254,18 @@ for (const [label, scene, ladder] of CONFIG.probes) {
     for (const l of list.slice(0, CONFIG.probeList)) console.log('    ' + l);
     if (list.length > CONFIG.probeList) console.log(`    +${list.length - CONFIG.probeList} more`);
   }
-  if (!ladder) continue;
   // part ladder: same page, timer queries off; baseline before and after (noise band); the reflection pass skipped; each part hidden in turn
   await pp.evaluate(() => { window.__probe.timing = false; });
   const time = async (expr) => { await pp.evaluate(expr); const r = await pp.evaluate(`(${LOOP})((k) => window.__night.stepFrame(1 / 60), window.__walkTest.renderer.getContext(), ${CONFIG.ladderFrames}, ${CONFIG.ladderWarm})`); return { tot: stats(r.tot), gpu: stats(r.gpu) }; };
+  if (scene === 'mirror shop') {
+    // reflection ladder (session 31): which part of the reflection pass costs; variants interleaved per round, so VM drift hits them alike
+    const V = { base: '', 'no reflection pass': 'P.skipL1 = true', 'reflection, clearDepth skipped': 'P.noClearDepth = true', 'reflection, scissor off': 'P.noScissor = true' }, res = {};
+    for (let r = 0; r < CONFIG.reflRounds; r++) for (const [n, e] of Object.entries(V)) { const t = await time(`{ const P = window.__probe; P.skipL1 = P.noClearDepth = P.noScissor = false; ${e}; }`); (res[n] = res[n] || []).push(t.tot.median); }
+    await pp.evaluate(() => { const P = window.__probe; P.skipL1 = P.noClearDepth = P.noScissor = false; });
+    console.log(`  reflection ladder ${tag} (${CONFIG.reflRounds} rounds x ${CONFIG.ladderFrames} frames, total ms; median of the round medians, then each round):`);
+    for (const [n, a] of Object.entries(res)) console.log(`    ${n.padEnd(32)} ${stats(a).median}  [${a.join(', ')}]`);
+  }
+  if (!ladder) continue;
   const base0 = await time('window.__probe.hide = null; window.__probe.skipL1 = false');
   const noRefl = await time('window.__probe.skipL1 = true');
   await pp.evaluate(() => { window.__probe.skipL1 = false; });
@@ -270,6 +286,30 @@ for (const [label, scene, ladder] of CONFIG.probes) {
   }
 }
 await pp.close();
+// Shop A/B (session 31): run 120 shop 1080p p95 18.2 vs run 119 8.3 with the same draws (15 calls, 108,068 triangles) on a slower VM. This page and
+// the previous one (env NIGHT1_PREV) timed in alternating rounds on fresh pages; gate: this page's median of round p95s is not above the previous
+// page's by more than the larger of the two pages' round-to-round spread (noise band).
+if (process.env.NIGHT1_PREV) for (const label of CONFIG.abSetups) {
+  const [w, h, sf] = CONFIG.setups.find((s) => s[3] === label), res = { now: [], prev: [] };
+  for (let r = 0; r < CONFIG.abRounds; r++) for (const [k, file] of [['now', 'night1.html'], ['prev', process.env.NIGHT1_PREV]]) {
+    await p.setViewport({ width: w, height: h, deviceScaleFactor: sf });
+    try {
+      await p.goto(`http://localhost:${srv.address().port}/${file}`, { waitUntil: 'load' });
+      await p.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame, { timeout: 120000 });
+      await p.evaluate(SCENES['mirror shop']);
+      await p.evaluate(() => { const N = window.__night; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } });
+      const lr = await p.evaluate(`(${LOOP})((k) => window.__night.stepFrame(1 / 60), window.__walkTest.renderer.getContext(), ${CONFIG.abFrames}, ${CONFIG.warm})`);
+      res[k].push(stats(lr.tot));
+    } catch (e) {
+      const st = await p.evaluate(() => ({ night: !!window.__night, ready: !!(window.__night && window.__night.S.ready), lost: !!(window.__night && window.__night.S.lost) })).catch(() => null);
+      gate(`${label} shop A/B round ${r} ${file}: page ready and timed`, false, { error: String(e).slice(0, 120), state: st, pageErrors: errs.slice(-3) });
+    }
+  }
+  if (res.now.length < CONFIG.abRounds || res.prev.length < CONFIG.abRounds) continue;
+  const p95 = (k) => res[k].map((x) => x.p95), med = (k) => stats(p95(k)).median, spread = (k) => +(Math.max(...p95(k)) - Math.min(...p95(k))).toFixed(2);
+  console.log(`shop A/B ${label}: now medians [${res.now.map((x) => x.median).join(', ')}] p95s [${p95('now').join(', ')}]; prev (${process.env.NIGHT1_PREV}) medians [${res.prev.map((x) => x.median).join(', ')}] p95s [${p95('prev').join(', ')}]`);
+  if (!process.env.EXTRA_ARGS) gate(`${label} mirror shop: this page not slower than the previous page (median of round p95s, noise band)`, med('now') <= med('prev') + Math.max(spread('now'), spread('prev')), { now: med('now'), prev: med('prev'), noise: Math.max(spread('now'), spread('prev')) });
+}
 // CPU profile per scene at the first setup (a separate pass, so sampling does not touch the timings above): top functions by self time
 {
   const [w, h, sf, label] = CONFIG.setups[0];
