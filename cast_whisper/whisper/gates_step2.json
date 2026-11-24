@@ -1,0 +1,92 @@
+[
+ {
+  "name": "body: parts joined, hidden faces removed",
+  "ok": true,
+  "info": "187 parts, 19272 tris before, 2810 hidden faces removed, 14691 tris, 0.5s"
+ },
+ {
+  "name": "body UVs: no overlaps",
+  "ok": true,
+  "info": "0 overlapping faces, 528 islands"
+ },
+ {
+  "name": "head UV: one island",
+  "ok": true,
+  "info": "1 islands"
+ },
+ {
+  "name": "body bakes (colour, AO, edge/top/noise)",
+  "ok": true,
+  "info": "0.4s / 20.0s / 0.3s"
+ },
+ {
+  "name": "body regions: every part ramp present in the atlas",
+  "ok": true,
+  "info": "{'M_DARK': 372645, 'M_MID': 568415, 'M_PALE': 97745, 'SILVER': 9771}"
+ },
+ {
+  "name": "body regions: faces of each ramp read back as that ramp (>= 95%)",
+  "ok": true,
+  "info": "{'M_MID': 1.0, 'M_DARK': 1.0, 'SILVER': 1.0, 'M_PALE': 1.0}"
+ },
+ {
+  "name": "face bake hush",
+  "ok": true,
+  "info": "0.3s, feature texels 14788"
+ },
+ {
+  "name": "paint layer hush: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "face bake see",
+  "ok": true,
+  "info": "0.3s, feature texels 24341"
+ },
+ {
+  "name": "paint layer see: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "face bake wince",
+  "ok": true,
+  "info": "0.2s, feature texels 13860"
+ },
+ {
+  "name": "paint layer wince: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "face bake fade",
+  "ok": true,
+  "info": "0.3s, feature texels 13293"
+ },
+ {
+  "name": "paint layer fade: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "spec mask: some body vertices shine, most do not",
+  "ok": true,
+  "info": "413 of 8798 vertices"
+ },
+ {
+  "name": "triangles <= 30k (body + head)",
+  "ok": true,
+  "info": "14691 + 2208 = 16899"
+ },
+ {
+  "name": "materials (= draw calls before hull) <= 2",
+  "ok": true,
+  "info": "['body', 'face']"
+ },
+ {
+  "name": "total time",
+  "ok": true,
+  "info": "36s"
+ }
+]

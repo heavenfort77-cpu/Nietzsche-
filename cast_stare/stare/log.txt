@@ -1,0 +1,141 @@
+Info: Saved as "high.blend"
+PASS chars.stare: 149 parts tagged; untagged meshes: []
+00:00.218  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_stare/high.blend"
+PASS body: parts joined, hidden faces removed | 148 parts, 26112 tris before, 7765 hidden faces removed, 11821 tris, 0.8s
+PASS body UVs: no overlaps | 0 overlapping faces, 318 islands
+PASS head UV: one island | 1 islands
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS body bakes (colour, AO, edge/top/noise) | 0.6s / 26.1s / 0.4s
+PASS body regions: every part ramp present in the atlas | {'M_DARK': 813615, 'M_MID': 30794, 'M_PALE': 203830, 'SILVER': 337}
+PASS body regions: faces of each ramp read back as that ramp (>= 95%) | {'M_DARK': 1.0, 'M_PALE': 1.0, 'M_MID': 1.0, 'SILVER': 1.0}
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake watch | 0.2s, feature texels 107312
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer watch: empty (no face paint) | 0.00% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake wide | 0.3s, feature texels 132085
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer wide: empty (no face paint) | 0.00% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake judge | 0.2s, feature texels 100301
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer judge: empty (no face paint) | 0.00% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake dull | 0.2s, feature texels 107312
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer dull: empty (no face paint) | 0.00% of the cell painted
+PASS spec mask: some body vertices shine, most do not | 53 of 7092 vertices
+Info: Deleted 399 data-block(s)
+PASS triangles <= 30k (body + head) | 11821 + 2208 = 14029
+PASS materials (= draw calls before hull) <= 2 | ['body', 'face']
+Info: Saved as "low.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+11:15:12 | INFO: Starting glTF 2.0 export
+11:15:12 | INFO: Extracting primitive: Sphere.111
+11:15:12 | INFO: Primitives created: 1
+11:15:12 | INFO: Extracting primitive: Sphere.210
+11:15:12 | INFO: Primitives created: 1
+11:15:12 | INFO: Finished glTF 2.0 export in 0.05400538444519043 s
+
+PASS total time | 44s
+00:00.217  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_stare/low.blend"
+PASS armature | 7 deform bones
+PASS weights: every vertex weighted, <= 4 influences | unweighted 0, max influences 2
+Info: Saved as "rigged.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+11:15:12 | INFO: Starting glTF 2.0 export
+11:15:12 | INFO: Extracting primitive: Sphere.111
+11:15:12 | INFO: Primitives created: 1
+11:15:12 | INFO: Extracting primitive: Sphere.210
+11:15:12 | INFO: Primitives created: 1
+11:15:12 | INFO: Finished glTF 2.0 export in 0.20465087890625 s
+
+PASS GLB: 5 clips, durations = photographs x interval | {'gaze': 0.4, 'hit': 0.6, 'idle': 2, 'judge': 0.4, 'out': 1} expected {'idle': 2.0, 'gaze': 0.4, 'judge': 0.4, 'hit': 0.6, 'out': 1.0}
+PASS GLB size | 1801 KB, skins 1, meshes 2
+PASS  clip idle: frame furthest from its neighbours' midpoint 1.4 deg, lid_T at frame 42 (max 4)
+RESULT PASS
+00:00.218  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_stare/rigged.blend"
+PASS bone names have no dots
+PASS every mesh visible
+PASS every vertex weighted (sum 1) | 0 vertices off
+PASS <= 4 influences per vertex | 2
+PASS coordinates finite
+PASS height 0.7-1.0 m | 0.813 m
+PASS feet on the floor (z = 0) | min z 0.0000
+PASS no degenerate faces
+PASS head sits on its bone | 0.0 cm from the head bone
+PASS materials <= 2 | 2
+PASS body UVs: no overlaps | 0 faces
+PASS head UV: one island | 1
+PASS head UVs inside cell 0 (u 0..0.5, v 0.5..1) | u 0.000..0.500 v 0.500..1.000
+PASS the 4 face cells all differ | smallest mean difference 9.5
+RESULT 14 of 14 pass
+PASS clips are idle, gaze, judge, hit, out | ['gaze', 'hit', 'idle', 'judge', 'out']
+PASS clip lengths match the plates (within 1 frame) | {'gaze': 0.4, 'hit': 0.6, 'idle': 2, 'judge': 0.4, 'out': 1}
+PASS one skin | 1
+PASS two meshes (body, face) | 2
+PASS node names have no dots
+PASS at most 4 joints per vertex (no JOINTS_1)
+PASS no vertex colours (COLOR_0)
+PASS shine mask _SPEC on every mesh | [['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC'], ['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC']]
+PASS file <= 4096 KB before compression | 1801 KB
+PASS animation channels target real nodes
+RESULT 10 of 10 pass
+00:00.218  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_stare/rigged.blend"
+PASS rest pose = bind mesh | max 0.000 mm
+touching pairs at rest: 339
+part groups at rest: 1
+PASS idle: edge stretch p99.9 <= 1.6 | p99.9 1.06, max 1.07 on part [crowd,heads_L]
+PASS idle: nothing floats free (part groups stay 1) | max groups 1; parts with no contact: []
+PASS gaze: edge stretch p99.9 <= 1.6 | p99.9 1.08, max 1.15 on part [base,crowd]
+PASS gaze: nothing floats free (part groups stay 1) | max groups 1; parts with no contact: []
+PASS judge: edge stretch p99.9 <= 1.6 | p99.9 1.11, max 1.19 on part [base,crowd]
+PASS judge: nothing floats free (part groups stay 1) | max groups 1; parts with no contact: []
+PASS hit: edge stretch p99.9 <= 1.6 | p99.9 1.16, max 1.17 on part [crowd,heads_L]
+PASS hit: nothing floats free (part groups stay 1) | max groups 1; parts with no contact: []
+PASS out: edge stretch p99.9 <= 1.6 | p99.9 1.27, max 1.30 on part [crowd,heads_L]
+PASS out: nothing floats free (part groups stay 1) | max groups 1; parts with no contact: []
+PASS pose sheets: figure inside the frame on every sampled frame | extent 0.480 of 0.480, scale x0.878 of the approved
+00:22.971  render           | Saved: '/tmp/sheet_idle_0.png'
+00:24.255  render           | Saved: '/tmp/sheet_idle_1.png'
+00:25.525  render           | Saved: '/tmp/sheet_idle_2.png'
+00:26.792  render           | Saved: '/tmp/sheet_idle_3.png'
+00:28.067  render           | Saved: '/tmp/sheet_idle_4.png'
+00:29.330  render           | Saved: '/tmp/sheet_idle_5.png'
+00:30.728  render           | Saved: '/tmp/sheet_gaze_0.png'
+00:31.985  render           | Saved: '/tmp/sheet_gaze_1.png'
+00:33.258  render           | Saved: '/tmp/sheet_gaze_2.png'
+00:34.517  render           | Saved: '/tmp/sheet_gaze_3.png'
+00:35.787  render           | Saved: '/tmp/sheet_gaze_4.png'
+00:37.044  render           | Saved: '/tmp/sheet_gaze_5.png'
+00:38.389  render           | Saved: '/tmp/sheet_judge_0.png'
+00:39.677  render           | Saved: '/tmp/sheet_judge_1.png'
+00:40.947  render           | Saved: '/tmp/sheet_judge_2.png'
+00:42.212  render           | Saved: '/tmp/sheet_judge_3.png'
+00:43.490  render           | Saved: '/tmp/sheet_judge_4.png'
+00:44.750  render           | Saved: '/tmp/sheet_judge_5.png'
+00:46.102  render           | Saved: '/tmp/sheet_hit_0.png'
+00:47.419  render           | Saved: '/tmp/sheet_hit_1.png'
+00:48.703  render           | Saved: '/tmp/sheet_hit_2.png'
+00:49.971  render           | Saved: '/tmp/sheet_hit_3.png'
+00:51.273  render           | Saved: '/tmp/sheet_hit_4.png'
+00:52.537  render           | Saved: '/tmp/sheet_hit_5.png'
+00:53.926  render           | Saved: '/tmp/sheet_out_0.png'
+00:55.199  render           | Saved: '/tmp/sheet_out_1.png'
+00:56.483  render           | Saved: '/tmp/sheet_out_2.png'
+00:57.766  render           | Saved: '/tmp/sheet_out_3.png'
+00:59.041  render           | Saved: '/tmp/sheet_out_4.png'
+01:00.307  render           | Saved: '/tmp/sheet_out_5.png'
+INFO size: source 1801 KB, compressed 304 KB
+PASS compressed GLB 304 KB <= 800 KB
+PASS every image is KTX2: ['image/ktx2', 'image/ktx2']
+PASS meshopt used: ['EXT_meshopt_compression', 'KHR_materials_specular', 'KHR_mesh_quantization', 'KHR_texture_basisu']
+PASS skins kept: 1 -> 1
+PASS clips kept: ['gaze', 'hit', 'idle', 'judge', 'out'] -> ['gaze', 'hit', 'idle', 'judge', 'out']
+PASS meshes kept: 2 -> 2
