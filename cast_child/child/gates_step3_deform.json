@@ -1,0 +1,42 @@
+[
+ {
+  "name": "rest pose = bind mesh",
+  "ok": true,
+  "info": "max 0.000 mm"
+ },
+ {
+  "name": "idle: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.36, max 1.45 on part [upper_arm_R,forearm_R,hand_R]"
+ },
+ {
+  "name": "idle: nothing floats free (part groups stay 2)",
+  "ok": true,
+  "info": "max groups 2; parts with no contact: []"
+ },
+ {
+  "name": "walk: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.21, max 1.32 on part [hips,thigh_R]"
+ },
+ {
+  "name": "walk: nothing floats free (part groups stay 2)",
+  "ok": true,
+  "info": "max groups 2; parts with no contact: []"
+ },
+ {
+  "name": "slap: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.24, max 1.50 on part [chest,clavicle_R,upper_arm_R,forearm_R]"
+ },
+ {
+  "name": "slap: nothing floats free (part groups stay 2)",
+  "ok": true,
+  "info": "max groups 2; parts with no contact: []"
+ },
+ {
+  "name": "pose sheets: figure inside the frame on every sampled frame",
+  "ok": true,
+  "info": "extent 0.467 of 0.480, scale x1.000 of the approved"
+ }
+]
