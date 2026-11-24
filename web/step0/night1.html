@@ -748,10 +748,18 @@ const CONFIG = Object.freeze({
 // Carried from night to night in the address hash, so each night is a fresh page and every scene's state is reset by the reload:
 // #n=<night>&m=<Mask>&s=<shards>&b=<acts and abilities bought, dot separated>&t=<acts tried on the board, dot separated>&lo=<times the Light was put out>
 // No hash = night 1. Laughs are not carried: each night's act earns its own (GDD Meters: they come from the crowd, on stage).
+// session 33: the run is also kept in sessionStorage (key RUN_KEY), read when the hash comes back empty: an artifact frame passes only
+// a plain #name, so a key=value hash may be dropped on the reload; same tab only, cleared by "Start again"
+const RUN_KEY = 'clownMirrorRun';
+function runHash() {
+  const h = (location.hash || '').slice(1);
+  if (/(^|&)n=/.test(h)) return h;
+  try { return sessionStorage.getItem(RUN_KEY) || ''; } catch (e) { return ''; }
+}
 function runLoad() {
   const r = { n: 1, m: 0, s: 0, b: [], t: [], lo: 0 };
   try {
-    const q = new URLSearchParams((location.hash || '').slice(1));
+    const q = new URLSearchParams(runHash());
     const int = (k, lo, hi) => { const v = parseInt(q.get(k), 10); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : r[k]; };
     r.n = int('n', 1, 7); r.m = int('m', 0, 99); r.s = int('s', 0, 999); r.lo = int('lo', 0, 7);
     const ids = (k) => (q.get(k) || '').split('.').filter((x) => /^[a-z]+$/.test(x));
@@ -1965,10 +1973,12 @@ function actTitle(id) { const a = N1.acts.find((x) => x.id === id); return a ? a
 // the next night is a fresh page with the run in the address hash (RUN); start over clears it
 function runNext() {
   const h = `n=${N1.night + 1}&m=${NS.mask}&s=${NS.shards}&b=${NS.bought.join('.')}&t=${NS.tried.join('.')}&lo=${NS.lightOuts}`;
-  try { location.hash = h; } catch (e) { /* hash refused: the reload starts night 1 */ }
+  try { sessionStorage.setItem(RUN_KEY, h); } catch (e) { /* no storage: the hash alone carries the run */ }
+  try { location.hash = h; } catch (e) { /* hash refused: the stored run carries it */ }
   location.reload();
 }
 function runRestart() {
+  try { sessionStorage.removeItem(RUN_KEY); } catch (e) { /* no storage */ }
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { try { location.hash = ''; } catch (e2) { /* keep */ } }
   location.reload();
 }
