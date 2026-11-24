@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The deliberate fall: act prototype (boxes)</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d0b0e; color: #eadfcf; font: 15px/1.4 system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #goal { position: fixed; left: 0; right: 0; top: 8px; text-align: center; font: 600 16px/1.3 Georgia, serif; color: #f0d27a; text-shadow: 0 1px 3px #000; pointer-events: none; padding: 0 12px; }
+  #hud { position: fixed; right: 10px; top: 34px; text-align: right; font-weight: 600; text-shadow: 0 1px 2px #000; pointer-events: none; }
+  #cap { position: fixed; left: 6%; right: 6%; top: 30%; text-align: center; font: italic 400 20px/1.4 Georgia, serif; color: #fff3dc; text-shadow: 0 1px 3px #000, 0 0 12px #000; pointer-events: none; }
+  #hint { position: fixed; left: 10px; bottom: 10px; right: 150px; opacity: .7; font-size: 12px; pointer-events: none; }
+  #fallBtn { position: fixed; right: 16px; bottom: 24px; min-width: 120px; min-height: 64px; border-radius: 32px; border: 0; background: #cfaa4e; color: #1e1714; font: 600 17px system-ui, sans-serif; padding: 0 18px; }
+  .card { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #0d0b0ee0; }
+  .card > div { max-width: 30em; margin: 16px; padding: 20px; background: #1d1916; border: 1px solid #6c5f3e; border-radius: 8px; }
+  .card h2 { margin: 0 0 8px; font: 600 22px Georgia, serif; color: #f0d27a; }
+  .card button { min-width: 88px; min-height: 44px; margin: 6px 6px 0 0; border-radius: 6px; border: 1px solid #cfaa4e; background: #2c2620; color: #f0d27a; font: 600 15px system-ui, sans-serif; }
+  .card ol { padding-left: 1.3em; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="goal"></div>
+<div id="hud"></div>
+<div id="cap"></div>
+<div id="hint"></div>
+<button id="fallBtn">Fall</button>
+<div id="startCard" class="card"><div>
+  <h2>The deliberate fall</h2>
+  <p>Stand in the light. A drumroll starts. Fall so you hit the floor on the crash.</p>
+  <p>The fall takes time to land, like the trips in the corridor: press a little before the crash. Watch the band leader's stick: it rises just before the crash.</p>
+  <p>Three falls, then a bow. Two misses end the act.</p>
+  <p><b>Night:</b> <button data-night="1">1</button><button data-night="2">2</button><button data-night="3">3</button></p>
+</div></div>
+<div id="endCard" class="card hidden"><div>
+  <h2 id="endTitle"></h2>
+  <ol id="endList"></ol>
+  <p id="endSum"></p>
+  <button id="againBtn">Again</button><button id="nightBtn">Choose night</button>
+</div></div>
+<script>
+'use strict';
+// ===== CONFIG (box-and-shape prototype of the fall act; GDD Stage section, owner 24 Nov 2026 14:33) =====
+const CONFIG = Object.freeze({
+  // seconds from the press to his belly hitting the floor: the corridor trip clip's landing key (night1.html GPCLIP.trip keys[4])
+  landSecs: 0.74,
+  // seconds of the trip's stagger before the dive (GPCLIP.trip keys[2])
+  staggerSecs: 0.42,
+  // the get-up after the result, s (GPCLIP.up)
+  upSecs: 0.6,
+  // how far the dive carries him, m (night1.html N1.tripStep)
+  tripStep: 0.6,
+  // walk speed, m/s
+  walkSpeed: 1.6,
+  // the ring floor's half widths (x across, z into the ring), m; he cannot leave it
+  ringRx: 4.2, ringRz: 2.6,
+  // per night (index 0 = night 1): spotlight pool radius m, drumroll length s, perfect and good windows (plus or minus s), pool drift during the roll m/s
+  nights: [
+    { pool: 1.2, roll: 1.6, perfect: 0.12, good: 0.25, drift: 0, fakeCall: false },
+    { pool: 1.0, roll: 1.4, perfect: 0.10, good: 0.22, drift: 0.25, fakeCall: false },
+    { pool: 0.9, roll: 1.2, perfect: 0.09, good: 0.19, drift: 0.3, fakeCall: true },
+  ],
+  // the pool settles and brightens this long before it can start a roll (place tell), s
+  settleSecs: 0.8,
+  // the band leader's stick rises over the last part of the roll (time tell, at least 0.4 s on every night), s
+  stickSecs: 0.5,
+  // night 3: the whiteface calls "Now!" this long too early for a perfect landing (the crash never lies), s, and the call stays up this long
+  fakeLead: 0.25, fakeShow: 0.45,
+  // no press this long after the crash: the crash hit a standing clown, s
+  lateGiveUp: 0.6,
+  // the result stays on screen this long before the next fall, s
+  holdSecs: 1.8,
+  // falls per act and misses that end it
+  falls: 3, missesEnd: 2,
+  // the next pool is this far from where he stands, m (min, max)
+  nextPoolDist: [2.0, 3.6],
+  // Laughs per grade, and paint (Mask) per Perfect (GDD Meters)
+  laughs: { perfect: 10, good: 5 }, paintPerPerfect: 1,
+  // the bow after the last fall, s
+  bowSecs: 1.4,
+  // logic step, s; frame delta clamp, s; pixel ratio cap
+  step: 1 / 120, dtMax: 0.05, prMax: 1.25,
+  // screen: pixels per metre fit (world width and height shown), floor foreshortening, depth shrink per metre
+  viewW: 10.2, viewH: 5.4, foreshort: 0.42, depthShrink: 0.06,
+  // colours (painted palette from the style study)
+  colours: { floor: '#3a2a1c', curb: '#c24a52', curbGold: '#cfaa4e', pool: '#fff1c8', beam: '#fff1c8', crowd: '#0b0a0d', clownBody: '#e6e8ec', clownFace: '#f7f1e6', nose: '#c24a52', hat: '#c3c7cf', leader: '#24212a', stick: '#f0d27a', whiteface: '#962e3a' },
+  // master volume
+  volume: 0.7,
+  // the words on screen (prototype wording, lead's; owner to change)
+  text: {
+    goal: 'Fall in the light, on the crash.',
+    hintKeys: 'Walk: WASD or arrow keys. Fall: Space.',
+    hintTouch: 'Walk: drag anywhere. Fall: the gold button.',
+    perfect: 'Perfect. He hits the floor with the crash.',
+    good: 'Good. Close to the crash.',
+    dark: 'Nobody saw it. He fell in the dark.',
+    early: 'Too early. He was already down when the crash came.',
+    lateFell: 'Too late. He fell into silence.',
+    lateStood: 'Too late. The crash hit a clown still standing.',
+    fake: 'Now!',
+    bow: 'He bows.',
+    endOk: 'The act is over.',
+    endCut: 'Two misses. The act ends.',
+    sum: 'Laughs {l} · Mask {m}',
+    hud: 'Night {n} · fall {f} of {t} · Laughs {l}',
+  },
+});
+
+// ===== state =====
+const S = {
+  night: 1, N: CONFIG.nights[0], phase: 'start', t: 0, x: 0, z: 1.2, dir: 1,
+  poolX: 0, poolZ: 0, poolA: 0, rollAt: 0, rollT: 0, rollOn: false, rollAudio: false, crashed: false, fakeShown: false, fakeAt: 0, hudBeat: -1, hudL: -1,
+  fall: { on: false, t: 0, x0: 0, dir: 1, pressRoll: -1, inPool: false, landed: false, angle: 0, a0: 0 },
+  up: 0, bow: 0, beat: 0, misses: 0, laughs: 0, mask: 0, grades: [], result: '', resultAt: 0,
+  keys: { l: false, r: false, u: false, d: false }, touch: null, touchUsed: false, running: false, acc: 0, last: 0, stick: 0, flash: 0,
+};
+const el = {
+  gl: document.getElementById('gl'), goal: document.getElementById('goal'), hud: document.getElementById('hud'), cap: document.getElementById('cap'),
+  hint: document.getElementById('hint'), fallBtn: document.getElementById('fallBtn'), start: document.getElementById('startCard'), end: document.getElementById('endCard'),
+  endTitle: document.getElementById('endTitle'), endList: document.getElementById('endList'), endSum: document.getElementById('endSum'),
+};
+const ctx2 = el.gl.getContext('2d');
+const shown = new Map();
+function setText(node, s) { if (shown.get(node) === s) return; shown.set(node, s); node.textContent = s; }
+function fmt(s, o) { return s.replace(/\{(\w)\}/g, (m, k) => o[k]); }
+
+// ===== audio (generated once at the first tap; one-shot sources reuse the buffers) =====
+const A = { ctx: null, master: null, band: null, roll: null, crash: null, laugh: null, cough: null, murmur: null, thud: null, clap: null, src: [] };
+function noiseBuf(secs, fn) {
+  const c = A.ctx, n = Math.floor(secs * c.sampleRate), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = fn(i / c.sampleRate, Math.random() * 2 - 1);
+  return b;
+}
+function audioInit() {
+  if (A.ctx) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
+  try { A.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { A.ctx = null; return; }
+  A.master = A.ctx.createGain(); A.master.gain.value = CONFIG.volume; A.master.connect(A.ctx.destination);
+  A.band = A.ctx.createBiquadFilter(); A.band.type = 'bandpass'; A.band.frequency.value = 900; A.band.Q.value = 0.8; A.band.connect(A.master);
+  const hit = 1 / 24;
+  A.roll = noiseBuf(2.2, (t, r) => { const k = (t % hit) / hit; return r * Math.exp(-k * 6) * (0.25 + 0.75 * t / 2.2) * 0.6; });
+  A.crash = noiseBuf(1.6, (t, r) => r * Math.exp(-t * 3.2) * (t < 0.01 ? t / 0.01 : 1));
+  A.laugh = noiseBuf(1.8, (t, r) => { const s = Math.sin(2 * Math.PI * 4.6 * t); return r * s * s * Math.sin(Math.PI * t / 1.8) * 1.6; });
+  A.cough = noiseBuf(0.3, (t, r) => r * Math.exp(-t * 14) * 1.4);
+  A.murmur = noiseBuf(1.6, (t, r) => r * (0.5 + 0.5 * Math.sin(2 * Math.PI * 1.7 * t)) * Math.sin(Math.PI * t / 1.6) * 0.5);
+  A.thud = noiseBuf(0.25, (t, r) => (Math.sin(2 * Math.PI * 70 * t) * 0.9 + r * 0.3) * Math.exp(-t * 18));
+  A.clap = noiseBuf(2.0, (t, r) => { const k = (t * 13 + Math.sin(t * 31) * 0.3) % 1; return r * Math.exp(-k * 18) * Math.sin(Math.PI * t / 2.0) * 1.2; });
+}
+function play(buf, when, gain, thru, offset) {
+  if (!A.ctx || !buf) return null;
+  const s = A.ctx.createBufferSource(), g = A.ctx.createGain();
+  s.buffer = buf; g.gain.value = gain; s.connect(g); g.connect(thru || A.master);
+  s.start(when || 0, offset || 0);
+  s.onended = () => { const i = A.src.indexOf(s); if (i >= 0) A.src.splice(i, 1); };
+  A.src.push(s);
+  return s;
+}
+function stopAll() { for (const s of A.src.slice()) { try { s.stop(); } catch (e) { /* already stopped */ } } A.src.length = 0; }
+
+// ===== the roll clock: the audio clock when there is sound, so the crash and the picture agree =====
+function rollNow() { return S.rollAudio ? A.ctx.currentTime - S.rollAt : S.rollT; }
+
+// ===== game =====
+function startAct(night) {
+  audioInit();
+  S.night = night; S.N = CONFIG.nights[night - 1];
+  S.beat = 0; S.misses = 0; S.laughs = 0; S.mask = 0; S.grades.length = 0;
+  S.x = 0; S.z = 1.6; S.dir = 1; S.up = 0; S.bow = 0;
+  S.fall.on = false; S.fall.landed = false; S.fall.angle = 0; S.hudBeat = -1;
+  el.start.classList.add('hidden'); el.end.classList.add('hidden');
+  setText(el.goal, CONFIG.text.goal);
+  setText(el.hint, S.touchUsed ? CONFIG.text.hintTouch : CONFIG.text.hintKeys);
+  setText(el.cap, '');
+  newPool(true);
+  S.running = true; S.last = performance.now(); S.acc = 0;
+}
+function newPool(first) {
+  let px = 0, pz = 0;
+  if (first) { px = 1.6; pz = 0.2; }
+  else {
+    for (let i = 0; i < 30; i++) {
+      const a = Math.random() * Math.PI * 2, d = CONFIG.nextPoolDist[0] + Math.random() * (CONFIG.nextPoolDist[1] - CONFIG.nextPoolDist[0]);
+      px = S.x + Math.cos(a) * d; pz = S.z + Math.sin(a) * d * 0.6;
+      if (inRing(px, pz, S.N.pool + 0.4)) break;
+    }
+    if (!inRing(px, pz, S.N.pool + 0.4)) { px = -Math.sign(S.x || 1) * 1.8; pz = 0; }
+  }
+  S.poolX = px; S.poolZ = pz; S.poolA = 0;
+  S.fall.landed = false;
+  S.phase = 'settle'; S.t = 0; S.rollOn = false; S.crashed = false; S.fakeShown = false; S.result = ''; S.stick = 0;
+  setText(el.cap, '');
+}
+function inRing(x, z, m) { const rx = CONFIG.ringRx - m, rz = CONFIG.ringRz - m; return (x * x) / (rx * rx) + (z * z) / (rz * rz) <= 1; }
+function inPool() { const dx = S.x - S.poolX, dz = S.z - S.poolZ; return dx * dx + dz * dz <= S.N.pool * S.N.pool; }
+function startRoll() {
+  S.phase = 'roll'; S.rollOn = true; S.rollT = 0; S.crashed = false;
+  S.rollAudio = !!(A.ctx && A.ctx.state === 'running');
+  if (S.rollAudio) {
+    const now = A.ctx.currentTime + 0.03, R = S.N.roll;
+    S.rollAt = now;
+    play(A.roll, now, 0.8, null, 2.2 - R);
+    play(A.crash, now + R, 1.0);
+  }
+}
+function pressFall() {
+  if (!S.running || S.fall.on || S.up > 0 || S.phase === 'result' || S.phase === 'bow') return;
+  const f = S.fall;
+  f.on = true; f.t = 0; f.x0 = S.x; f.landed = false; f.angle = 0;
+  // he dives across the house's view toward the middle of the light (corridor tripAcross: the fall seen side-on)
+  f.dir = S.x <= S.poolX ? 1 : -1;
+  f.pressRoll = S.phase === 'roll' ? rollNow() : -1;
+  f.inPool = inPool();
+}
+function grade(kind) {
+  S.grades.push(kind);
+  const T = CONFIG.text;
+  if (kind === 'perfect') { S.laughs += CONFIG.laughs.perfect; S.mask += CONFIG.paintPerPerfect; play(A.laugh, 0, 1.0, A.band); }
+  else if (kind === 'good') { S.laughs += CONFIG.laughs.good; play(A.laugh, 0, 0.45, A.band); }
+  else { S.misses++; if (kind === 'dark') play(A.murmur, 0, 0.8, A.band); else play(A.cough, A.ctx ? A.ctx.currentTime + 0.5 : 0, 0.9, A.band); }
+  S.result = kind; S.phase = 'result'; S.t = 0;
+  const key = kind === 'late' ? (S.fall.on || S.fall.landed ? 'lateFell' : 'lateStood') : kind;
+  setText(el.cap, T[key]);
+}
+function step(dt) {
+  const N = S.N, f = S.fall;
+  S.t += dt;
+  if (S.phase === 'roll' && !S.rollAudio) S.rollT += dt;
+  // walking (not while falling, lying or getting up)
+  if (!f.on && S.up <= 0 && S.phase !== 'bow') {
+    let mx = (S.keys.r ? 1 : 0) - (S.keys.l ? 1 : 0), mz = (S.keys.u ? 1 : 0) - (S.keys.d ? 1 : 0);
+    if (S.touch) { mx = S.touch.vx; mz = S.touch.vz; }
+    const m = Math.hypot(mx, mz);
+    if (m > 0.05) {
+      const k = Math.min(1, m) / m, nx = S.x + mx * k * CONFIG.walkSpeed * dt, nz = S.z + mz * k * CONFIG.walkSpeed * dt;
+      if (inRing(nx, nz, 0.3)) { S.x = nx; S.z = nz; }
+      if (Math.abs(mx) > 0.1) S.dir = mx > 0 ? 1 : -1;
+    }
+  }
+  // the pool: settle (place tell), wait for him, roll (drifts on later nights)
+  if (S.phase === 'settle') { S.poolA = Math.min(1, S.t / CONFIG.settleSecs); if (S.t >= CONFIG.settleSecs) { S.phase = 'wait'; S.t = 0; } }
+  else if (S.phase === 'wait') { if (inPool() && !f.on) startRoll(); }
+  if (S.phase === 'roll') {
+    const r = rollNow(), R = N.roll;
+    if (N.drift > 0 && !S.crashed) { const nx = S.poolX + N.drift * dt * (S.poolX > 0 ? -1 : 1); if (inRing(nx, S.poolZ, N.pool)) S.poolX = nx; }
+    S.stick = Math.max(0, Math.min(1, (r - (R - CONFIG.stickSecs)) / CONFIG.stickSecs));
+    if (N.fakeCall && !S.fakeShown && r >= R - CONFIG.landSecs - CONFIG.fakeLead) { S.fakeShown = true; S.fakeAt = r; }
+    if (!S.crashed && r >= R) { S.crashed = true; S.flash = 1; S.stick = 0; }
+    // judged when both the landing and the crash have happened
+    if (f.on && f.landed && S.crashed) {
+      if (f.pressRoll < 0 || !f.inPool) grade('dark');
+      else { const err = f.pressRoll + CONFIG.landSecs - R; grade(Math.abs(err) <= N.perfect ? 'perfect' : Math.abs(err) <= N.good ? 'good' : err < 0 ? 'early' : 'late'); }
+    } else if (!f.on && S.crashed && r >= R + CONFIG.lateGiveUp) grade('late');
+  } else if (f.on && f.landed && S.phase !== 'result' && S.phase !== 'bow') grade('dark');
+  // the fall itself (stagger, dive, flop), timed from the corridor clip
+  if (f.on) {
+    f.t += dt;
+    if (f.t < CONFIG.staggerSecs) f.angle = 0.26 * Math.sin(Math.PI * f.t / CONFIG.staggerSecs) * f.dir;
+    else { const k = Math.min(1, (f.t - CONFIG.staggerSecs) / (CONFIG.landSecs - CONFIG.staggerSecs)); f.angle = 1.54 * k * k * f.dir; S.x = f.x0 + f.dir * CONFIG.tripStep * k; }
+    if (!f.landed && f.t >= CONFIG.landSecs) { f.landed = true; play(A.thud, 0, 1.0); }
+  }
+  if (S.flash > 0) S.flash = Math.max(0, S.flash - dt * 3);
+  // after a result: he gets up, then the next fall, the bow, or the end
+  if (S.phase === 'result') {
+    if (f.on && f.landed && S.t > 0.6) { f.on = false; f.a0 = f.angle; S.up = CONFIG.upSecs; }
+    if (S.up > 0) { S.up -= dt; f.angle = f.a0 * Math.max(0, S.up / CONFIG.upSecs); if (S.up <= 0) { S.up = 0; f.angle = 0; } }
+    if (S.t >= CONFIG.holdSecs && S.up <= 0 && !f.on) {
+      S.beat++;
+      if (S.misses >= CONFIG.missesEnd) endAct(false);
+      else if (S.beat >= CONFIG.falls) { S.phase = 'bow'; S.t = 0; setText(el.cap, CONFIG.text.bow); play(A.clap, 0, 0.6 + 0.1 * S.grades.filter((g) => g === 'perfect').length, A.band); }
+      else newPool(false);
+    }
+  }
+  if (S.phase === 'bow') { S.bow = Math.sin(Math.PI * Math.min(1, S.t / CONFIG.bowSecs)); if (S.t >= CONFIG.bowSecs) endAct(true); }
+}
+function endAct(ok) {
+  S.running = false; S.phase = 'end';
+  const T = CONFIG.text;
+  setText(el.endTitle, ok ? T.endOk : T.endCut);
+  el.endList.textContent = '';
+  for (const g of S.grades) { const li = document.createElement('li'); li.textContent = g === 'late' ? 'Late' : g[0].toUpperCase() + g.slice(1); el.endList.appendChild(li); }
+  setText(el.endSum, fmt(T.sum, { l: S.laughs, m: S.mask }));
+  el.end.classList.remove('hidden');
+}
+
+// ===== drawing (boxes and shapes) =====
+const view = { w: 0, h: 0, s: 1, cx: 0, cy: 0, pr: 1, fakeFont: '' };
+const crowdHeads = [];
+for (let i = 0; i < 26; i++) crowdHeads.push({ u: (i + 0.5) / 26 + (Math.random() - 0.5) * 0.02, r: 0.045 + Math.random() * 0.012, v: Math.random() * 0.03 });
+let poolGrad = null;
+function resize() {
+  const pr = Math.min(window.devicePixelRatio || 1, CONFIG.prMax), w = window.innerWidth, h = window.innerHeight;
+  if (w === view.w && h === view.h && pr === view.pr) return;
+  view.w = w; view.h = h; view.pr = pr;
+  el.gl.width = Math.round(w * pr); el.gl.height = Math.round(h * pr);
+  view.s = Math.min(w / CONFIG.viewW, h / CONFIG.viewH);
+  view.cx = w / 2; view.cy = h * 0.52;
+  view.fakeFont = `600 ${Math.round(view.s * 0.38)}px Georgia, serif`;
+  poolGrad = ctx2.createRadialGradient(0, 0, 0, 0, 0, 1);
+  poolGrad.addColorStop(0, '#fff6dcff'); poolGrad.addColorStop(0.7, '#ffe9b0cc'); poolGrad.addColorStop(1, '#ffe9b000');
+}
+function sx(x, z) { return view.cx + x * view.s * (1 - z * CONFIG.depthShrink); }
+function sy(z) { return view.cy - z * view.s * CONFIG.foreshort; }
+function draw() {
+  const c = ctx2, C = CONFIG.colours, s = view.s, N = S.N;
+  c.setTransform(view.pr, 0, 0, view.pr, 0, 0);
+  c.fillStyle = '#0d0b0e'; c.fillRect(0, 0, view.w, view.h);
+  // ring floor and curb
+  c.fillStyle = C.floor; c.beginPath(); c.ellipse(view.cx, view.cy, CONFIG.ringRx * s, CONFIG.ringRz * s * CONFIG.foreshort, 0, 0, Math.PI * 2); c.fill();
+  c.lineWidth = Math.max(3, s * 0.12); c.strokeStyle = C.curb; c.stroke();
+  c.lineWidth = Math.max(1, s * 0.03); c.strokeStyle = C.curbGold; c.stroke();
+  // the light: beam and pool
+  if (S.phase !== 'start' && S.phase !== 'end') {
+    const k = 1 - S.poolZ * CONFIG.depthShrink, px = sx(S.poolX, S.poolZ), py = sy(S.poolZ), rx = N.pool * s * k, ry = rx * CONFIG.foreshort;
+    c.globalAlpha = 0.10 * S.poolA; c.fillStyle = C.beam;
+    c.beginPath(); c.moveTo(px - rx * 0.15, 0); c.lineTo(px + rx * 0.15, 0); c.lineTo(px + rx, py); c.lineTo(px - rx, py); c.closePath(); c.fill();
+    c.globalAlpha = (0.35 + 0.55 * S.poolA) * (S.phase === 'settle' ? 0.6 + 0.4 * Math.sin(S.t * 18) : 1);
+    c.save(); c.translate(px, py); c.scale(rx, ry); c.fillStyle = poolGrad; c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill(); c.restore();
+    c.globalAlpha = 1;
+  }
+  // band leader (left, outside the ring): body box, stick rises in the last part of the roll; cymbal flash on the crash
+  const lx = sx(-CONFIG.ringRx - 0.5, 1.4), ly = sy(1.4), lh = 1.5 * s * 0.92;
+  c.fillStyle = C.leader; c.fillRect(lx - 0.22 * s, ly - lh, 0.44 * s, lh);
+  c.beginPath(); c.arc(lx, ly - lh - 0.14 * s, 0.14 * s, 0, Math.PI * 2); c.fill();
+  const sa = -0.35 + S.stick * 2.0, shx = lx + 0.2 * s, shy = ly - lh * 0.8;
+  c.strokeStyle = C.stick; c.lineWidth = Math.max(2, s * 0.05);
+  c.beginPath(); c.moveTo(shx, shy); c.lineTo(shx + Math.cos(sa) * 0.7 * s, shy - Math.sin(sa) * 0.7 * s); c.stroke();
+  if (S.flash > 0) { c.globalAlpha = S.flash; c.fillStyle = '#ffe9a0'; c.beginPath(); c.arc(lx + 0.5 * s, ly - lh * 0.5, 0.45 * s, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
+  // whiteface (right, outside the ring); night 3 calls "Now!" too early
+  const wx = sx(CONFIG.ringRx + 0.5, 1.4), wy = sy(1.4);
+  c.fillStyle = C.whiteface; c.fillRect(wx - 0.22 * s, wy - lh, 0.44 * s, lh);
+  c.fillStyle = C.clownFace; c.beginPath(); c.arc(wx, wy - lh - 0.14 * s, 0.14 * s, 0, Math.PI * 2); c.fill();
+  c.fillStyle = C.hat; c.beginPath(); c.moveTo(wx - 0.12 * s, wy - lh - 0.24 * s); c.lineTo(wx + 0.12 * s, wy - lh - 0.24 * s); c.lineTo(wx, wy - lh - 0.62 * s); c.closePath(); c.fill();
+  if (S.fakeShown && S.phase === 'roll' && rollNow() - S.fakeAt < CONFIG.fakeShow) { c.fillStyle = '#fff3dc'; c.font = view.fakeFont; c.textAlign = 'center'; c.fillText(CONFIG.text.fake, wx, wy - lh - 0.75 * s); }
+  // the clown: box body, round face, red nose, cone hat; tipped about his feet when he falls, forward when he bows
+  if (S.phase !== 'start') {
+    const k = 1 - S.z * CONFIG.depthShrink, fx = sx(S.x, S.z), fy = sy(S.z), h = 1.7 * s * k, w = 0.5 * s * k;
+    c.fillStyle = '#00000066'; c.beginPath(); c.ellipse(fx, fy, 0.45 * s * k, 0.12 * s * k, 0, 0, Math.PI * 2); c.fill();
+    c.save(); c.translate(fx, fy); c.rotate(S.fall.angle + S.bow * 0.5 * S.dir);
+    c.fillStyle = C.clownBody; c.fillRect(-w / 2, -h * 0.82, w, h * 0.82);
+    c.fillStyle = C.clownFace; c.beginPath(); c.arc(0, -h * 0.9, 0.17 * s * k, 0, Math.PI * 2); c.fill();
+    c.fillStyle = C.nose; c.beginPath(); c.arc(0.06 * s * k * S.dir, -h * 0.9, 0.045 * s * k, 0, Math.PI * 2); c.fill();
+    c.fillStyle = C.hat; c.beginPath(); c.moveTo(-0.11 * s * k, -h * 0.97); c.lineTo(0.11 * s * k, -h * 0.97); c.lineTo(0, -h * 1.17); c.closePath(); c.fill();
+    c.restore();
+  }
+  // the house: backs of heads in front of the camera
+  c.fillStyle = C.crowd;
+  for (let i = 0; i < crowdHeads.length; i++) { const hd = crowdHeads[i], r = hd.r * view.w; c.beginPath(); c.arc(hd.u * view.w, view.h - r * 0.35 + hd.v * view.h, r, 0, Math.PI * 2); c.fill(); }
+}
+function hud() {
+  if (!S.running || (S.beat === S.hudBeat && S.laughs === S.hudL)) return;
+  S.hudBeat = S.beat; S.hudL = S.laughs;
+  setText(el.hud, fmt(CONFIG.text.hud, { n: S.night, f: Math.min(S.beat + 1, CONFIG.falls), t: CONFIG.falls, l: S.laughs }));
+}
+
+// ===== loop: fixed-step logic, clamped delta, stops when hidden =====
+function frame(now) {
+  requestAnimationFrame(frame);
+  try {
+    resize();
+    if (S.running && !document.hidden) {
+      const dt = Math.min(CONFIG.dtMax, (now - S.last) / 1000);
+      S.acc += dt;
+      while (S.acc >= CONFIG.step) { step(CONFIG.step); S.acc -= CONFIG.step; }
+      hud();
+    }
+    S.last = now;
+    draw();
+  } catch (e) { S.running = false; setText(el.cap, 'Error: ' + e.message); }
+}
+// hidden tab: drop held input; a roll in progress starts again (he is still in the light) so the picture and the crash stay together
+document.addEventListener('visibilitychange', () => {
+  releaseAll();
+  if (document.hidden) { if (A.ctx) A.ctx.suspend(); }
+  else {
+    if (A.ctx) A.ctx.resume();
+    if (S.running && S.phase === 'roll' && !S.crashed && !S.fall.on) { stopAll(); S.phase = 'wait'; S.rollOn = false; S.stick = 0; S.fakeShown = false; }
+  }
+});
+window.addEventListener('blur', releaseAll);
+function releaseAll() { S.keys.l = S.keys.r = S.keys.u = S.keys.d = false; S.touch = null; }
+
+// ===== input: keyboard, touch drag, the gold button =====
+const KEYS = { ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r', ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd' };
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = KEYS[e.code];
+  if (k) { S.keys[k] = true; e.preventDefault(); return; }
+  if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) { e.preventDefault(); audioInit(); pressFall(); }
+});
+window.addEventListener('keyup', (e) => { const k = KEYS[e.code]; if (k) S.keys[k] = false; });
+el.gl.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') { S.touchUsed = true; setText(el.hint, CONFIG.text.hintTouch); }
+  audioInit();
+  S.touch = { id: e.pointerId, x0: e.clientX, y0: e.clientY, vx: 0, vz: 0 };
+  el.gl.setPointerCapture(e.pointerId);
+});
+el.gl.addEventListener('pointermove', (e) => {
+  const t = S.touch;
+  if (!t || t.id !== e.pointerId) return;
+  const r = 60, dx = (e.clientX - t.x0) / r, dy = (e.clientY - t.y0) / r;
+  t.vx = Math.max(-1, Math.min(1, dx)); t.vz = Math.max(-1, Math.min(1, -dy));
+});
+function touchEnd(e) { if (S.touch && S.touch.id === e.pointerId) S.touch = null; }
+el.gl.addEventListener('pointerup', touchEnd);
+el.gl.addEventListener('pointercancel', touchEnd);
+el.fallBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); audioInit(); pressFall(); });
+document.querySelectorAll('[data-night]').forEach((b) => b.addEventListener('click', () => startAct(+b.dataset.night)));
+document.getElementById('againBtn').addEventListener('click', () => startAct(S.night));
+document.getElementById('nightBtn').addEventListener('click', () => { el.end.classList.add('hidden'); el.start.classList.remove('hidden'); });
+
+// test hook (read-only use): state, CONFIG, the roll clock, the fall press
+window.__fall = { S, CONFIG, rollNow, pressFall };
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
