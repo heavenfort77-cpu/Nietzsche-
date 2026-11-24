@@ -570,6 +570,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clone as skelClone } from 'three/addons/utils/SkeletonUtils.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 // ===== MAP =====
 // Fixed-camera walk sample (owner requirement 7). Blender shots: web/step0/walk/build_walk.py writes plates/ and shots.json.
@@ -765,8 +767,12 @@ const N1 = Object.freeze({
   nights: 3,
   // tonight, from the run (1 when the page has no hash)
   get night() { return Math.min(RUN.n, this.nights); },
-  // night-1 cast GLBs (art/cast2, proposal): material names are palette ramps
+  // night-1 cast GLBs: the approved v2 figures (session 32), compressed (meshopt, KTX2), rigged, face atlas of 4 cells; setup.sh copies art/cast2/v2/web
   castDir: './assets/cast2/',
+  // Basis transcoder for the KTX2 textures (setup.sh copies it from three.js)
+  basisDir: './assets/basis/',
+  // cast clip changes cross-fade over this many s
+  castFade: 0.15,
   // per-figure GLB urls that override castDir (empty in the repo; the published artifact fills it with its asset urls)
   castUrls: {},
   // clown height in the Blender style units (build.py clown, bowler top); sets metres per unit for the whole cast
@@ -876,6 +882,10 @@ const N1 = Object.freeze({
   stillAfter: 0.25,
   // the insecurities (constructs): height m, hit points, shards dropped, start (x, z)
   light: { h: 2.9, at: [0, -7.6], spotR: 1.25, follow: 1.2, drain: 6, gags: 3, stun: 0.6, shards: 3 },
+  // session 32: the v2 Light's lens this far ahead of its head bone (the lamp's tilt pivot), m; the beam and the dark lamp's glint start there
+  lampLensFwd: 0.25,
+  // session 32: a gag that lands plays the figure's hit clip for this long (s; the v2 hit clips are 0.6 s)
+  foeHitClip: 0.6,
   // panel B: each time he leaves the spot it grows (m, up to cap) and drains this much more on re-entry (share per escape); it flares tell s before it chases
   // F24 (owner 22 Nov 17:58 "still unable to avoid the light"): growth 0.25 -> 0.15 m, cap 2.5 -> 1.75 m; after chasing lightChase s it loses him for lightLose s and drifts to the middle
   lightGrow: 0.15, lightCap: 1.75, lightDrainGrow: 0.5, lightTell: 0.4, lightChase: 2.5, lightLose: 1.5,
@@ -1795,6 +1805,7 @@ function stepFrame(dt) {
   else if (S.mode === 'act') updateAct(dt);
   else if (S.room) { if (S.mirror) updateMirror(dt); else updateRoom(dt); }
   else { updateClown(dt); updatePerformers(dt); updateCrew(dt); }
+  castAnim(dt);
   renderFrame();
 }
 function startLoop() {
@@ -1882,6 +1893,7 @@ async function boot() {
   warmDraw(roomScene, roomCam);
   scene.add(chars.clown.root);
   for (const c of Object.values(chars)) for (const t of c.textures) renderer.initTexture(t);
+  for (const u of castAnimList) for (const t of u.textures) renderer.initTexture(t);
   for (const p of Object.values(plates)) { renderer.initTexture(p.color); renderer.initTexture(p.depth); }
   for (const t of room.textures) renderer.initTexture(t);
   n1Warm();
@@ -2162,17 +2174,59 @@ function rampMat(raw) {
   rampMats[name] = m;
   return m;
 }
+// session 32: the approved v2 figures, through the clowns' look (toon body and face, skinned outline hull, own mixer); built in metres, feet at y 0.
+// userData: h (height), acts (clip name -> action), now (playing clip), faceMat, face (cell index: 0 default, 1 the tell, 2 wince, 3 fade / out)
+const castAnimList = [];
+const CAST_ONCE = ['flare', 'hit', 'out', 'reach', 'copy', 'strike', 'gaze', 'judge', 'shaken', 'slap'];
 async function loadCast(id) {
-  const g = await new GLTFLoader().loadAsync(N1.castUrls[id] || N1.castDir + id + '.glb');
+  if (!NS.castLoader) {
+    const k = new KTX2Loader().setTranscoderPath(N1.basisDir).detectSupport(renderer);
+    NS.castLoader = new GLTFLoader().setKTX2Loader(k).setMeshoptDecoder(MeshoptDecoder);
+  }
+  const g = await NS.castLoader.loadAsync(N1.castUrls[id] || N1.castDir + id + '.glb');
   const inner = g.scene;
-  inner.traverse((o) => { if (o.isMesh) o.material = rampMat(o.material && o.material.name); });
+  let body = null, face = null;
+  inner.traverse((o) => { if (o.isSkinnedMesh) { if (o.material.name === 'face') face = o; else body = o; } });
+  for (const m of [body, face]) { const t = m.material.map; t.anisotropy = 4; m.material = makeToon(t, null); }
+  const hull = makeHull(body, face);
+  body.parent.add(hull);
+  [body, face, hull].forEach(growBounds);
   const box = new THREE.Box3().setFromObject(inner);
-  inner.scale.setScalar(NS.unit);
-  inner.position.y = -box.min.y * NS.unit;
+  inner.position.y = -box.min.y;
   const root = new THREE.Group();
   root.add(inner);
-  root.userData.h = (box.max.y - box.min.y) * NS.unit;
+  const mixer = new THREE.AnimationMixer(inner), acts = {};
+  for (const a of g.animations) {
+    const act = mixer.clipAction(a);
+    if (CAST_ONCE.includes(a.name)) { act.setLoop(THREE.LoopOnce, 1); act.clampWhenFinished = true; }
+    acts[a.name] = act;
+  }
+  acts.idle.play();
+  mixer.update(0);
+  Object.assign(root.userData, { h: box.max.y - box.min.y, acts, now: 'idle', faceMat: face.material, face: 0, mixer, root, textures: [body.material.uniforms.uMap.value, face.material.uniforms.uMap.value] });
+  castAnimList.push(root.userData);
   return root;
+}
+// one clip at a time, cross-faded; a play-once clip starts from its first frame and holds its last
+function castClip(root, name) {
+  const u = root.userData;
+  if (u.now === name || !u.acts[name]) return;
+  const next = u.acts[name], prev = u.acts[u.now];
+  next.reset().play();
+  if (prev) next.crossFadeFrom(prev, N1.castFade, false);
+  u.now = name;
+}
+function castFace(root, i) {
+  const u = root.userData;
+  if (u.face === i) return;
+  u.face = i;
+  u.faceMat.uniforms.uCell.value.set(i & 1 ? 0.5 : 0, i & 2 ? 0.5 : 0);
+}
+// rule 36: only the figures in the scene being drawn are animated
+function castAnim(dt) {
+  const cur = S.mode === 'mw' ? mwScene : S.mode === 'end' ? endScene : S.mode === 'act' ? actScene : S.room ? null : scene;
+  if (!cur) return;
+  for (let i = 0; i < castAnimList.length; i++) { const u = castAnimList[i]; if (u.root.parent === cur && u.root.visible) u.mixer.update(dt); }
 }
 function makeLabel() {
   const d = document.createElement('div');
@@ -2189,6 +2243,7 @@ async function n1Load() {
   const ids = N1.crew.map((c) => c.id).concat(['light', 'whisper', 'stare', 'shame']);
   const roots = await Promise.all(ids.map(loadCast));
   ids.forEach((id, i) => { cast[id] = roots[i]; });
+  cast.light.traverse((o) => { if (o.isBone && o.name === 'head') NS.lampHead = o; });
   // session 24 batch 2: box-and-shape figures until the art pass
   cast.sergeant = buildSergeant(); cast.weigher = buildWeigher();
   for (const cd of N1.crew) {
@@ -3805,7 +3860,8 @@ function buildVoid() {
       mvPosition.xyz += normalize(normalMatrix * normal) * ${N1.voidOutline.toFixed(4)};
       gl_Position = projectionMatrix * mvPosition;`); };
   NS.castHulls = [];
-  for (const k of ['whisper', 'stare', 'shame', 'sergeant', 'weigher']) {
+  // session 32: the v2 Whisper, Stare and Shame keep their own skinned hulls, like the clown
+  for (const k of ['sergeant', 'weigher']) {
     const meshes = [];
     cast[k].traverse((o) => { if (o.isMesh) meshes.push(o); });
     for (const o of meshes) { const h = new THREE.Mesh(o.geometry, hullMat); h.position.copy(o.position); h.quaternion.copy(o.quaternion); h.scale.copy(o.scale); h.visible = false; o.parent.add(h); NS.castHulls.push(h); }
@@ -4272,7 +4328,8 @@ function lightStartR() { return N1.light.spotR * (1 + N1.lightWiden * NS.lightOu
 function addFoe(kind) {
   const cfg = N1[kind], root = cast[kind];
   const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: kind === 'light' ? lightStartR() : 0, hits: 0, stunT: 0, dark: false, clickT: 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0, ph: 0, phT: 0,
-    beatT: 0, beatN: 0, strikeOn: false, strikeAt: 0, sx: 0, sz: 1, lift: 0, needle: kind === 'weigher' ? root.getObjectByName('needle') : null };
+    beatT: 0, beatN: 0, strikeOn: false, strikeAt: 0, sx: 0, sz: 1, lift: 0, needle: kind === 'weigher' ? root.getObjectByName('needle') : null, hold: '', holdT: 0 };
+  if (root.userData.acts) { castClip(root, 'idle'); castFace(root, 0); }
   root.position.set(f.x, 0, f.z); root.rotation.set(0, 0, 0); root.scale.setScalar(1); root.visible = true;
   if (kind === 'light') { f.spotX = 0; f.spotZ = -3; mwScene.remove(pool.glint); mwScene.add(pool.beam, pool.spot, pool.rim); pool.beam.material.opacity = 0.14; pool.spot.material.opacity = 0.32; pool.rim.material.opacity = N1.lightRimOp; }
   mwScene.add(root);
@@ -4598,7 +4655,7 @@ function hitFoe(f, dmg, fromX, fromZ) {
   if (f.kind === 'performer') { if (f.show) return; if (f.answers && f.ansT < 0) { f.ansT = 0; mwScene.add(pool.ring); tone(N1.perfAttacks.trade.hz[0], N1.perfAttacks.trade.hz[1], N1.perfAttacks.trade.tell, 'sawtooth', 0.05); } }
   // session 24: on the drum beat the Sergeant parries; between beats the gag lands
   if (f.kind === 'sergeant' && Math.min(f.beatT, f.cfg.beat - f.beatT) < f.cfg.onBeat) { tip(TIPS.sergeantParry); f.pop = 0.1; tone(1500, 1400, 0.05, 'square', 0.05); return; }
-  f.hp -= dmg; f.pop = 0.18;
+  f.hp -= dmg; f.pop = 0.18; f.hold = 'hit'; f.holdT = N1.foeHitClip;
   if (f.hp <= 0) killFoe(f);
 }
 // P5: a gag landed on the lamp: it flinches, the beam weakens and holds off for light.stun s; light.gags of them put it out
@@ -4771,7 +4828,7 @@ function mwLight(M, f, dt) {
   pool.beam.material.opacity = 0.14 * dim; pool.spot.material.opacity = 0.32 * dim; pool.rim.material.opacity = N1.lightRimOp * Math.min(1, dim);
 }
 // the lamp's lens in the world (the head faces f.yaw)
-function lampLens(f, v) { f.root.getWorldPosition(v); v.y += 56 * NS.unit; v.x += Math.sin(f.yaw) * 12.6 * NS.unit; v.z += Math.cos(f.yaw) * 12.6 * NS.unit; return v; }
+function lampLens(f, v) { NS.lampHead.getWorldPosition(v); v.x += Math.sin(f.yaw) * N1.lampLensFwd; v.z += Math.cos(f.yaw) * N1.lampLensFwd; return v; }
 // A4: the dark lamp keeps turning to follow him, with a click; a glint stays on its lens
 function mwLampDark(M, f, dt) {
   const want = Math.atan2(M.x - f.x, M.z - f.z), diff = Math.atan2(Math.sin(want - f.yaw), Math.cos(want - f.yaw));
@@ -4807,7 +4864,7 @@ function mwWhisper(M, f, dt, dx, dz, d) {
   }
   f.tell -= dt; pool.ring.scale.setScalar(1 + 0.15 * Math.sin(M.t * 30));
   if (f.tell > 0) return;
-  f.x = f.tx; f.z = f.tz; mwScene.remove(pool.ring); f.pop = 0.2;
+  f.x = f.tx; f.z = f.tz; mwScene.remove(pool.ring); f.pop = 0.2; f.hold = 'strike'; f.holdT = f.cfg.tell;
   if (Math.hypot(M.x - f.tx, M.z - f.tz) < f.cfg.strikeR) mwHurt(f.cfg.strike);
 }
 function mwStare(M, f, dt, dx, dz, d) {
@@ -4817,7 +4874,7 @@ function mwStare(M, f, dt, dx, dz, d) {
   f.gazeT += dt;
   if (f.gazeT < f.cfg.tell) { f.pop = 0.08; return; }
   f.judgeT -= dt;
-  if (f.judgeT <= 0) { f.judgeT = f.cfg.every; mwHurt(f.cfg.judge); f.pop = 0.15; }
+  if (f.judgeT <= 0) { f.judgeT = f.cfg.every; mwHurt(f.cfg.judge); f.pop = 0.15; f.hold = 'judge'; f.holdT = f.cfg.tell; }
 }
 // the Stare in its photograph room is a camera: it aims; once it has him in its cone and stareFlash.every s have passed, the lens opens for the tell with a whine and its aim locks
 // (the cone shows on the floor); then the flash: caught in the cone costs Laughs (mwHurt: a dodge is safe), the frame freezes
@@ -4836,7 +4893,7 @@ function mwStareFlash(M, f, dt, dx, dz, d) {
   if (f.phT < c.tell) return;
   const off = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - f.yaw), Math.cos(Math.atan2(dx, dz) - f.yaw)));
   if (off < deg(c.cone) && d < c.range) mwHurt(c.judge);
-  f.ph = 0; f.phT = 0; f.pop = 0.2; M.freezeT = c.freeze;
+  f.ph = 0; f.phT = 0; f.pop = 0.2; M.freezeT = c.freeze; f.hold = 'judge'; f.holdT = c.tell;
   el.flash.classList.add('on'); tone(2800, 400, 0.08, 'square', 0.09);
   mwScene.remove(pool.lens, pool.wedge);
 }
@@ -4847,10 +4904,26 @@ function mwShame(M, f, dt, dx, dz, d) {
   if (d < f.cfg.grab) { f.reach += dt; f.pop = 0.06; if (f.reach >= f.cfg.tell) f.cling = true; return; }
   f.reach = 0; f.x += dx / d * f.cfg.speed * dt; f.z += dz / d * f.cfg.speed * dt;
 }
+// session 32: the v2 figures' clip and face from the game state (sergeant, weigher, Performer have no acts); A4: the dark lamp keeps its idle, turning
+// to follow him, with the dark face (its out clip drops the lamp to the floor, which the A4 rule does not want)
+function foeAnim(f, dt) {
+  if (!f.root.userData.acts) return;
+  if (f.holdT > 0) f.holdT -= dt;
+  let c = 'idle', face = 0;
+  if (f.dark) face = 3;
+  else if (!f.alive) { c = 'out'; face = 3; }
+  else if (f.holdT > 0) { c = f.hold; face = f.hold === 'hit' ? 2 : 1; }
+  else if (f.kind === 'light') { if (f.stunT > 0) { c = 'hit'; face = 2; } else if (f.tellT > 0) { c = 'flare'; face = 1; } }
+  else if (f.kind === 'whisper') { if (f.tell > 0) { c = 'copy'; face = 1; } }
+  else if (f.kind === 'stare') { if (f.ph === 1 || (f.gazeT > 0 && f.gazeT < f.cfg.tell)) { c = 'gaze'; face = 1; } }
+  else if (f.kind === 'shame') { if (f.stun > 0) { c = 'shaken'; face = 2; } else if (f.cling) c = 'cling'; else if (f.reach > 0) { c = 'reach'; face = 1; } else c = 'walk'; }
+  castClip(f.root, c); castFace(f.root, face);
+}
 function mwFoes(M, dt) {
   let alive = 0, best = null, bd = 1e9;
   for (let fi = 0; fi < foes.length; fi++) {
     const f = foes[fi];
+    foeAnim(f, dt);
     if (!f.alive) { if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt); continue; }
     alive++;
     if (!f.seen) { f.seen = true; if (!N1.mwHints) tip(TIPS[f.kind]); }

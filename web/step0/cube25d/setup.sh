@@ -13,6 +13,13 @@ N=$T/node_modules/three
 cp $N/build/three.module.js $N/build/three.core.js $S/lib/build/
 cp $N/examples/jsm/loaders/GLTFLoader.js $S/lib/examples/jsm/loaders/
 cp $N/examples/jsm/utils/BufferGeometryUtils.js $N/examples/jsm/utils/SkeletonUtils.js $S/lib/examples/jsm/utils/
+# session 32: compressed cast GLBs (meshopt geometry, KTX2 ETC1S textures): KTX2Loader with its parts, the meshopt decoder, the Basis transcoder
+mkdir -p $S/lib/examples/jsm/libs $S/lib/examples/jsm/math $S/assets/basis
+cp $N/examples/jsm/loaders/KTX2Loader.js $S/lib/examples/jsm/loaders/
+cp $N/examples/jsm/utils/WorkerPool.js $S/lib/examples/jsm/utils/
+cp $N/examples/jsm/libs/ktx-parse.module.js $N/examples/jsm/libs/zstddec.module.js $N/examples/jsm/libs/meshopt_decoder.module.js $S/lib/examples/jsm/libs/
+cp $N/examples/jsm/math/ColorSpaces.js $S/lib/examples/jsm/math/
+cp $N/examples/jsm/libs/basis/basis_transcoder.js $N/examples/jsm/libs/basis/basis_transcoder.wasm $S/assets/basis/
 git fetch -q --depth=1 origin "$BR"
 for f in clown_v2.glb face_atlas.png face_paint.png; do git show "FETCH_HEAD:out/$f" > $S/assets/$f; done
 # walk.html: the v2 whiteface and Performer (waiting on approval) stand in for the performers in the wings
@@ -20,8 +27,9 @@ for c in whiteface performer; do
   mkdir -p $S/assets/$c
   for f in clown_v2.glb face_atlas.png face_paint.png; do git show "FETCH_HEAD:cast_$c/$c/$f" > $S/assets/$c/$f; done
 done
-# night1.html: the night-1 crew and the Mirror constructs (art/cast2, committed web GLBs)
+# night1.html: the night-1 crew and the Mirror constructs, the approved v2 figures compressed for the web (session 32; sources art/cast2/v2/*_v2.glb)
 mkdir -p $S/assets/cast2
-cp art/cast2/renders/*.glb $S/assets/cast2/
+rm -f $S/assets/cast2/*.glb
+cp art/cast2/v2/web/*.glb $S/assets/cast2/
 rm -rf "$T"
 echo "ready: serve web/step0/ and open night1.html, cue_model.html or walk.html"

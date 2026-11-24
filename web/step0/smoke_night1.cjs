@@ -9,8 +9,11 @@ const path = require('path'), http = require('http'), fs = require('fs');
 function need(names) { for (const n of names) { try { return require(n); } catch (e) { /* next */ } } console.error('Missing playwright'); process.exit(2); }
 const pw = need(['playwright-core', path.join(__dirname, '..', 'node_modules', 'playwright-core')]);
 const ROOT = __dirname, OUT = process.argv[2] || '/tmp/night1';
+// session 32: hang guard (wall ms) for waits on game conditions; the conditions decide pass or fail. Was 15000: the v2 cast (five skinned crew in the
+// corridor) draws about 2 frames a second in software GL, so the 1.8 s pratfall took over 15 s of wall time (rule 18: checks wait on game conditions)
+const GUARD = 120000;
 fs.mkdirSync(OUT, { recursive: true });
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg', '.wasm': 'application/wasm' };
 const MUTS = {
   hurt: ['night1.html', 'hurtPays: true,', 'hurtPays: false,'],
   learn: ['night1.html', 'performerLearns: true,', 'performerLearns: false,'],
@@ -206,15 +209,15 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       const act = await pg.evaluate(() => window.__night.NS.act);
       if (act !== actPick) throw new Error('act ' + act);
     });
-    await step('go out: corridor', async () => { if (!boardWall) await pg.click('#goOut'); await sleep(900); await pg.waitForFunction(() => window.__night.S.shot === 'corridor', null, { timeout: 15000 }); });
+    await step('go out: corridor', async () => { if (!boardWall) await pg.click('#goOut'); await sleep(900); await pg.waitForFunction(() => window.__night.S.shot === 'corridor', null, { timeout: GUARD }); });
     // panel C: count the text bubbles on screen through the walk out (test-only sampler in the page)
     await pg.evaluate(() => { window.__bubbles = 0; window.__bubbleT = setInterval(() => { const n = document.querySelectorAll('.label:not(.hidden)').length; if (n > window.__bubbles) window.__bubbles = n; }, 50); });
     const tp = (x, y) => pg.evaluate(([x, y]) => { const S = window.__night.S; S.x = x; S.y = y; }, [x, y]);
-    const verb = async (x, y, v) => { await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 }); await tp(x, y); await sleep(500); const vis = await pg.isVisible('#verb'); if (!vis) throw new Error('no verb button for ' + v); await pg.click('#verb'); await sleep(1100); const done = await pg.evaluate((v) => window.__night.NS.verbs[v], v); if (!done) throw new Error(v + ' not done'); };
+    const verb = async (x, y, v) => { await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: GUARD }); await tp(x, y); await sleep(500); const vis = await pg.isVisible('#verb'); if (!vis) throw new Error('no verb button for ' + v); await pg.click('#verb'); await sleep(1100); const done = await pg.evaluate((v) => window.__night.NS.verbs[v], v); if (!done) throw new Error(v + ' not done'); };
     await step('take the pie', () => verb(1.0, 9.0, 'take'));
     // chart: Esc pauses; the loop stops, held keys are let go, game time stands still, the card lists this scene's controls from the table
     await step('Esc pauses with the controls list, Esc resumes (chart)', async () => {
-      await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 });
+      await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: GUARD });
       const m0 = await pg.evaluate(musicState);
       await pg.keyboard.down('KeyW'); await sleep(200); await pg.keyboard.press('Escape'); await sleep(150);
       const mp = await pg.evaluate(musicState);
@@ -231,7 +234,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     });
     // panel D (owner 22 Nov 15:58: in the corridor shot "the player sees nothing"): the cable lies across the wings, filmed side-on
     await step('cable: blocks before the pratfall (D)', async () => {
-      await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: 15000 }); await tp(0.4, 10.6);
+      await pg.waitForFunction(() => !window.__night.NS.anim, null, { timeout: GUARD }); await tp(0.4, 10.6);
       await pg.waitForFunction(() => window.__night.S.shot === 'wings', null, { timeout: 10000 });
       // the walk check itself: across the cable line is closed before the pratfall, the floor before it is open
       const r = await pg.evaluate(() => { const N = window.__night, W = window.__walkTest, c = N.N1.cableY; return { across: W.free(0.4, c + 0.05), before: W.free(0.4, c - N.N1.cableGap - 0.2), fall: N.NS.verbs.fall }; });
@@ -245,7 +248,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       const at = () => pg.evaluate(() => { const N = window.__night, W = window.__walkTest, v = new W.camera.position.constructor(N.S.x, 0.9, -N.S.y).project(W.camera); return { x: (v.x + 1) / 2 * N.S.w, y: (1 - v.y) / 2 * N.S.h, h: N.S.h, shot: N.S.shot, sy: N.S.y }; });
       const a = await at();
       await pg.keyboard.press('Space');
-      await pg.waitForFunction(() => window.__night.NS.verbs.fall && !window.__night.NS.anim, null, { timeout: 15000 });
+      await pg.waitForFunction(() => window.__night.NS.verbs.fall && !window.__night.NS.anim, null, { timeout: GUARD });
       const b = await at(), r = await pg.evaluate(() => ({ peak: window.__night.NS.pratPeak, c: window.__night.N1.cableY }));
       const travel = Math.hypot(b.x - a.x, b.y - a.y);
       console.log('    pratfall: shot', a.shot, '| screen travel', travel.toFixed(0), 'px of', a.h, '| landed y', b.sy.toFixed(2), '| pitch', r.peak.toFixed(2));
@@ -409,7 +412,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       await sleep(800);
       await pg.evaluate(() => { window.__shots = {}; window.__shotT = setInterval(() => { const s = window.__night.S; if (!s.room) window.__shots[s.shot] = 1; }, 40); });
       await tp(0, 8.7); await pg.evaluate(() => { window.__night.input.ty = -1; });
-      await pg.waitForFunction(() => window.__night.S.room, null, { timeout: 15000 }).catch(() => {});
+      await pg.waitForFunction(() => window.__night.S.room, null, { timeout: GUARD }).catch(() => {});
       await pg.evaluate(() => { window.__night.input.ty = 0; });
       const r = await pg.evaluate(() => { clearInterval(window.__shotT); const N = window.__night, C = window.__walkTest.CONFIG; return { room: N.S.room, shots: Object.keys(window.__shots).join(','), secs: (C.backStart[1] - C.backEndY) / (N.S.speed * C.moodBack.tempo), tempo: (N.NS.slump || C.moodBack).tempo }; });
       console.log('    walk back shots', r.shots, '| computed walk', r.secs.toFixed(1), 's at tempo', r.tempo);
@@ -460,7 +463,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
         await pg.evaluate((r) => { const N = window.__night; N.M.x = 0; N.M.z = N.NS.corPanels[r].z - 0.1; }, r);
         await pg.waitForFunction((r) => window.__night.M.row > r, r, { timeout: 10000 });
       }
-      await pg.waitForFunction(() => window.__night.M.broke, null, { timeout: 15000 });
+      await pg.waitForFunction(() => window.__night.M.broke, null, { timeout: GUARD });
       await sleep(500); await shot('mw_break');
       const b = await pg.evaluate(() => { const N = window.__night, M = N.M; return { broke: M.broke, tell: M.breakTell, drawn: M.drawn.join(','), foes: N.foes.map((f) => f.kind).join(','), w: N.N1.mwCorX }; });
       console.log('    bag drew', b.drawn, '| broke out', b.broke, 'after', b.tell.toFixed(2), 's');
@@ -468,7 +471,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     });
     await step('Mirror World: the cut at the door, constructs in the ring (G)', async () => {
       await pg.evaluate(() => { const N = window.__night; N.M.x = 0; N.M.z = N.N1.mwCorDoor + 0.6; N.input.ty = 1; });
-      await pg.waitForFunction(() => window.__night.M.space === 'ring', null, { timeout: 15000 });
+      await pg.waitForFunction(() => window.__night.M.space === 'ring', null, { timeout: GUARD });
       await pg.evaluate(() => { window.__night.input.ty = 0; });
       await sleep(1500); await shot('mw');
       const b = await pg.evaluate(() => { const N = window.__night, k = N.foes.map((f) => f.kind); return { cuts: N.M.cuts, foes: k.join(','), dup: k.length !== new Set(k).size, light: k.includes('light'), tip: document.getElementById('mwTip').textContent, calls: window.__walkTest.renderer.info.render.calls }; });
@@ -491,7 +494,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       // F31: the count may still show the pratfall's spend from the step before; wait until that is gone, then for this slap's own figure
       await pg.waitForFunction(() => !/\(-\d+\)/.test(document.getElementById('mwHud').textContent), null, { timeout: 20000 });
       await pg.keyboard.press('KeyJ');
-      await pg.waitForFunction(() => document.getElementById('mwHud').textContent.indexOf('(-' + window.__night.N1.slap.cost + ')') >= 0, null, { timeout: 15000 });
+      await pg.waitForFunction(() => document.getElementById('mwHud').textContent.indexOf('(-' + window.__night.N1.slap.cost + ')') >= 0, null, { timeout: GUARD });
       const r = await pg.evaluate(() => { const N = window.__night, c = N.N1; return { hud: document.getElementById('mwHud').textContent, cost: c.slap.cost, told: N.M.costTold, pads: ['padSlap', 'padPie', 'padFall'].map((id) => document.getElementById(id).textContent), want: [c.slap.cost, c.pie.cost, c.fall.cost], hint: document.getElementById('hint').textContent, touch: N.NS.touch }; });
       console.log('    HUD after a slap:', r.hud, '| pads', r.pads.join(', '));
       if (r.hud.indexOf('(-' + r.cost + ')') < 0 || !r.told) throw new Error('spend not shown ' + JSON.stringify(r));

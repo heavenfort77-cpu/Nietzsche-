@@ -9,7 +9,7 @@ import base64, json, os, re, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'step0')
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'night1_single.html'
-MIME = {'.glb': 'model/gltf-binary', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.js': 'text/javascript', '.mp3': 'audio/mpeg'}
+MIME = {'.glb': 'model/gltf-binary', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.js': 'text/javascript', '.mp3': 'audio/mpeg', '.wasm': 'application/wasm'}
 # packed folders (night1.html and cue_model.html load from these at run time)
 DIRS = ['assets', 'cube25d', 'walk/plates', 'music']
 SKIP = ('.py', '.sh', '.cjs', '.blend')
@@ -32,6 +32,13 @@ MODS = {
     'three/addons/loaders/GLTFLoader.js': 'lib/examples/jsm/loaders/GLTFLoader.js',
     'three/addons/utils/BufferGeometryUtils.js': 'lib/examples/jsm/utils/BufferGeometryUtils.js',
     'three/addons/utils/SkeletonUtils.js': 'lib/examples/jsm/utils/SkeletonUtils.js',
+    # session 32: compressed cast GLBs
+    'three/addons/loaders/KTX2Loader.js': 'lib/examples/jsm/loaders/KTX2Loader.js',
+    'three/addons/utils/WorkerPool.js': 'lib/examples/jsm/utils/WorkerPool.js',
+    'three/addons/libs/ktx-parse.module.js': 'lib/examples/jsm/libs/ktx-parse.module.js',
+    'three/addons/libs/zstddec.module.js': 'lib/examples/jsm/libs/zstddec.module.js',
+    'three/addons/libs/meshopt_decoder.module.js': 'lib/examples/jsm/libs/meshopt_decoder.module.js',
+    'three/addons/math/ColorSpaces.js': 'lib/examples/jsm/math/ColorSpaces.js',
 }
 mods = {}
 for name, p in MODS.items():
@@ -39,7 +46,12 @@ for name, p in MODS.items():
     s = s.replace("from './three.core.js'", "from 'three/core'")
     s = s.replace("from '../utils/BufferGeometryUtils.js'", "from 'three/addons/utils/BufferGeometryUtils.js'")
     s = s.replace("from '../utils/SkeletonUtils.js'", "from 'three/addons/utils/SkeletonUtils.js'")
-    left = re.findall(r"from '\.{1,2}/[^']+'", s)
+    s = s.replace("from '../utils/WorkerPool.js'", "from 'three/addons/utils/WorkerPool.js'")
+    s = re.sub(r"from '\.\./(libs|math)/([^']+)'", r"from 'three/addons/\1/\2'", s)
+    # KTX2Loader's default transcoder URLs resolve against import.meta.url, which a blob module cannot do; the page sets its own path (N1.basisDir)
+    s = s.replace("new URL( '../libs/basis/basis_transcoder.wasm', import.meta.url ).toString()", "'basis_transcoder.wasm'")
+    s = s.replace("new URL( '../libs/basis/basis_transcoder.js', import.meta.url ).toString()", "'basis_transcoder.js'")
+    left = re.findall(r"from '\.{1,2}/[^']+'", s) + re.findall(r"new URL\( '\.{1,2}/", s)
     if left:
         raise SystemExit(f'relative import left in {p}: {left[:3]}')
     mods[name] = base64.b64encode(s.encode('utf-8')).decode('ascii')
