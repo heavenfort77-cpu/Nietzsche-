@@ -61,6 +61,11 @@ jobs:
           python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt || rc=1
           node check-static.cjs step0/night1.html | tee -a step0.txt || rc=1
           node step0/smoke_night1.cjs /tmp/night1 | tee -a step0.txt || rc=1
+          # session 35: the fall-act prototype (fall_act.html), both screens, then each mutation must fail a step (desk only)
+          node step0/smoke_fall.cjs | tee -a step0.txt || rc=1
+          for k in window stick settle stood crashlies misses hudrepeat; do
+            if MUTATE=$k ONLY=desk node step0/smoke_fall.cjs > fm_$k.txt 2>&1; then echo "FAIL fall mutation $k: not caught (smoke passed)" | tee -a step0.txt; rc=1; else echo "PASS fall mutation $k caught: $(grep -m1 '^desk FAIL' fm_$k.txt | cut -c1-90)" | tee -a step0.txt; fi
+          done
           # F41: the gnaw warning read only from a frame after its own setup; probe and its stalewait mutation
           bash step0/probe_gnaw_stale.sh /tmp/probe_gnaw | tee -a step0.txt || rc=1
           node step0/probe_cover.cjs step0 | tee -a step0.txt || rc=1
