@@ -1,0 +1,5 @@
+PASS mutation litset -> "7. lights" fires | FAIL 7. lights <= 1, none at intensity 0, no lit (Standard/Physical/Lambert/Phong) materials | {"lights":1,"zero":0,"lit":["MeshStandardMate
+PASS mutation bigshadow -> "8. shadow map" fires | FAIL 8. shadow map <= 2048, casters <= 40000 tris | {"map":4096,"casterTris":18006}
+PASS mutation inlined -> "9. load" fires | FAIL 9. load: bytes before the first frame <= 20 MB, page <= 200 KB (no inlined base64 assets) | 4.8 MB fetched, page 347 KB
+PASS mutation aniso -> "5. texture memory" fires | FAIL 5. texture memory <= 64 MB, anisotropy <= 4 | 48.7 MB, anisotropy 16
+RESULT perf mutations 4 of 4 fired
