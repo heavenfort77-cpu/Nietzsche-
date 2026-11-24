@@ -81,10 +81,14 @@ async function seen() {
       const t = n.textContent.replace(/\s+/g, ' ').trim();
       if (!t || !n.parentElement || /^(SCRIPT|STYLE)$/.test(n.parentElement.tagName) || !vis(n.parentElement)) continue;
       if (n.parentElement.closest('button')) continue;
+      // session 38: a closed fold (details) draws only its summary
+      const fold = n.parentElement.closest('details');
+      if (fold && !fold.open && !n.parentElement.closest('summary')) continue;
+      if (n.parentElement.closest('summary')) continue;
       if (!seenT.has(t)) { seenT.add(t); text.push(t); }
     }
     const buttons = [];
-    for (const b of document.querySelectorAll('button, [role=button]')) {
+    for (const b of document.querySelectorAll('button, [role=button], summary')) {
       if (!vis(b)) continue;
       const r = b.getBoundingClientRect();
       buttons.push({ label: (b.innerText || b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim() || '(no label)', x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), dim: b.disabled || b.classList.contains('held') });
@@ -201,7 +205,7 @@ async function act(c) {
   page = await ctx.newPage();
   cdp = await ctx.newCDPSession(page);
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto(`http://127.0.0.1:${srv.address().port}/night1.html`);
+  await page.goto(`http://127.0.0.1:${srv.address().port}/night1.html?tester`);
   await page.waitForFunction(() => !!window.__night, null, { timeout: 180000 });
   await sleep(2000);
   const api = http.createServer((q, r) => {
