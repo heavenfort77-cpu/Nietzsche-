@@ -126,6 +126,32 @@ if (!process.env.EXTRA_ARGS) for (const [, , , label] of CONFIG.setups) {
   const c = rows.filter((r) => r.setup === label && /^control/.test(r.scene)), worst = Math.max(...c.map((r) => r.p95));
   gate(`${label}: control page (empty WebGL frame) p95 <= ${CONFIG.budgetMs} ms, so this runner can show the budget`, worst <= CONFIG.budgetMs, c.map((r) => ({ [r.scene]: { median: r.median, p95: r.p95, max: r.max } })));
 }
+// Load sweep (session 31): cause of run 119's act frame #27 (17.4 ms) was a shader program used for the first time during play; the class is every
+// material of every scene. Each must have a program that was already used (drawn) at load, under the loading card. Own page, so the useProgram
+// wrapper does not touch the timed pages. Not covered: pooled objects kept outside every scene at load.
+{
+  const ps = await b.newPage();
+  ps.on('pageerror', (e) => errs.push(String(e)));
+  await ps.setViewport({ width: CONFIG.setups[0][0], height: CONFIG.setups[0][1], deviceScaleFactor: CONFIG.setups[0][2] });
+  await ps.evaluateOnNewDocument(() => { const u = window.__usedProgs = new Set(), o = WebGL2RenderingContext.prototype.useProgram; WebGL2RenderingContext.prototype.useProgram = function (q) { if (q) u.add(q); return o.call(this, q); }; });
+  await ps.goto(`http://localhost:${srv.address().port}/night1.html`, { waitUntil: 'load' });
+  await ps.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame);
+  const r = await ps.evaluate(() => {
+    const R = window.__walkTest.renderer, U = window.__usedProgs, out = { mats: 0, never: [], unused: [] }, seen = new Set();
+    for (const [sn, s] of Object.entries(window.__night.scenes)) s.traverse((o) => {
+      if (!o.material) return;
+      for (const m of [].concat(o.material)) {
+        if (seen.has(m)) continue;
+        seen.add(m); out.mats++;
+        const pr = R.properties.get(m).currentProgram, lab = `${sn}: ${o.name || o.type}${o.isInstancedMesh ? ' x' + o.count : ''} ${m.name || m.type}${o.visible ? '' : ' (hidden)'}`;
+        if (!pr) out.never.push(lab); else if (!U.has(pr.program)) out.unused.push(lab);
+      }
+    });
+    return out;
+  });
+  gate(`load sweep: every material of every scene (${r.mats}) has a program drawn at load, none first used during play`, !r.never.length && !r.unused.length, { neverCompiled: r.never.length, compiledNotDrawn: r.unused.length, byScene: [...r.never, ...r.unused].reduce((a, l) => { const k = l.split(':')[0]; a[k] = (a[k] || 0) + 1; return a; }, {}), first: [...r.never, ...r.unused].slice(0, 6) });
+  await ps.close();
+}
 // Probe pass (session 31, rule 28: name the cause before any fix). A separate pass on a fresh page, so the hooks do not touch the timings above.
 // Test-side hooks only, no game change: renderer.render is wrapped (GPU timer query per pass, labelled by scene and camera layers; a part of the
 // main scene can be hidden for that render only, so game logic cannot undo it; the reflection pass (layers mask 2) can be skipped); gl calls are
@@ -152,7 +178,7 @@ const PROBE = `(() => {
   for (const fn of ['texImage2D', 'texSubImage2D', 'compressedTexImage2D', 'compressedTexSubImage2D', 'texStorage2D', 'texImage3D', 'texStorage3D']) { const o = gl[fn].bind(gl); gl[fn] = (...a) => { P.cur.tex++; if (P.cur.texs.length < 3) P.cur.texs.push(fn + ' ' + src(fn, a)); return o(...a); }; }
   for (const fn of ['bufferData', 'bufferSubData']) { const o = gl[fn].bind(gl); gl[fn] = (...a) => { P.cur.buf++; return o(...a); }; }
   { const o = gl.linkProgram.bind(gl); gl.linkProgram = (p) => { P.cur.link++; return o(p); }; }
-  { const o = gl.useProgram.bind(gl); gl.useProgram = (p) => { if (p && !P.used.has(p)) { P.used.add(p); P.cur.first++; } return o(p); }; }
+  { P.used = window.__usedProgs || P.used; const o = gl.useProgram.bind(gl); gl.useProgram = (p) => { if (p && !P.used.has(p)) P.cur.first++; return o(p); }; }
   const O3 = Object.getPrototypeOf(Object.getPrototypeOf(W.scene)), ob = O3.onBeforeRender;
   O3.onBeforeRender = function (...a) { mark(this); return ob.apply(this, a); };
   const hookOwn = (s) => s.traverse((o) => { if (Object.prototype.hasOwnProperty.call(o, 'onBeforeRender') && !o.__probeHook) { const f = o.onBeforeRender; o.__probeHook = 1; o.onBeforeRender = function (...a) { mark(this); return f.apply(this, a); }; } });
@@ -182,21 +208,26 @@ const PROBE = `(() => {
   P.parts = (g) => g.children.map((c, i) => { let tris = 0, meshes = 0; c.traverse((o) => { if (o.geometry && o.geometry.attributes && o.geometry.attributes.position) { meshes++; const n = o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count; tris += Math.round(n / 3) * (o.isInstancedMesh ? o.count : 1); } }); return { i, label: lab(c), tris, meshes, kids: c.children.length, vis: c.visible }; });
 })()`;
 const pstats = (a) => a.length ? stats(a) : { median: 0, p95: 0, max: 0 };
+// one probe page with program use recorded from page load (a program drawn by the load warm-up is not a first use during play)
+const pp = await b.newPage();
+pp.setDefaultTimeout(300000);
+pp.on('pageerror', (e) => errs.push(String(e)));
+await pp.evaluateOnNewDocument(() => { const u = window.__usedProgs = new Set(), o = WebGL2RenderingContext.prototype.useProgram; WebGL2RenderingContext.prototype.useProgram = function (q) { if (q) u.add(q); return o.call(this, q); }; });
 for (const [label, scene, ladder] of CONFIG.probes) {
   const [w, h, sf] = CONFIG.setups.find((s) => s[3] === label);
-  await p.setViewport({ width: w, height: h, deviceScaleFactor: sf, isMobile: /phone/.test(label), hasTouch: /phone/.test(label) });
-  await p.goto(`http://localhost:${srv.address().port}/night1.html`, { waitUntil: 'load' });
-  await p.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame);
-  await p.evaluate(SCENES[scene]);
-  await p.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } R.info.autoReset = false; });
-  await p.evaluate(PROBE);
+  await pp.setViewport({ width: w, height: h, deviceScaleFactor: sf, isMobile: /phone/.test(label), hasTouch: /phone/.test(label) });
+  await pp.goto(`http://localhost:${srv.address().port}/night1.html`, { waitUntil: 'load' });
+  await pp.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame);
+  await pp.evaluate(SCENES[scene]);
+  await pp.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } R.info.autoReset = false; });
+  await pp.evaluate(PROBE);
   const run = `(k) => { const P = window.__probe, R = window.__walkTest.renderer; P.k = k; P.cur = P.fresh(); R.info.reset(); window.__night.stepFrame(1 / 60); P.cur.calls = R.info.render.calls; P.ev[k] = P.cur; }`;
-  const lr = await p.evaluate(`(${LOOP})(${run}, window.__walkTest.renderer.getContext(), ${CONFIG.frames}, ${CONFIG.warm})`);
-  const ev = await p.evaluate(() => window.__probe.ev);
-  const tq = await p.evaluate(() => window.__probe.read());
+  const lr = await pp.evaluate(`(${LOOP})(${run}, window.__walkTest.renderer.getContext(), ${CONFIG.frames}, ${CONFIG.warm})`);
+  const ev = await pp.evaluate(() => window.__probe.ev);
+  const tq = await pp.evaluate(() => window.__probe.read());
   const st = split(lr), tag = `probe ${label} ${scene}`;
   gate(`${tag}: every frame logged`, ev.length === CONFIG.frames + CONFIG.warm, { logged: ev.length });
-  console.log(`${tag}: median ${st.median} p95 ${st.p95} max ${st.max} cpu p95 ${st.cpuP95} gpu p95 ${st.gpuP95} over ${CONFIG.budgetMs}: ${st.long} | timer query ${await p.evaluate(() => window.__probe.X)} lost ${tq.lost} disjoint ${tq.disjoint}`);
+  console.log(`${tag}: median ${st.median} p95 ${st.p95} max ${st.max} cpu p95 ${st.cpuP95} gpu p95 ${st.gpuP95} over ${CONFIG.budgetMs}: ${st.long} | timer query ${await pp.evaluate(() => window.__probe.X)} lost ${tq.lost} disjoint ${tq.disjoint}`);
   for (const [l, a] of Object.entries(tq.out)) { const t = a.filter(([k]) => k >= CONFIG.warm).map(([, ms]) => ms), s = pstats(t); console.log(`  pass ${l.padEnd(18)} GPU ms median ${s.median} p95 ${s.p95} max ${s.max} (${t.length} frames)`); }
   // frames with events, timed frames only (k counted from the first timed frame, as in the lists above)
   const tot = { link: 0, first: 0, tex: 0, drawn: 0 }, listed = [], evList = [];
@@ -205,7 +236,7 @@ for (const [label, scene, ladder] of CONFIG.probes) {
     tot.link += e.link; tot.first += e.first; tot.tex += e.tex; tot.drawn += e.drawn.length;
     const hasEv = e.link || e.first || e.drawn.length;
     if (!hasEv && ms <= CONFIG.budgetMs) continue;
-    (hasEv ? evList : listed).push(`#${i} ${ms.toFixed(1)} (${lr.cpu[i].toFixed(1)} / ${lr.gpu[i].toFixed(1)}) calls ${e.calls} link ${e.link} firstUse ${e.first} tex ${e.tex}${e.texs.length ? ' [' + e.texs.join('; ') + ']' : ''} buf ${e.buf}${e.drawn.length ? ' firstDrawn ' + e.drawn.slice(0, 5).join(', ') + (e.drawn.length > 5 ? ` +${e.drawn.length - 5}` : '') : ''}`);
+    (hasEv ? evList : listed).push(`#${i} ${ms.toFixed(1)} (${lr.cpu[i].toFixed(1)} / ${lr.gpu[i].toFixed(1)}) calls ${e.calls} link ${e.link} firstUse ${e.first} tex ${e.tex}${e.texs.length ? ' [' + e.texs.join('; ') + ']' : ''} buf ${e.buf}${e.drawn.length ? ' drawnFirstSinceProbe ' + e.drawn.slice(0, 5).join(', ') + (e.drawn.length > 5 ? ` +${e.drawn.length - 5}` : '') : ''}`);
   }
   const warmEv = ev.slice(0, CONFIG.warm).reduce((a, e) => ({ link: a.link + e.link, first: a.first + e.first, tex: a.tex + e.tex, drawn: a.drawn + e.drawn.length }), { link: 0, first: 0, tex: 0, drawn: 0 });
   console.log(`  events in the ${CONFIG.warm} settle frames ${JSON.stringify(warmEv)}; in the ${CONFIG.frames} timed frames ${JSON.stringify(tot)}; frame lines are index, total, cpu / gpu:`);
@@ -217,15 +248,15 @@ for (const [label, scene, ladder] of CONFIG.probes) {
   }
   if (!ladder) continue;
   // part ladder: same page, timer queries off; baseline before and after (noise band); the reflection pass skipped; each part hidden in turn
-  await p.evaluate(() => { window.__probe.timing = false; });
-  const time = async (expr) => { await p.evaluate(expr); const r = await p.evaluate(`(${LOOP})((k) => window.__night.stepFrame(1 / 60), window.__walkTest.renderer.getContext(), ${CONFIG.ladderFrames}, ${CONFIG.ladderWarm})`); return { tot: stats(r.tot), gpu: stats(r.gpu) }; };
+  await pp.evaluate(() => { window.__probe.timing = false; });
+  const time = async (expr) => { await pp.evaluate(expr); const r = await pp.evaluate(`(${LOOP})((k) => window.__night.stepFrame(1 / 60), window.__walkTest.renderer.getContext(), ${CONFIG.ladderFrames}, ${CONFIG.ladderWarm})`); return { tot: stats(r.tot), gpu: stats(r.gpu) }; };
   const base0 = await time('window.__probe.hide = null; window.__probe.skipL1 = false');
   const noRefl = await time('window.__probe.skipL1 = true');
-  await p.evaluate(() => { window.__probe.skipL1 = false; });
+  await pp.evaluate(() => { window.__probe.skipL1 = false; });
   const lad = async (path) => {
-    const parts = await p.evaluate(`window.__probe.parts(${path})`), out = [];
+    const parts = await pp.evaluate(`window.__probe.parts(${path})`), out = [];
     for (const pt of parts) { if (!pt.vis || !pt.meshes) continue; const r = await time(`window.__probe.hide = (${path}).children[${pt.i}]`); out.push({ ...pt, path: `${path}.children[${pt.i}]`, save: +(base0.tot.median - r.tot.median).toFixed(2), saveP95: +(base0.tot.p95 - r.tot.p95).toFixed(2), gpuMed: r.gpu.median }); }
-    await p.evaluate(() => { window.__probe.hide = null; });
+    await pp.evaluate(() => { window.__probe.hide = null; });
     return out.sort((a, b) => b.save - a.save);
   };
   const top = await lad('window.__probe.main');
@@ -238,6 +269,7 @@ for (const [label, scene, ladder] of CONFIG.probes) {
     for (const r of sub.slice(0, CONFIG.ladderTop)) console.log(`    hide ${r.label.padEnd(34)} saves median ${r.save} p95 ${r.saveP95} | tris ${r.tris} meshes ${r.meshes}`);
   }
 }
+await pp.close();
 // CPU profile per scene at the first setup (a separate pass, so sampling does not touch the timings above): top functions by self time
 {
   const [w, h, sf, label] = CONFIG.setups[0];
