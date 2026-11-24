@@ -972,6 +972,10 @@ const N1 = Object.freeze({
   endQuitText: 'Bow, say "I quit" and walk out', endAgainText: 'Perform one last act',
   // after a choice: the bow s, his line, the walk out to (x, z) at the ring's edge where the child stands, the last act's falls, black and silence s before the restart button
   endBowSecs: 1.4, endQuitLine: 'I quit.', endExit: [0, -7.4], endFalls: 3, endFallGap: 1.7, endHoldSecs: 2.5,
+  // owner 24 Nov, session 37 ("yes" to panel C1, design/PANEL-theme-nihilism-24nov.md): switch, his paint stays on in the warm light and through the last act; only "I quit" takes it off, faded out over s while the line shows; false = paint gone when the light opens, as before
+  endPaintStays: true, endPaintOffSecs: 1.6,
+  // owner 24 Nov, session 37 ("yes" to panel C3): switch, the Light's dark lamp stays in the ring through the ending, still turning to follow him with its click and glint; false = no lamp in the ending, as before
+  endLampStays: true,
   // a passing tip (cost, gnaw, corridor; a construct's first sighting when mwHints is off), s on screen
   tipSecs: 4.5,
   // owner 23 Nov 06:22 ("solve 1 and 2", player: "in the mirror I also don't know what to do"): switch, the insecurities come one at a time in the ring; the next enters when the one before is down (the Light: put out); false = all of tonight's from the start, as before
@@ -2440,7 +2444,7 @@ function n1Warm() {
   mwScene.add(pool.stripe, pool.weighRing);
   const pr = chars.performer ? chars.performer.root : null, prAt = pr && pr.parent;
   if (pr) mwScene.add(pr);
-  endScene.add(c.root); endObj.crowd.count = 0; warmDraw(endScene, mwCam); mwScene.add(c.root);
+  endScene.add(c.root, cast.light, pool.glint); endObj.crowd.count = 0; warmDraw(endScene, mwCam); mwScene.add(c.root, cast.light); endScene.remove(pool.glint);
   // session 23: the photograph room's lens and cone and the void's outlines, line and door fill are drawn here too
   mwScene.add(pool.lens, pool.wedge);
   warmDraw(mwScene, mwCam);
@@ -4486,6 +4490,7 @@ function updateEnd(dt) {
       E.step = 'choose'; endButtons();
     }
   }
+  if (E.lamp && E.step !== 'quote') mwLampDark(E, E.lamp, dt);
   if (E.step === 'quit') endQuit(E, c, dt);
   if (E.step === 'again') endAgain(E, c, dt);
   if (E.step === 'done' && E.t >= N1.endHoldSecs && !E.shown) { E.shown = true; endRestartCard(); }
@@ -4520,7 +4525,10 @@ function endLight() {
   E.step = 'clap'; E.t = 0; E.x = N1.endAt[0]; E.z = N1.endAt[1]; E.yaw = Math.atan2(N1.mwCamPos[0] - E.x, N1.mwCamPos[2] - E.z);
   endScene.add(c.root, c.blob);
   endObj.warm.position.set(E.x, 0.02, E.z); endObj.cone.position.set(E.x, 4.5, E.z); endObj.warm.updateMatrix(); endObj.cone.updateMatrix();
-  c.face.material.uniforms.uPaintAmt.value = 0;
+  E.paint0 = c.face.material.uniforms.uPaintAmt.value;
+  if (!N1.endPaintStays) c.face.material.uniforms.uPaintAmt.value = 0;
+  E.lamp = N1.endLampStays ? foes.find((f) => f.kind === 'light' && f.dark) || null : null;
+  if (E.lamp) { endScene.add(E.lamp.root, pool.glint); E.lamp.clickT = 0; }
   shared.uGradeAmt.value = 0; rampU.uGradeAmt.value = 0; mwPaper(false); mwCam.up.set(0, 1, 0);
   c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
   setFace(c, 'sad');
@@ -4541,8 +4549,13 @@ function endQuit(E, c, dt) {
   const b = N1.endBowSecs;
   if (E.t < b) { const k = Math.sin(Math.PI * Math.min(1, E.t / b)); NS.endMood = { tempo: 1, chest: N1.bowChest * k, neck: 0, head: 0 }; return; }
   NS.endMood = null;
-  if (E.t < b + 1.6) { setPrompt(N1.endQuitLine); return; }
+  if (E.t < b + 1.6) {
+    setPrompt(N1.endQuitLine);
+    if (N1.endPaintStays) c.face.material.uniforms.uPaintAmt.value = E.paint0 * (1 - Math.min(1, (E.t - b) / N1.endPaintOffSecs));
+    return;
+  }
   setPrompt('');
+  if (N1.endPaintStays) c.face.material.uniforms.uPaintAmt.value = 0;
   if (!E.walk) { E.walk = 1; setFace(c, 'sad'); c.walk.reset().play(); c.idle.crossFadeTo(c.walk, 0.2, false); }
   const dx = N1.endExit[0] - E.x, dz = N1.endExit[1] - E.z, d = Math.hypot(dx, dz);
   if (d > 0.2) { const st = Math.min(d, S.speed * dt); E.x += dx / d * st; E.z += dz / d * st; E.yaw = Math.atan2(dx, dz); return; }

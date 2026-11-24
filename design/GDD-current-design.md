@@ -32,7 +32,7 @@ A sad clown performs slapstick to earn Laughs, and those Laughs are what he figh
 - The circus members' tutorial lines turn into game prompts ("one more show!").
 - The reflection's one-frame lag grows each night.
 - On later nights the whiteface's call lies about the timing (the mask cue stays honest).
-- On the last night the menu's Quit option is greyed out until the Performer is beaten.
+- Dropped (owner 24 Nov, session 37, panel `design/PANEL-theme-nihilism-24nov.md`, no lock 11 of 13): the menu's Quit option is never locked on the last night; a door that opens only for the winner makes freedom a prize.
 - The Performer is built from what you bought: every act bought is one more attack it has, and every paint layer is more HP.
 - In the Mirror World, standing still drains him.
 
@@ -260,8 +260,8 @@ Rewritten from the owner's decisions of 22-23 Nov 2026. Built as box and shape o
 - Its attacks: the deliberate fall always (it dives along a line on the floor, 0.7 s tell, 10 Laughs); one per act or ability he bought: spotlight sweep (a ring where he stood, 0.7 s, 8), talking scale (a wider ring, 0.8 s, 10), soldier drill (a thrust along a line, 0.7 s, 9), dash (a long fast lunge along a line, 0.6 s, 9), tit-for-tat (it answers each gag he lands, 0.6 s later, within 2 m in front of it, 8). Each tell has its own sound.
 - HP 12 x (1 + 0.04 per Mask), never below 12, at most 1.4 x 12. Gnawing goes on as everywhere.
 - Lost: he wakes at the mirror as on any night; the end card offers "Try the last night again" (the same night, with what the run carried in).
-- The ending: the Performer shatters (flash, glass sound); black and silence (the music is cut, not faded); the last Nietzsche line on its own card ("I refuse to be a saint; I would rather be a clown.", Ecce Homo, Ludovici 1911); his warm light opens on him in the middle of the ring, his paint gone; the audience appears one by one round the ring, each with a clap, faster and faster (36 figures), held, then cut to silence; two worded buttons (keys 1 and 2): "Bow, say "I quit" and walk out" (he bows, "I quit." on screen, walks out to the ring's edge where the child stands, black) and "Perform one last act" (three falls in the light, no laugh, no words, no numbers, black). After either, 2.5 s of black and silence, then only "Start again from night 1".
-- Not built: the Performer's face as the cue's mask on this night; the Quit option greyed out on the last night (there is no menu Quit yet).
+- The ending: the Performer shatters (flash, glass sound); black and silence (the music is cut, not faded); the last Nietzsche line on its own card ("I refuse to be a saint; I would rather be a clown.", Ecce Homo, Ludovici 1911); his warm light opens on him in the middle of the ring, his paint still on (owner 24 Nov, panel C1: only "I quit" takes it off, while the line shows; the last act keeps it on), the Light's dark lamp still in the ring turning after him with its click (panel C3); the audience appears one by one round the ring, each with a clap, faster and faster (36 figures), held, then cut to silence; two worded buttons (keys 1 and 2): "Bow, say "I quit" and walk out" (he bows, "I quit." on screen, walks out to the ring's edge where the child stands, black) and "Perform one last act" (three falls in the light, no laugh, no words, no numbers, black). After either, 2.5 s of black and silence, then only "Start again from night 1".
+- Not built: the Performer's face as the cue's mask on this night.
 
 **The fight.** The last night keeps its Dazai line. In the Mirror World he first fights the night's insecurities as on any night. Then the Performer, his pale double: the Performer is himself.
 
