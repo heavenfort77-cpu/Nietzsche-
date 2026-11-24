@@ -18,6 +18,8 @@ const CONFIG = {
   setups: [[1920, 1080, 1, '1080p desktop'], [1440, 900, 2, 'retina laptop'], [2560, 1440, 1, '1440p desktop'], [390, 844, 3, 'phone portrait'], [844, 390, 3, 'phone landscape']],
   // frames run before timing (shader and upload settling)
   warm: 30,
+  // walk out shots timed (session 33): Blender floor point (x, y) in metres inside each shot's zone (shots.json), with that shot's crew in view
+  walkAt: { corridor: [0, 3.4], wings: [0.2, 9.8], entrance: [-0.6, 15.4] },
   // frames timed per scene and setup
   frames: 240,
   // owner requirement 2 (22 Nov): 60 fps on desktop and phone, frame p95 at most this (ms)
@@ -81,6 +83,13 @@ async function caps() {
   return p.evaluate(() => { const g = document.createElement('canvas').getContext('webgl2'); return g ? { timerQuery: !!g.getExtension('EXT_disjoint_timer_query_webgl2'), parallelCompile: !!g.getExtension('KHR_parallel_shader_compile') } : null; });
 }
 
+// session 33: the walk out with the v2 crew, through the game's own route (board note, Perform it, walk out); only the walk's start point
+// (S.data.start, read once by placeStart) is moved test-side to a point in the shot, then put back; he stands (idle), the crew play their clips
+const walkAt = ([x, y]) => `(async () => { const N = window.__night, NS = N.NS, S = N.S, st = S.data.start, keep = st.at;
+  document.getElementById('curtain').classList.add('hidden'); document.getElementById('logo').classList.add('hidden');
+  st.at = [${x}, ${y}]; NS.scene = 'boardwall'; N.pickAct(NS.acts[0].id); document.getElementById('perform').click();
+  await new Promise((ok) => { const t = setInterval(() => { if (NS.scene === 'walk' && S.running && S.x === ${x} && S.y === ${y}) { clearInterval(t); ok(); } }, 20); });
+  st.at = keep; })()`;
 // the scenes, each set up on a fresh page: the ring of the Mirror World with its group (the arena), the act at the zoom-out, the shop at the mirror (room plus reflection pass)
 const SCENES = {
   'mirror world ring': () => {
@@ -96,8 +105,11 @@ const SCENES = {
     N.NS.actSeen = false; N.actAfter();
   },
   'mirror shop': () => { const N = window.__night; document.getElementById('curtain').classList.add('hidden'); N.NS.learn = null; N.shopCard(); },
+  'walk corridor': walkAt(CONFIG.walkAt.corridor),
+  'walk wings': walkAt(CONFIG.walkAt.wings),
+  'walk entrance': walkAt(CONFIG.walkAt.entrance),
 };
-const want = { 'mirror world ring': 'mw', 'act': 'act', 'mirror shop': 'room' };
+const want = { 'mirror world ring': 'mw', 'act': 'act', 'mirror shop': 'room', 'walk corridor': 'shot corridor', 'walk wings': 'shot wings', 'walk entrance': 'shot entrance' };
 const rows = [];
 let routeOk = null, capsLine = null;
 for (const [w, h, sf, label] of CONFIG.setups) for (const [scene, setup] of [['control before', null], ...Object.entries(SCENES), ['control after', null]]) {
@@ -117,8 +129,8 @@ for (const [w, h, sf, label] of CONFIG.setups) for (const [scene, setup] of [['c
   // every pass of a frame counted (the mirror's reflection is a second render)
   await p.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } window.__cnt = { calls: 0, tris: 0, auto: R.info.autoReset }; R.info.autoReset = false; });
   const lr = await p.evaluate(`(${LOOP})((k) => { const N = window.__night, R = window.__walkTest.renderer; R.info.reset(); N.stepFrame(1 / 60); if (k >= ${CONFIG.warm}) { window.__cnt.calls = Math.max(window.__cnt.calls, R.info.render.calls); window.__cnt.tris = Math.max(window.__cnt.tris, R.info.render.triangles); } }, window.__walkTest.renderer.getContext(), ${CONFIG.frames}, ${CONFIG.warm})`);
-  const r = await p.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer, c = R.domElement; R.info.autoReset = window.__cnt.auto; return { calls: window.__cnt.calls, tris: window.__cnt.tris, mode: N.S.mode, room: !!N.S.room, px: `${c.width}x${c.height}`, dpr: R.getPixelRatio() }; });
-  const st = split(lr), mode = r.mode === 'mw' || r.mode === 'act' ? r.mode : r.room ? 'room' : r.mode;
+  const r = await p.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer, c = R.domElement; R.info.autoReset = window.__cnt.auto; return { calls: window.__cnt.calls, tris: window.__cnt.tris, mode: N.S.mode, room: !!N.S.room, shot: N.NS.scene === 'walk' ? N.S.shot : '', px: `${c.width}x${c.height}`, dpr: R.getPixelRatio() }; });
+  const st = split(lr), mode = r.mode === 'mw' || r.mode === 'act' ? r.mode : r.room ? 'room' : r.shot ? 'shot ' + r.shot : r.mode;
   rows.push({ scene, setup: label, ...st, calls: r.calls, tris: r.tris, px: r.px, dpr: r.dpr });
   gate(`${label} ${scene}: still in the scene after ${CONFIG.frames + CONFIG.warm} frames`, mode === want[scene], { mode });
   gate(`${label} ${scene} (${r.px}, pixel ratio ${r.dpr}): draw calls <= ${CONFIG.maxCalls}, triangles <= ${CONFIG.maxTris}`, r.calls <= CONFIG.maxCalls && r.tris <= CONFIG.maxTris, { calls: r.calls, tris: r.tris });

@@ -402,3 +402,12 @@ Checked with no fault found are listed at the end of each sweep, so the next ses
 - Where: `clown_v2/chars/stare.py`, `clown_v2/chars/whisper.py`.
 - Fix: unused `cyl` imports removed; `_coat_at` unpacks the unused y values as `_`. No geometry change.
 - Proof: PASS `cd clown_v2 && python3 -m pyflakes chars/*.py *.py && echo PASS pyflakes clown_v2 chars and scripts`.
+
+## F44: the shop A/B's earlier page could not load the v2 cast
+- Found: CI run 123 (4fe8eba), job `gpu`: all 8 shop A/B rounds `FAIL 1080p desktop shop A/B round 0 night1_prev.html: page ready and timed | {"error":"TimeoutError: Waiting failed: 120000ms exceeded","state":{"night":true,"ready":false,...},"pageErrors":["Error: THREE.GLTFLoader: setKTX2Loader must be called before loading KTX2 textures"]}` (and 1440p), then `FAIL no page or console errors`; `RESULT gpu night1 57 of 66 pass`. The job ran 21 min (8 x 120 s waits), run 122 ran 6 min.
+- Probe: new `web/probe_prev_page.mjs` (loads a page copy against the current step0 assets the way the A/B does). Local, software GL, night1.html from b08b829: `FAIL night1_prev_old.html ready with no page errors against the current step0 assets | {"ready":false,"errors":["Error: THREE.GLTFLoader: setKTX2Loader must be called before loading KTX2 textures","not ready: TimeoutError: Waiting failed: 120000ms exceeded"]}`.
+- Cause: session 32 batch 2 (a381ce7) made `step0/cube25d/setup.sh` copy the v2 cast as KTX2/meshopt GLBs; the A/B's earlier page (`NIGHT1_PREV_SHA` b08b829, workflow `clown.yml`) has no KTX2Loader, so its cast load throws and the page never reaches ready.
+- Class: a page from an older commit served against the current tree's assets in CI.
+- Sweep: `clown.yml` has two such pages: `NIGHT1_PREV_SHA` (faulted) and `GPU_CONTROL_SHA` (web/game/index.html at 1356a35 against web/game assets; loads and is timed in run 123: `"controlBefore":17.4,"controlAfter":14.8`; web/game assets unchanged by the v2 cast). No other `git show FETCH_HEAD` in the workflows. New probe for the class: `probe_prev_page.mjs` now runs in the `gpu` job before the A/B and fails the job with its own line.
+- Fix: `NIGHT1_PREV_SHA` moved to a381ce7 (session 32 batch 2: the v2 cast, before batch 3's reflection change), so the A/B now compares batch 3 against batch 2.
+- Proof: local, software GL, night1.html from a381ce7: `PASS night1_prev_new.html ready with no page errors against the current step0 assets | {"ready":true,"errors":[]}`; Mac proof is this commit's `gpu` job (`PASS night1_prev.html ready ...` and both A/B gates judged).

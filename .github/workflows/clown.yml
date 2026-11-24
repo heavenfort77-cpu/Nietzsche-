@@ -310,7 +310,7 @@ jobs:
     needs: [build, ring]
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[gpu]')
     runs-on: macos-15
-    # session 25: plus night1.html (gpu_night1.mjs, 5 setups x 3 scenes)
+    # session 25: plus night1.html (gpu_night1.mjs, 5 setups x 3 scenes; session 33: x 6 scenes, the three walk-out shots added)
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -324,8 +324,9 @@ jobs:
         env:
           # control page timed in the same job (same VM): the game page before session 8 batch 2 (same page as run 10)
           GPU_CONTROL_SHA: 1356a358e24548d96980a71d27d54d520cb17962
-          # session 31: night1 shop A/B against the page before the warm-up draw (session 31 batch 2)
-          NIGHT1_PREV_SHA: b08b829c1eac7878d4ad9c9b344f60cebb0bdc01
+          # session 31: night1 shop A/B against an earlier page. Session 33 (F44): b08b829 cannot load the v2 cast's KTX2 GLBs that setup.sh now copies;
+          # moved to session 32 batch 2 (a381ce7, the v2 cast, before batch 3's reflection change)
+          NIGHT1_PREV_SHA: a381ce75e5f770cfe1fcc3fc58530154f39d9cb3
         run: |
           bash web/ci_setup.sh
           git fetch -q --depth=1 origin "$GPU_CONTROL_SHA"
@@ -336,6 +337,8 @@ jobs:
           # session 25: the game the owner plays (night1.html), its heaviest scenes, owner requirement 2 budget 16.7 ms
           bash step0/cube25d/setup.sh
           git fetch -q --depth=1 origin "$NIGHT1_PREV_SHA" && git show FETCH_HEAD:web/step0/night1.html > step0/night1_prev.html
+          # F44: the earlier page must load against the current assets before the A/B uses it
+          node probe_prev_page.mjs step0 night1_prev.html 2>&1 | tee -a gpu.txt || rc=1
           NIGHT1_PREV=night1_prev.html node gpu_night1.mjs step0 2>&1 | tee -a gpu.txt || rc=1
           [ "${rc:-0}" = 0 ]
       - uses: actions/upload-artifact@v4
