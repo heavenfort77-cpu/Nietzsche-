@@ -1,0 +1,34 @@
+#!/bin/bash
+# Cold-play client: play look | play click X Y | play tap X Y | play button "Label" | play key K | play hold K SECS | play hold2 K1 K2 SECS
+#   | play drag X1 Y1 X2 Y2 SECS | play wait SECS | play watch SECS | play pressafter SECS K (desk) | play pressafter SECS X Y (phone) | play quit
+# Every command may end with -- "what you think now" (logged as your words). Prints what is on screen and the screenshot file to open.
+PORT=${PORT:-8790}
+says=""; args=()
+while [ $# -gt 0 ]; do if [ "$1" = "--" ]; then shift; says="$*"; break; fi; args+=("$1"); shift; done
+set -- "${args[@]}"
+a="$1"; shift || true
+case "$a" in
+  look|quit|note) j=$(python3 -c 'import json,sys; print(json.dumps({"a":sys.argv[1]}))' "$a");;
+  click|tap) j=$(python3 -c 'import json,sys; print(json.dumps({"a":sys.argv[1],"x":sys.argv[2],"y":sys.argv[3]}))' "$a" "$1" "$2");;
+  button) j=$(python3 -c 'import json,sys; print(json.dumps({"a":"button","label":sys.argv[1]}))' "$*");;
+  key) j=$(python3 -c 'import json,sys; print(json.dumps({"a":"key","key":sys.argv[1]}))' "$1");;
+  hold) j=$(python3 -c 'import json,sys; print(json.dumps({"a":"hold","key":sys.argv[1],"s":sys.argv[2]}))' "$1" "$2");;
+  hold2) j=$(python3 -c 'import json,sys; print(json.dumps({"a":"hold2","key":sys.argv[1],"key2":sys.argv[2],"s":sys.argv[3]}))' "$1" "$2" "$3");;
+  drag) j=$(python3 -c 'import json,sys; print(json.dumps({"a":"drag","x1":sys.argv[1],"y1":sys.argv[2],"x2":sys.argv[3],"y2":sys.argv[4],"s":sys.argv[5]}))' "$1" "$2" "$3" "$4" "$5");;
+  wait|watch) j=$(python3 -c 'import json,sys; print(json.dumps({"a":sys.argv[1],"s":sys.argv[2]}))' "$a" "${1:-1}");;
+  pressafter) if [ $# -ge 3 ]; then j=$(python3 -c 'import json,sys; print(json.dumps({"a":"pressafter","s":sys.argv[1],"x":sys.argv[2],"y":sys.argv[3]}))' "$1" "$2" "$3"); else j=$(python3 -c 'import json,sys; print(json.dumps({"a":"pressafter","s":sys.argv[1],"key":sys.argv[2]}))' "$1" "$2"); fi;;
+  *) echo "unknown command: $a"; exit 1;;
+esac
+j=$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); d["says"]=sys.argv[2]; print(json.dumps(d))' "$j" "$says")
+curl -s -m 120 -X POST --data "$j" "http://127.0.0.1:$PORT/" | python3 -c '
+import json,sys
+r=json.load(sys.stdin)
+if r.get("quit"): print("You stopped playing."); sys.exit()
+if r.get("noted"): print("noted"); sys.exit()
+if r.get("error"): print("NOTE:", r["error"])
+print("Step", r.get("step"))
+print("Text on screen:"); [print("  ", t) for t in r.get("text", [])] or print("   (none)")
+print("Buttons:"); [print("   [%s] at %d,%d%s" % (b["label"], b["x"], b["y"], " (greyed out)" if b.get("dim") else "")) for b in r.get("buttons", [])] or print("   (none)")
+print("Screenshot:", r.get("shot"))
+if r.get("sheet"): print("Moving pictures:", r["sheet"], "-", r.get("sheetNote",""))
+'
