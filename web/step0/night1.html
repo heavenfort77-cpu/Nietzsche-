@@ -1759,6 +1759,11 @@ window.addEventListener('pointercancel', endTouch);
 
 // ===== movement and zones =====
 function inRect(r, x, y, m) { return x >= r[0] + m && x <= r[2] - m && y >= r[1] + m && y <= r[3] - m; }
+// F45: the walkable x nearest to x on row y (searched out to 3 m either side in 0.05 m steps); x itself when nothing is free
+function landX(x, y) {
+  for (let d = 0; d <= 3; d += 0.05) { if (free(x - d, y)) return x - d; if (free(x + d, y)) return x + d; }
+  return x;
+}
 function free(x, y) {
   const walk = S.data.walk, obs = S.data.obstacles;
   let ok = false;
@@ -3574,7 +3579,10 @@ function doVerb() {
   const v = m.cd.verb;
   if (v === 'fall') {
     if (S.y > N1.cableY) return;
-    NS.anim = { kind: 'prat', t: 0, y0: S.y, y1: N1.cableY + N1.pratLand, peak: 0 };
+    // F45: he lands where he can walk on: the nearest walkable x on the landing row (the cable rule no longer applies once he has fallen)
+    NS.verbs.fall = true;
+    const y1 = N1.cableY + N1.pratLand;
+    NS.anim = { kind: 'prat', t: 0, x0: S.x, x1: landX(S.x, y1), y0: S.y, y1, peak: 0 };
     gpStart(chars.clown, 'trip');
   } else if (v === 'take') { NS.pies = N1.pies; if (N1.corridorJokes) NS.anim = { kind: 'sniff', t: 0 }; }
   else if (v === 'honk') { honk(1, 0); if (N1.corridorJokes) { honk(N1.echoVol, N1.echoSecs); NS.jokes.echo = true; } }
@@ -3610,12 +3618,14 @@ function tripAcross(m) {
   const h = Math.hypot(GP.v.x, GP.v.z) || 1, fx = GP.v.x / h, fy = -GP.v.z / h, rx = fy, ry = -fx, at = m.cd.at;
   const away = rx * (at[0] - S.x) + ry * (at[1] - S.y) > 0 ? -1 : 1, L = N1.tripStep + N1.tripLen;
   const fits = (dx, dy) => { for (let d = 0.3; d <= L + 0.01; d += 0.3) if (!free(S.x + dx * d, S.y + dy * d)) return false; return free(S.x + dx * L, S.y + dy * L); };
-  let dx = fx, dy = fy;
+  let dx = fx, dy = fy, step = N1.tripStep, found = false;
   search: for (const a of N1.tripAngles) for (const sd of [away, -away]) {
     const s = Math.sin(THREE.MathUtils.degToRad(a)) * sd, c = Math.cos(THREE.MathUtils.degToRad(a));
-    if (fits(fx * c + rx * s, fy * c + ry * s)) { dx = fx * c + rx * s; dy = fy * c + ry * s; break search; }
+    if (fits(fx * c + rx * s, fy * c + ry * s)) { dx = fx * c + rx * s; dy = fy * c + ry * s; found = true; break search; }
   }
-  return { kind: 'trip', t: 0, who: m, x0: S.x, y0: S.y, dx, dy, yaw: Math.atan2(dx, -dy) };
+  // F45: no fall line fits: he trips along the camera's line only as far as the floor is walkable (0 = in place)
+  if (!found) while (step > 0 && !free(S.x + dx * step, S.y + dy * step)) step = Math.max(0, step - 0.05);
+  return { kind: 'trip', t: 0, who: m, x0: S.x, y0: S.y, dx, dy, step, yaw: Math.atan2(dx, -dy) };
 }
 function n1Anim(c, dt) {
   const a = NS.anim;
@@ -3624,8 +3634,8 @@ function n1Anim(c, dt) {
   if (a.kind === 'prat' || a.kind === 'trip') {
     // panel 22 Nov b item 4: the clown trip (stagger, dive, belly flop) carries him over the cable (or toward the child), then he gets up
     const g = c.gp, land = GPCLIP.trip.keys[4][0], k = Math.min(1, a.t / land);
-    if (a.kind === 'prat') { S.y = a.y0 + (a.y1 - a.y0) * ease(k); S.yaw = turnToward(S.yaw, Math.PI, CONFIG.turnRate, dt); }
-    else { S.x = a.x0 + a.dx * N1.tripStep * ease(k); S.y = a.y0 + a.dy * N1.tripStep * ease(k); S.yaw = turnToward(S.yaw, a.yaw, N1.tripTurn, dt); }
+    if (a.kind === 'prat') { S.x = a.x0 + (a.x1 - a.x0) * ease(k); S.y = a.y0 + (a.y1 - a.y0) * ease(k); S.yaw = turnToward(S.yaw, Math.PI, CONFIG.turnRate, dt); }
+    else { S.x = a.x0 + a.dx * a.step * ease(k); S.y = a.y0 + a.dy * a.step * ease(k); S.yaw = turnToward(S.yaw, a.yaw, N1.tripTurn, dt); }
     c.root.position.set(S.x, 0, -S.y);
     if (g.kind === 'trip' && gpDone(c)) gpStart(c, 'up');
     a.peak = Math.max(a.peak, g.now[1] / 90);
