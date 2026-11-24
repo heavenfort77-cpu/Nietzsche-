@@ -841,12 +841,14 @@ const N1 = Object.freeze({
   goalText: {
     painting: 'He paints the smile on.', bravado: 'He gets into the role. The act board is next.', board: 'Choose tonight\'s act on the board.',
     corridor: 'Walk up the corridor to the ring. Go round the crew.', wings: 'The ring is through the gap by the red curtains, at the back.',
-    entrance: 'Walk into the light.', back: 'Walk back to the dressing room.', room: 'Turn to the mirror wall and sit.',
+    entrance: 'Walk into the light.', back: 'Walk back to the dressing room.',
+    // session 38: the walk back by shot (the first-timer walked to the wings' lit vanity, taking it for the dressing room)
+    backentrance: 'Walk back toward the camera, into the wings.', backwings: 'The corridor back is at the bottom left.', backcorridor: 'Walk down the corridor to the dressing room.', room: 'Turn to the mirror wall and sit.',
   },
   // the paint prompt names what the paint is (cold players: "finish the paint" meant nothing)
   paintPrompt: { touch: 'His face is half painted. Tap to paint the smile on.', keys: 'His face is half painted. Press any key to paint the smile on.' },
   // cold players item 5: switch, a line saying what each gold button did, shown verbCapSecs (game time)
-  verbCaps: true, verbCapSecs: 2.5,
+  verbCaps: true, verbCapSecs: 4,
   // that line per verb (lead's wording; the owner edits)
   verbCap: { take: 'Pie in hand: one free pie throw in the Mirror.', honk: 'HONK! The strongman roars with laughter.', fall: 'Down over the cable, and up again.', trip: 'He trips on purpose. The child saw.' },
   // session 38, owner 24 Nov 23:49 "marker only to be seen by tester. to be removed when ship": switch, a ring and an arrow on the clown,
@@ -854,6 +856,15 @@ const N1 = Object.freeze({
   testMark: true,
   // the marker's colour (tester only, not art), ring inner and outer radius m, arrow height above his head m
   testMarkColor: 0x39ff88, testMarkR: [0.42, 0.52], testMarkUp: 0.3,
+  // session 38: switch, a blocked walk step turns toward the free side (walkTurn), tried at these angles in order, radians (15 to 150 degrees in 15s;
+  // past 90 only when the way ahead is a pocket, e.g. the child at the ring entrance against the left wall: he slides round her)
+  walkTurn: true, walkTurns: [0.26, 0.52, 0.79, 1.05, 1.31, 1.57, 1.83, 2.09, 2.36, 2.62],
+  // the turned step's length is the step times the cosine of the angle, never under this share of the step
+  walkTurnMin: 0.4,
+  // a new block: when both sides are free, the side with this much room beyond the turned step, m
+  walkTurnLook: 0.3,
+  // a one-axis slide counts only when it moves him at least this share of the step
+  walkSlideMin: 0.2,
   // crew collision radius, metres; verb reach from the member (or its anchor), metres; how long the child's words stay, s
   crewR: 0.35, verbDist: 1.5, saidSecs: 3,
   // the rigger's floor cable across the wings (Blender y, metres; owner 22 Nov 15:58: in the corridor shot "the player sees nothing", the wings camera films it side-on),
@@ -1833,8 +1844,45 @@ function moveInput(dt) {
 // one step along the last input direction at stick strength m; slides along walls
 function stepMove(m, dt) {
   const step = S.speed * S.mood.tempo * m * dt;
-  const nx = S.x + S.dirX * step, ny = S.y - S.dirZ * step;
-  if (free(nx, ny)) { S.x = nx; S.y = ny; } else if (free(nx, S.y)) S.x = nx; else if (free(S.x, ny)) S.y = ny;
+  const dx = S.dirX, dy = -S.dirZ, nx = S.x + dx * step, ny = S.y + dy * step;
+  if (free(nx, ny)) { S.x = nx; S.y = ny; S.turnSide = 0; return; }
+  // session 38: night 1 turns the blocked step (walkTurn: a slide along a wall is its 90 degree case); the axis slides stay for the walk sample
+  if (n1 && N1.walkTurn) { walkTurn(dx, dy, step); return; }
+  // a slide along one axis counts only when it moves him (pushing straight at a pole or a crew member "slid" 0 m and he stood still)
+  const min = step * N1.walkSlideMin;
+  if (Math.abs(dx) * step > min && free(nx, S.y)) { S.x = nx; return; }
+  if (Math.abs(dy) * step > min && free(S.x, ny)) { S.y = ny; return; }
+}
+// session 38 (cold players stuck on the corridor pole, the child, the crates): a blocked step turns toward the free side, up to the widest of N1.walkTurns.
+// The side is kept while he stays blocked (S.turnSide; flipping each frame between two free sides left him in place); a new block takes the side
+// whose turned step is free soonest, with room for N1.walkTurnLook m beyond it when both are. He faces the way he goes.
+function walkTurn(dx, dy, step) {
+  if (S.turnSide) { if (walkTurnSide(dx, dy, step, S.turnSide) || walkTurnSide(dx, dy, step, -S.turnSide)) return; return; }
+  const T = N1.walkTurns;
+  for (let i = 0; i < T.length; i++) {
+    const l = walkTurnFree(dx, dy, step, T[i], 1, 0), r = walkTurnFree(dx, dy, step, T[i], -1, 0);
+    if (!l && !r) continue;
+    const side = l && r ? (walkTurnFree(dx, dy, step, T[i], -1, N1.walkTurnLook) && !walkTurnFree(dx, dy, step, T[i], 1, N1.walkTurnLook) ? -1 : 1) : l ? 1 : -1;
+    walkTurnSide(dx, dy, step, side);
+    return;
+  }
+}
+// is the step turned by angle a to this side (1 = left) free, and free again look m further on
+function walkTurnFree(dx, dy, step, a, side, look) {
+  const c = Math.cos(a), sn = Math.sin(a) * side, d = step * Math.max(N1.walkTurnMin, c) + look;
+  return free(S.x + (dx * c - dy * sn) * d, S.y + (dx * sn + dy * c) * d);
+}
+// the smallest turn to this side that is free: he takes it; false when none is
+function walkTurnSide(dx, dy, step, side) {
+  const T = N1.walkTurns;
+  for (let i = 0; i < T.length; i++) {
+    if (!walkTurnFree(dx, dy, step, T[i], side, 0)) continue;
+    const c = Math.cos(T[i]), sn = Math.sin(T[i]) * side, d = step * Math.max(N1.walkTurnMin, c), mx = dx * c - dy * sn, my = dx * sn + dy * c;
+    S.x += mx * d; S.y += my * d; S.turnSide = side;
+    S.wantYaw = Math.atan2(mx, -my);
+    return true;
+  }
+  return false;
 }
 function turnToward(cur, want, rate, dt) {
   const d = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
@@ -2593,7 +2641,7 @@ function setGoal(key) {
   el.goal.textContent = t; el.goal.classList.toggle('hidden', !t);
 }
 // the walk's goal: by shot on the way out, one line on the way back
-function walkGoal() { setGoal(S.back ? 'back' : S.shot); }
+function walkGoal() { setGoal(S.back ? (N1.goalText['back' + S.shot] ? 'back' + S.shot : 'back') : S.shot); }
 // what the gold button did, shown for verbCapSecs of game time (verbCapUpdate counts it down in the walk)
 function verbCapShow(v) {
   if (!N1.verbCaps || !N1.verbCap[v]) return;
