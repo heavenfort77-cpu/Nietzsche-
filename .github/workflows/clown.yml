@@ -61,6 +61,8 @@ jobs:
           python -I game/probe_face_cells.py game/index.html game/assets/clown_v2.glb game/assets/face_atlas.png | tee -a step0.txt || rc=1
           node check-static.cjs step0/night1.html | tee -a step0.txt || rc=1
           node step0/smoke_night1.cjs /tmp/night1 | tee -a step0.txt || rc=1
+          # F41: the gnaw warning read only from a frame after its own setup; probe and its stalewait mutation
+          bash step0/probe_gnaw_stale.sh /tmp/probe_gnaw | tee -a step0.txt || rc=1
           node step0/probe_cover.cjs step0 | tee -a step0.txt || rc=1
           node step0/probe_shop.cjs step0 | tee -a step0.txt || rc=1
           node step0/check_anchors.cjs step0 | tee -a step0.txt || rc=1

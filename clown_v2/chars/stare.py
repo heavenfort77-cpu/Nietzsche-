@@ -11,7 +11,7 @@ heads, the eye, the two lids) and its own clips (idle, gaze, judge, hit, out); t
 game's code. Bind pose: eye looking straight ahead (-y like every face here), upper lid heavy as cast2."""
 import math
 from mathutils import Vector
-from chars.common import build, ell, cone, cyl, torus, on_surface, tag, res, T, F, capsule
+from chars.common import build, ell, cone, torus, on_surface, tag, res, T, F, capsule
 import posekit as K
 
 # CONFIG ---------------------------------------------------------------

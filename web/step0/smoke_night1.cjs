@@ -533,10 +533,15 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     });
     // owner 22 Nov 23:41 "standing still is not taking action and no action insecure will alway gnaw" (design/PANEL-action-22nov.md P4): game changed on purpose
     await step('standing still: they gnaw (edge at once, drain after the warning, any action clears it) (P4)', async () => {
-      await pg.evaluate(() => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.input.tx = 0; N.input.ty = 0; N.M.laughs = Math.max(N.M.laughs, 300); N.M.x = -L.spotX; N.M.z = 5.5; N.M.still = 0; window.__g0 = N.M.gnawed; });
-      await pg.waitForFunction(() => window.__night.M.gnawLvl === 1, null, { timeout: 20000 });
-      const a = await pg.evaluate(() => { const N = window.__night; return { still: N.M.still, d: N.M.gnawed - window.__g0, cls: document.getElementById('gnaw').className, warn: N.N1.gnaw.warn }; });
-      if (a.d !== 0 || a.still >= a.warn || a.cls !== 'warn') throw new Error('warning stage ' + JSON.stringify(a));
+      // F41: the wait read the warning left from the step before (gnawLvl 1 before this step's own frame): CI read "warning after 0.00 s",
+      // run 101 one frame later read the edge already cleared. Now the reading must come from a frame after this setup (M.t > t0),
+      // and a warning before N1.stillAfter is impossible in the game, so the check fails it.
+      // STALE=1 (probe use, probe_gnaw_stale.sh): one real game frame first leaves the warning on, as the step before leaves it, and the
+      // game's own photograph freeze (M.freezeT 0.3 s, no game time passes) holds that state past the wait, as when no frame lands between
+      await pg.evaluate((stale) => { const N = window.__night, L = N.foes.find((f) => f.kind === 'light'); N.input.tx = 0; N.input.ty = 0; if (stale) { N.M.still = 0.5; N.stepFrame(1 / 60); } N.M.laughs = Math.max(N.M.laughs, 300); N.M.x = -L.spotX; N.M.z = 5.5; N.M.still = 0; window.__g0 = N.M.gnawed; window.__t0 = N.M.t; if (stale) N.M.freezeT = 0.3; }, !!process.env.STALE);
+      await pg.waitForFunction(() => window.__night.M.t > window.__t0 && window.__night.M.gnawLvl === 1, null, { timeout: 20000 });
+      const a = await pg.evaluate(() => { const N = window.__night; return { still: N.M.still, d: N.M.gnawed - window.__g0, cls: document.getElementById('gnaw').className, warn: N.N1.gnaw.warn, after: N.N1.stillAfter }; });
+      if (a.d !== 0 || !(a.still > a.after) || a.still >= a.warn || a.cls !== 'warn') throw new Error('warning stage ' + JSON.stringify(a));
       await pg.waitForFunction(() => { const N = window.__night; return N.M.gnawLvl === 2 && N.M.still >= N.N1.gnaw.warn + 1; }, null, { timeout: 40000 });
       const b = await pg.evaluate(() => { const N = window.__night, g = N.N1.gnaw, o = N.M.still - g.warn; return { d: N.M.gnawed - window.__g0, want: g.drain * o + g.climb * o * o / 2, cls: document.getElementById('gnaw').className, over: N.M.over }; });
       console.log('    gnaw: warning after', a.still.toFixed(2), 's still, then drained', b.d.toFixed(2), 'Laughs (want about', b.want.toFixed(2) + ')');

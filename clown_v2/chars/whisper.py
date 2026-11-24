@@ -12,7 +12,7 @@ strike, hit, out); gliding and following the clown stay in the game's code. Bind
 baked on an upright head), the lean and the head tilt come from the idle."""
 import math
 from mathutils import Vector
-from chars.common import build, ell, cone, cyl, torus, on_surface, tag, res, T, F, capsule
+from chars.common import build, ell, cone, torus, on_surface, tag, res, T, F, capsule
 import posekit as K
 
 # CONFIG ---------------------------------------------------------------
@@ -71,7 +71,7 @@ def body():
 
 def _coat_at(z, a=0.0, push=0.0):
     """Point on the coat surface at height z, angle a degrees from the front (+ toward its left), pushed out by push."""
-    c = CONFIG; (tx, ty, tz), (hx, hy, hz) = c['coat_top'], c['coat_hem']; rt, rh = c['coat_R']
+    c = CONFIG; (tx, _, tz), (hx, _, hz) = c['coat_top'], c['coat_hem']; rt, rh = c['coat_R']
     f = (z - hz) / (tz - hz); x0 = hx + (tx - hx) * f; r = rh + (rt - rh) * f + push
     return Vector((x0 + r * math.sin(math.radians(a)), -r * math.cos(math.radians(a)), z))
 
