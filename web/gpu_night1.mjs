@@ -41,6 +41,11 @@ const CONFIG = {
   ladderTop: 12, ladderOpen: 2,
   // reflection ladder in every shop probe: rounds of the variants interleaved (session 32: base, no reflection pass, no second skeleton update, tiny scene, both)
   reflRounds: 5,
+  // interleave pass (session 33): [setup, scene] timed in alternating rounds with the empty control page on a second tab of the same browser,
+  // so both see the same VM moments; the run 124 misses (same game code as run 123, where they passed)
+  interleave: [['retina laptop', 'act'], ['retina laptop', 'mirror shop'], ['phone landscape', 'act']],
+  // interleave pass: rounds per page, frames timed per round
+  ilRounds: 8, ilFrames: 60,
   // shop A/B (session 31): this page against the previous one (env NIGHT1_PREV, a file in the step0 dir), alternated in the same job
   abSetups: ['1080p desktop', '1440p desktop'],
   // shop A/B: rounds per page, frames timed per round (after the warm frames)
@@ -320,6 +325,39 @@ await pp.close();
 // Shop A/B (session 31): run 120 shop 1080p p95 18.2 vs run 119 8.3 with the same draws (15 calls, 108,068 triangles) on a slower VM. This page and
 // the previous one (env NIGHT1_PREV) timed in alternating rounds on fresh pages; gate: this page's median of round p95s is not above the previous
 // page's by more than the larger of the two pages' round-to-round spread (noise band).
+// Interleave pass (session 33, rule 28 / "a bad measurement means our code until proven otherwise"): the scene and the empty control page, each on
+// its own tab, timed in alternating rounds of the same length; per round the frames over the budget and the p95 of each, so a VM stall shows in
+// both pages' rounds and a page cost shows in the scene's only. Information lines plus a gate that every round ran in its scene.
+for (const [label, scene] of CONFIG.interleave) {
+  const [w, h, sf] = CONFIG.setups.find((s) => s[3] === label), vp = { width: w, height: h, deviceScaleFactor: sf, isMobile: /phone/.test(label), hasTouch: /phone/.test(label) };
+  // each tab loads in front (a background tab gets no animation frames, and waits poll on a timer, not on animation frames)
+  const pa = await b.newPage();
+  pa.setDefaultTimeout(300000); pa.on('pageerror', (e) => errs.push(String(e)));
+  await pa.setViewport(vp); await pa.bringToFront();
+  await pa.goto(`http://localhost:${srv.address().port}/night1.html`, { waitUntil: 'load' });
+  await pa.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame, { polling: 100 });
+  await pa.evaluate(SCENES[scene]);
+  await pa.evaluate(() => { const N = window.__night; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } });
+  const pc = await b.newPage();
+  pc.setDefaultTimeout(300000); pc.on('pageerror', (e) => errs.push(String(e)));
+  await pc.setViewport(vp); await pc.bringToFront();
+  await pc.goto(`http://localhost:${srv.address().port}/gpu_control.html`, { waitUntil: 'load' });
+  await pc.waitForFunction(() => window.__ctl, { polling: 100 });
+  const res = { scene: [], control: [] };
+  for (let r = 0; r < CONFIG.ilRounds; r++) for (const [k, pg] of [['scene', pa], ['control', pc]]) {
+    await pg.bringToFront();
+    const fr = k === 'scene' ? '(k) => window.__night.stepFrame(1 / 60)' : '(k) => window.__ctl.frame()', gl = k === 'scene' ? 'window.__walkTest.renderer.getContext()' : 'window.__ctl.gl';
+    const lr = await pg.evaluate(`(${LOOP})(${fr}, ${gl}, ${CONFIG.ilFrames}, ${r === 0 ? CONFIG.warm : 0})`);
+    const st = stats(lr.tot);
+    res[k].push({ p95: st.p95, max: st.max, long: lr.tot.filter((v) => v > CONFIG.budgetMs).length, longGpu: lr.tot.filter((v, i) => v > CONFIG.budgetMs && lr.gpu[i] > lr.cpu[i]).length });
+  }
+  const mode = await pa.evaluate(() => { const N = window.__night; return N.S.mode === 'mw' || N.S.mode === 'act' ? N.S.mode : N.S.room ? 'room' : N.S.mode; });
+  gate(`interleave ${label} ${scene}: every round ran in the scene`, mode === want[scene] && res.scene.length === CONFIG.ilRounds, { mode, rounds: res.scene.length });
+  const sum = (a, f) => a.reduce((t, x) => t + x[f], 0), both = res.scene.filter((x, i) => x.long && res.control[i].long).length;
+  console.log(`interleave ${label} ${scene} (${CONFIG.ilRounds} rounds x ${CONFIG.ilFrames} frames each page): frames over ${CONFIG.budgetMs} ms scene ${sum(res.scene, 'long')} (gpu-led ${sum(res.scene, 'longGpu')}), control ${sum(res.control, 'long')} (gpu-led ${sum(res.control, 'longGpu')}); rounds with long frames: scene ${res.scene.filter((x) => x.long).length}, control ${res.control.filter((x) => x.long).length}, both in the same round ${both}`);
+  console.log(`  round p95 scene [${res.scene.map((x) => x.p95).join(', ')}] control [${res.control.map((x) => x.p95).join(', ')}]; round long frames scene [${res.scene.map((x) => x.long).join(', ')}] control [${res.control.map((x) => x.long).join(', ')}]`);
+  await pa.close(); await pc.close();
+}
 if (process.env.NIGHT1_PREV) for (const label of CONFIG.abSetups) {
   const [w, h, sf] = CONFIG.setups.find((s) => s[3] === label), res = { now: [], prev: [] };
   for (let r = 0; r < CONFIG.abRounds; r++) for (const [k, file] of [['now', 'night1.html'], ['prev', process.env.NIGHT1_PREV]]) {
