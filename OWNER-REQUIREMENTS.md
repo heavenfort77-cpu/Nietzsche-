@@ -154,6 +154,7 @@ Status: **in use** = in the build per START-HERE (20 Nov build status); **planne
 - Phone build (step 9): ask the owner before any lighter character model.
 - Owner, 22 Nov 2026 (frame rate first, see requirement 2): the approved models stay on desktop; a lighter character model on phone is used only if the phone misses 60 fps with everything else dialled down, and the owner is asked before the swap (this section's rule still holds).
 - Not enforced yet: a gate that the game's character triangle counts equal the built models' counts.
+- Owner, 24 Nov 2026 17:28 ("THREE.LOD"), lead's reading: the corridor crew get a far level (THREE.LOD, `tools/cast_lod.mjs`, 25% of the body's triangles, same skeleton, material and texture) past `N1.lodFar` from the camera; the approved model stays the near level and the source file is unchanged. Gate: smoke_night1 step "crew past the LOD distance" (mutation `lodfar`). The clown and the Mirror figures keep one level (owner to say if they get one too).
 
 
 ## 5. Faults: check wide, probe first, one commit (owner, 21 Nov 2026)
@@ -204,3 +205,11 @@ Owner, after playing the cue on the 3D clown in the 2.5D room: "cue is ok. this 
 - Owner, 21 Nov 23:41: Mirror World goes for the immersive following camera; asked whether it can stay 2.5D with only the characters in 3D. Answer given: a camera that stays in one spot and turns (pans, tilts, zooms) to follow the clown works on pre-rendered art (a 360 render per spot, colour plus depth, so the clown hides behind things); a camera that travels behind him needs a real 3D background. Waiting on the owner: 2.5D turning camera, or real-time 3D Mirror World.
 - Owner decision, 21 Nov 23:48: Mirror World is 2.5D with the turning camera. Each arena is one 360 Blender render (colour plus depth) seen from one fixed spot; the camera turns, tilts and zooms to keep the clown in full view; the clown and the enemies are 3D. No first-person or over-the-shoulder third-person camera anywhere in the game.
 - Owner, 22 Nov: the walk from the cube to the performance meets more than one performer, and maybe the audience.
+
+## 8. Unseen not drawn, nothing rebuilt, finished things disposed; asset textures in klad (owner, 24 Nov 2026 17:28)
+
+Owner: "use klad for texture for asset. THREE.LOD geometry.dispose(), material.dispose(), texture.dispose(). what is not shown don't render, do not constantly rebuild".
+- What is not shown is not drawn: only the current scene renders (`renderFrame`); crew on no pixel of a walk shot are hidden in that shot (`N1.crewHide`) and not animated. Gate: smoke_night1 step "crew on no pixel" redraws each crew member alone per shot (mutations `unseen`, `hideseen`).
+- Nothing rebuilt: scenes, sets and pools are built once at load (rule 26); the static check fails object creation in per-frame code.
+- Dispose: what a page is done with is freed with `dispose()` (geometry, material, texture, skeleton, instance buffers), keeping anything a later scene still uses (`freeRoots`). Night 1: the walk and act sets after the walk back (`N1.freeAfterWalk`). Gates: smoke_night1 steps "sets freed" and "stay freed" (no re-upload by the end card; mutations `nofree`, `freechild`). Between nights the page reloads.
+- Textures for assets are painted in klad (klad-headless-cli skill; klad credited in CREDITS, only exported PNGs ship). Lead's reading: new assets from now on; an approved asset's texture is replaced only after a klad sample at play size is approved (rule 4). Not used yet: no new asset since the owner said it.

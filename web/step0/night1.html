@@ -786,6 +786,12 @@ const N1 = Object.freeze({
   castFade: 0.15,
   // per-figure GLB urls that override castDir (empty in the repo; the published artifact fills it with its asset urls)
   castUrls: {},
+  // owner 24 Nov 17:28 ("THREE.LOD"): crew farther than this (m) from the camera draw their far body (<id>_far.glb, tools/cast_lod.mjs, 25% of the triangles)
+  lodFar: 8,
+  // owner 24 Nov 17:28 ("what is not shown don't render"): crew drawn on no pixel of a walk shot are hidden in it (session 33 pixel probe; smoke step "not drawn")
+  crewHide: { corridor: ['rigger'], wings: ['stagehand', 'child'], entrance: ['stagehand', 'rigger', 'props_girl'] },
+  // owner 24 Nov 17:28 (dispose): after the walk back the walk and act sets are freed (geometry, material, texture dispose); figures used later are kept
+  freeAfterWalk: true,
   // clown height in the Blender style units (build.py clown, bowler top); sets metres per unit for the whole cast
   clownUnits: 59.7,
   // palette ramps [light, base, shadow, deep] (art/3_blender_3d/palette.py plus build_cast2.py extras)
@@ -1411,7 +1417,10 @@ function cutTo(name) {
   shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(camera.matrixWorldInverse);
   shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(camera.matrixWorldInverse);
   el.shotName.textContent = s.title;
+  // owner 24 Nov: crew on no pixel of this shot are not drawn (hidden crew are not animated either, castAnim)
+  if (n1) { const hide = N1.crewHide[name] || NO_HIDE; for (let i = 0; i < crew.length; i++) crew[i].root.visible = !hide.includes(crew[i].cd.id); }
 }
+const NO_HIDE = [];
 
 // ===== cube room (after the walk back) and gloom =====
 function loadRoom(tl) {
@@ -1566,6 +1575,51 @@ function updateGains(dt) {
   }
 }
 function showPrep(on) { if (on !== S.prepOn) { S.prepOn = on; el.prep.classList.toggle('hidden', !on); } }
+// owner 24 Nov 17:28 (dispose): GPU resources (geometry, material, texture, skeleton, instance buffers) of the roots that are done, except any
+// a kept root still uses. Runs once a night at a scene change under the fade, never per frame.
+function gpuRes(roots, out) {
+  const tex = (v) => { if (v && v.isTexture) out.add(v); };
+  for (const r of roots) r.traverse((o) => {
+    if (o.geometry) out.add(o.geometry);
+    if (o.isSkinnedMesh) out.add(o.skeleton);
+    if (o.isInstancedMesh) out.add(o);
+    const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : NO_HIDE;
+    for (const m of ms) {
+      out.add(m);
+      for (const k in m) tex(m[k]);
+      if (m.uniforms) for (const k in m.uniforms) tex(m.uniforms[k].value);
+    }
+  });
+  return out;
+}
+function freeRoots(gone, kept, extra) {
+  const keep = gpuRes(kept, new Set()), drop = gpuRes(gone, new Set(extra));
+  for (const r of keep) drop.delete(r);
+  for (const r of drop) r.dispose();
+  for (const g of gone) if (g.parent) g.parent.remove(g);
+  // test hook (smoke step "stay freed"): the freed list is kept only when a check asks for it
+  if (window.__keepFreed) window.__freed = [...drop];
+  return drop.size;
+}
+// after the walk back: the crew who stay in the corridor, the cable, the walk plates and the act set; the child (end scene), the clown and every
+// scene still to come are kept
+function freeWalk() {
+  NS.walkFreed = true;
+  const ids = N1.crew.map((c) => c.id).filter((id) => id !== 'child');
+  for (const id of ids) {
+    const u = cast[id].userData;
+    u.mixer.stopAllAction(); u.mixer.uncacheRoot(u.mixer.getRoot());
+    castAnimList.splice(castAnimList.indexOf(u), 1);
+  }
+  for (let i = crew.length - 1; i >= 0; i--) if (ids.includes(crew[i].cd.id)) { crew[i].lab.remove(); crew.splice(i, 1); }
+  const kept = [roomScene, pressScene, mwScene, endScene, vigScene, cast.child, refl.root].concat(Object.values(chars).filter(Boolean).map((c) => c.root),
+    Object.keys(cast).filter((k) => !ids.includes(k)).map((k) => cast[k]), Object.values(rampMats).map((m) => ({ traverse: (f) => f({ material: m }) })));
+  const extra = [];
+  for (const k in plates) extra.push(plates[k].color, plates[k].depth);
+  const gone = ids.map((id) => cast[id]).concat([NS.cable, NS.tape, actScene], plateScene.children.slice());
+  NS.freed = freeRoots(gone, kept.filter(Boolean), extra);
+  for (const id of ids) delete cast[id];
+}
 // the clown moves between the walk scene and the room scene; walk state he carried is reset here
 function enterRoom() {
   const c = chars.clown;
@@ -1573,6 +1627,7 @@ function enterRoom() {
   if (n1) hatHome();
   c.walk.stop(); c.idle.reset().setEffectiveWeight(1).play();
   roomScene.add(c.root, c.blob);
+  if (n1 && S.back && N1.freeAfterWalk && !NS.walkFreed) freeWalk();
   setFace(c, CONFIG.faceBack);
   setGloom(1);
   setRoomView(CONFIG.roomStart);
@@ -2212,6 +2267,21 @@ async function loadCast(id) {
   const hull = makeHull(body, face);
   body.parent.add(hull);
   [body, face, hull].forEach(growBounds);
+  // owner 24 Nov: crew get a far body (THREE.LOD) bound to the same skeleton and material; the face stays in both levels
+  if (N1.crew.some((c) => c.id === id)) {
+    const fg = await NS.castLoader.loadAsync(N1.castUrls[id + '_far'] || N1.castDir + id + '_far.glb');
+    let src = null;
+    fg.scene.traverse((o) => { if (o.isSkinnedMesh) src = o; });
+    const far = new THREE.SkinnedMesh(src.geometry, body.material);
+    far.bind(body.skeleton, body.bindMatrix);
+    far.position.copy(body.position); far.quaternion.copy(body.quaternion); far.scale.copy(body.scale);
+    const farHull = makeHull(far, face);
+    [far, farHull].forEach(growBounds);
+    const lod = new THREE.LOD(), near = new THREE.Group(), farG = new THREE.Group();
+    body.parent.add(lod);
+    near.add(body, hull); farG.add(far, farHull);
+    lod.addLevel(near, 0); lod.addLevel(farG, N1.lodFar);
+  }
   const box = new THREE.Box3().setFromObject(inner);
   inner.position.y = -box.min.y;
   const root = new THREE.Group();
@@ -2303,6 +2373,7 @@ function warmDraw(scn, cam) {
     if (!o.visible) { o.visible = true; undo.push(() => { o.visible = false; }); }
     if (o.isInstancedMesh && o.count === 0) { o.count = 1; undo.push(() => { o.count = 0; }); }
     if (o.frustumCulled) { o.frustumCulled = false; undo.push(() => { o.frustumCulled = true; }); }
+    if (o.isLOD && o.autoUpdate) { o.autoUpdate = false; undo.push(() => { o.autoUpdate = true; }); }
   });
   const mask = cam.layers.mask;
   cam.layers.enableAll();
@@ -2919,7 +2990,7 @@ function actEnter() {
   actObj.bar.visible = !sweep; actObj.rug.visible = actObj.pan.visible = actObj.broom.visible = sweep;
   // the child from the corridor watches from the ring entrance: the one figure who does not laugh
   actObj.childAt.copy(ch.position); actObj.childYaw = ch.rotation.y;
-  actScene.add(ch); ch.position.set(N1.actChild[0], 0, N1.actChild[1]); ch.rotation.y = Math.atan2(-N1.actChild[0], -N1.actChild[1]);
+  actScene.add(ch); ch.visible = true; ch.position.set(N1.actChild[0], 0, N1.actChild[1]); ch.rotation.y = Math.atan2(-N1.actChild[0], -N1.actChild[1]);
   crewQuiet();
   el.hint.textContent = ''; el.shotName.textContent = '';
   actFit();
@@ -4243,7 +4314,7 @@ function endChoose(k) {
 // 1: he bows, says "I quit" and walks out of the ring past the child at the exit, out of his light
 function endQuit(E, c, dt) {
   if (!E.child) {
-    E.child = cast.child; endScene.add(cast.child); cast.child.position.set(N1.endExit[0] + 0.8, 0, N1.endExit[1]); cast.child.rotation.set(0, Math.atan2(E.x - N1.endExit[0], E.z - N1.endExit[1]), 0); cast.child.updateMatrixWorld(true);
+    E.child = cast.child; endScene.add(cast.child); cast.child.visible = true; cast.child.position.set(N1.endExit[0] + 0.8, 0, N1.endExit[1]); cast.child.rotation.set(0, Math.atan2(E.x - N1.endExit[0], E.z - N1.endExit[1]), 0); cast.child.updateMatrixWorld(true);
   }
   const b = N1.endBowSecs;
   if (E.t < b) { const k = Math.sin(Math.PI * Math.min(1, E.t / b)); NS.endMood = { tempo: 1, chest: N1.bowChest * k, neck: 0, head: 0 }; return; }

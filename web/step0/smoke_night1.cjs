@@ -57,6 +57,13 @@ const MUTS = {
   corwide: ['night1.html', '  mwRoute: true, mwCorX: 2.2,', '  mwRoute: true, mwCorX: 1.2,'],
   stickfull: ['night1.html', '  stickFull: 0.35,', '  stickFull: 1,'],
   lightlose: ['night1.html', 'lightChase: 2.5, lightLose: 1.5,', 'lightChase: 99, lightLose: 1.5,'],
+  belong: ['night1.html', 'belongThought: true,', 'belongThought: false,'],
+  // owner 24 Nov 17:28: unseen crew hidden, LOD, dispose
+  unseen: ['night1.html', "crewHide: { corridor: ['rigger'],", "crewHide: { corridor: [],"],
+  hideseen: ['night1.html', "wings: ['stagehand', 'child'],", "wings: ['stagehand', 'child', 'rigger'],"],
+  lodfar: ['night1.html', 'lodFar: 8,', 'lodFar: 99,'],
+  nofree: ['night1.html', 'freeAfterWalk: true,', 'freeAfterWalk: false,'],
+  freechild: ['night1.html', ".filter((id) => id !== 'child');", ".filter((id) => id !== 'none');"],
   falls: ['night1.html', "else if (once(A, 'fall')) { A.falls++; gpStart(c, 'prat');", "else if (once(A, 'fall')) { A.falls++;"],
   intense: ['night1.html', "  if (once(A, 'roll')) { drum(actObj.roll); A.fxN.roll++; }", ''],
   vanity: ['night1.html', "  const vanity = kind === 'paint';", '  const vanity = false;'],
@@ -210,6 +217,61 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       if (act !== actPick) throw new Error('act ' + act);
     });
     await step('go out: corridor', async () => { if (!boardWall) await pg.click('#goOut'); await sleep(900); await pg.waitForFunction(() => window.__night.S.shot === 'corridor', null, { timeout: GUARD }); });
+    // owner 24 Nov 17:28 ("what is not shown don't render"): per walk shot, each crew member is drawn alone in turn against the same frame; one
+    // that changes no pixel must be hidden in that shot (N1.crewHide), one that changes any must be drawn. Same frame, no loop step between draws.
+    await step('walk: crew on no pixel of a shot are not drawn, every crew member seen is drawn (owner 24 Nov)', async () => {
+      const r = await pg.evaluate(() => {
+        const N = window.__night, W = window.__walkTest, R = W.renderer, gl = R.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+        const read = () => { W.renderFrame(); const b = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+        const was = N.S.shot, out = {};
+        window.__keepFreed = true;
+        for (const name of ['corridor', 'wings', 'entrance']) {
+          N.S.shot = ''; W.cutTo(name);
+          const hidden = N.crew.filter((m) => !m.root.visible).map((m) => m.cd.id);
+          for (const m of N.crew) m.root.visible = true;
+          const all = read(), px = {};
+          for (const m of N.crew) {
+            m.root.visible = false; const b = read(); m.root.visible = true;
+            let n = 0; for (let i = 0; i < b.length; i += 4) if (b[i] !== all[i] || b[i + 1] !== all[i + 1] || b[i + 2] !== all[i + 2]) n++;
+            px[m.cd.id] = n;
+          }
+          out[name] = { hidden, px };
+        }
+        N.S.shot = ''; W.cutTo(was);
+        return out;
+      });
+      const bad = [];
+      for (const [name, v] of Object.entries(r)) {
+        console.log('    ' + name + ' crew pixels', JSON.stringify(v.px), '| hidden', v.hidden.join(',') || '-');
+        for (const [id, n] of Object.entries(v.px)) {
+          if (n === 0 && !v.hidden.includes(id)) bad.push(`${name}: ${id} draws on no pixel but is drawn`);
+          if (n > 0 && v.hidden.includes(id)) bad.push(`${name}: ${id} is seen (${n} px) but hidden`);
+        }
+      }
+      if (bad.length) throw new Error(bad.join('; '));
+    });
+    // owner 24 Nov 17:28 ("THREE.LOD"): each crew member shows its far body past N1.lodFar from the camera and its near body inside it
+    await step('walk: crew past the LOD distance draw the far body, nearer crew the near body (owner 24 Nov)', async () => {
+      const r = await pg.evaluate(() => {
+        const N = window.__night, W = window.__walkTest, was = N.S.shot, out = { far: 0, near: 0, bad: [], tris: {} };
+        for (const name of ['corridor', 'wings', 'entrance']) {
+          N.S.shot = ''; W.cutTo(name); W.renderFrame();
+          out.tris[name] = W.renderer.info.render.triangles;
+          for (const m of N.crew) {
+            if (!m.root.visible) continue;
+            let lod = null; m.root.traverse((o) => { if (o.isLOD) lod = o; });
+            if (!lod) { out.bad.push(m.cd.id + ' has no LOD'); continue; }
+            const d = W.camera.position.distanceTo(lod.getWorldPosition(lod.position.clone().set(0, 0, 0))), want = d > N.N1.lodFar ? 1 : 0, got = lod.getCurrentLevel();
+            if (want) out.far++; else out.near++;
+            if (got !== want) out.bad.push(`${name} ${m.cd.id} at ${d.toFixed(1)} m: level ${got}, want ${want}`);
+          }
+        }
+        N.S.shot = ''; W.cutTo(was);
+        return out;
+      });
+      console.log('    LOD levels: far', r.far, 'near', r.near, '| crew pass triangles', JSON.stringify(r.tris));
+      if (r.bad.length || !r.far || !r.near) throw new Error(r.bad.join('; ') || 'no far or no near crew in the walk shots');
+    });
     // panel C: count the text bubbles on screen through the walk out (test-only sampler in the page)
     await pg.evaluate(() => { window.__bubbles = 0; window.__bubbleT = setInterval(() => { const n = document.querySelectorAll('.label:not(.hidden)').length; if (n > window.__bubbles) window.__bubbles = n; }, 50); });
     const tp = (x, y) => pg.evaluate(([x, y]) => { const S = window.__night.S; S.x = x; S.y = y; }, [x, y]);
@@ -261,6 +323,19 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     await step('trip button does not say "on purpose" (H2)', async () => { await tp(-1.3, 17.0); await sleep(500); const t = await pg.textContent('#verb'); if (!/^Trip\b/.test(t) || /purpose/i.test(t)) throw new Error('verb reads "' + t + '"'); });
     await step('trip for the child', async () => { await verb(-1.3, 17.0, 'trip'); await pg.waitForFunction(() => /on purpose/.test(window.__night.crew[4].lab.textContent), null, { timeout: 8000 }); await shot('child'); });
     // panel 22 Nov c 3d: the trip is played across the camera, at least 45 degrees off its line
+    // owner 24 Nov 14:37 (session 34 batch 1): after her "...on purpose." his own thought shows in the picture; the walk does not end while it shows
+    await step('his thought after the child: in the picture, and the walk does not end until it is read (owner 24 Nov)', async () => {
+      await pg.waitForFunction(() => window.__night.NS.belong === 2, null, { timeout: GUARD });
+      const r = await pg.evaluate(() => { const N = window.__night, t = document.getElementById('thought'), f = document.getElementById('frame'), a = t.getBoundingClientRect(), b = f.getBoundingClientRect(); return { text: t.textContent, want: N.N1.belongText, shown: !t.classList.contains('hidden'), inside: t.parentElement === f && a.left >= b.left && a.right <= b.right && a.top >= b.top && a.bottom <= b.bottom }; });
+      if (!r.shown || r.text !== r.want || !r.inside) throw new Error('thought ' + JSON.stringify(r));
+      await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await sleep(1500);
+      const held = await pg.evaluate(() => ({ ended: window.__night.S.ended, belong: window.__night.NS.belong }));
+      await pg.evaluate(() => { window.__night.input.ty = 0; }); await tp(-1.3, 17.0);
+      if (held.belong === 2 && held.ended) throw new Error('the walk ended while the thought was on screen');
+      await pg.waitForFunction(() => window.__night.NS.belong === 3, null, { timeout: GUARD });
+      if (!(await pg.$eval('#thought', (t) => t.classList.contains('hidden')))) throw new Error('thought still shown after its time');
+      console.log('    thought', JSON.stringify(r.text.slice(0, 30)) + '...', '| walk held while shown', !held.ended, '(belong ' + held.belong + ')');
+    });
     await step('trip for the child is seen across the camera (22c-3)', async () => {
       const a = await pg.evaluate(() => window.__night.NS.fallAxes.filter((f) => f.scene === 'walk'));
       console.log('    walk falls off the camera line (deg)', a.map((f) => f.off).join(' '));
@@ -274,7 +349,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       console.log('    walk out', r.v.toFixed(2), 'm/s,', r.m.toFixed(1), 'm in', r.secs.toFixed(1), 's (computed); most bubbles at once', r.max);
       if (r.max > 1 || !(r.secs <= 14)) throw new Error('walk out ' + JSON.stringify(r));
     });
-    if (boardWall) await step('ring edge: the act starts with no board card (F)', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForFunction(() => window.__night.NS.scene === 'act', null, { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); if (await pg.$('#card_board')) throw new Error('board card shown'); });
+    if (boardWall) await step('ring edge: the act starts with no board card (F)', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForFunction(() => window.__night.NS.scene === 'act', null, { timeout: GUARD }); await pg.evaluate(() => { window.__night.input.ty = 0; }); if (await pg.$('#card_board')) throw new Error('board card shown'); });
     else await step('ring edge: board', async () => { await tp(-1.3, 18.3); await pg.evaluate(() => { window.__night.input.ty = 1; }); await pg.waitForSelector('#card_board', { timeout: 8000 }); await pg.evaluate(() => { window.__night.input.ty = 0; }); });
     const actShow = await pg.evaluate(() => window.__night.N1.actShow);
     // the act at the zoom-out: he walks on into the spot, the house quiets, then the cue page (FAIL here when N1.actShow is off)
@@ -418,6 +493,13 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       console.log('    walk back shots', r.shots, '| computed walk', r.secs.toFixed(1), 's at tempo', r.tempo);
       if (!r.room || /corridor/.test(r.shots) || r.tempo !== 0.78 || r.secs > 18) throw new Error('walk back ' + JSON.stringify(r));
       await sleep(800);
+    });
+    // owner 24 Nov 17:28 (dispose): after the walk back the walk and act sets are freed once; the GPU counts are kept to compare at the end
+    let freed = null;
+    await step('walk back: walk and act sets freed (geometry, material, texture dispose) (owner 24 Nov)', async () => {
+      freed = await pg.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer, m = R.info.memory; return { n: N.NS.freed || 0, geo: m.geometries, tex: m.textures, prog: R.info.programs.length }; });
+      console.log('    freed resources', freed.n, '| after: geometries', freed.geo, 'textures', freed.tex, 'programs', freed.prog);
+      if (!(freed.n > 0)) throw new Error('nothing freed after the walk back');
     });
     await step('turn to the mirror wall, sit button', async () => { for (let i = 0; i < 4; i++) { const v = await pg.evaluate(() => window.__night.S.roomView); if (v === 'mirror') break; await pg.click('#roomR'); await sleep(500); } await pg.waitForSelector('#sit:not(.hidden)', { timeout: 3000 }); });
     await step('mirror entry: a pale form of him, hands meet on the glass, reflection late, cracks (22b-7)', async () => {
@@ -655,6 +737,21 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       if (e.n > e.max) throw new Error(`${e.n} continue-only cards, at most ${e.max}`);
       if (!e.facts || !e.log) throw new Error('end card brief ' + JSON.stringify(e));
       console.log('    continue-only cards', e.n, 'of at most', e.max);
+    });
+    // a freed resource used again is uploaded again (three.js does it silently): the counts must not rise above those right after the free
+    await step('freed sets stay freed: no geometry, texture or program uploaded again by the end (owner 24 Nov)', async () => {
+      // three.js adds its own 'dispose' listener to a geometry, texture or material when it uploads or compiles it, and removes it on dispose;
+      // a skeleton gets a new bone texture when used again
+      const e = await pg.evaluate(() => {
+        const R = window.__walkTest.renderer, m = R.info.memory, again = [];
+        for (const r of window.__freed || []) {
+          const used = r.isSkeleton ? !!r.boneTexture : !!(r._listeners && r._listeners.dispose && r._listeners.dispose.length);
+          if (used) again.push((r.type || r.constructor.name) + ' ' + (r.name || r.uuid.slice(0, 8)));
+        }
+        return { list: (window.__freed || []).length, again, geo: m.geometries, tex: m.textures, prog: R.info.programs.length };
+      });
+      console.log('    end: geometries', e.geo, 'textures', e.tex, 'programs', e.prog, '| freed list', e.list, '| used again', e.again.length);
+      if (!e.list || e.again.length) throw new Error('freed and used again: ' + (e.again.slice(0, 6).join(', ') || 'no freed list'));
     });
     await step('music: backstage, ring and after each get their track, one sounds at a time (owner 22 Nov)', async () => {
       await sleep(2500);

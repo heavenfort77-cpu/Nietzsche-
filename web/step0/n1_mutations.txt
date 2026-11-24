@@ -64,3 +64,9 @@ lampgag	Light: three gags
 lightdark	Light: three gags
 hints	hints say act
 cost	gags show what they cost
+unseen	crew on no pixel
+hideseen	crew on no pixel
+lodfar	LOD distance
+nofree	sets freed
+freechild	stay freed
+belong	his thought after the child
