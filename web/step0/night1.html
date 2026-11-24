@@ -126,6 +126,11 @@
   #mwTip { position: fixed; left: 0; right: 0; top: 40px; text-align: center; color: #c9d5d7; text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 5; }
   /* session 18 batch 2: the act is skipped only by this button (owner 22 Nov 20:27); full screen where the browser allows it */
   #actSkipBtn { position: fixed; right: 16px; bottom: 24px; min-width: 88px; min-height: 48px; border-radius: 24px; border: 1px solid #cfaa4e; background: #1e1714cc; color: #e9d9b0; font: 600 15px system-ui, sans-serif; z-index: 7; }
+  /* session 36 (owner 24 Nov: the fall prototype works): the live fall act's goal line, result caption, the whiteface's early call and the gold Fall button */
+  #fallGoal { position: absolute; left: 0; right: 0; top: 8px; text-align: center; color: #f0d27a; font: 600 16px/1.3 Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; padding: 0 12px; }
+  #fallCap { position: absolute; left: 6%; right: 6%; top: 24%; text-align: center; color: #fff3dc; font: italic 400 18px/1.4 Georgia, serif; text-shadow: 0 1px 3px #000, 0 0 12px #000; pointer-events: none; }
+  #fallCall { position: absolute; left: calc(var(--x) * 1px); top: calc(var(--y) * 1px); transform: translate(-50%, -100%); color: #fff3dc; font: 600 20px Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; }
+  #fallBtn { position: fixed; right: 16px; bottom: 96px; min-width: 120px; min-height: 64px; border-radius: 32px; border: 0; background: #cfaa4e; color: #1e1714; font: 600 17px system-ui, sans-serif; padding: 0 18px; z-index: 6; }
   #fsBtn { position: fixed; right: 8px; top: 8px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 22px; border: 0; background: #1e1714b3; color: #e9d9b0; font: 600 13px system-ui, sans-serif; z-index: 12; }
   #pauseCard { z-index: 30; }
   #pauseList { border-collapse: collapse; font: 15px system-ui, sans-serif; color: #e9d9b0; }
@@ -157,6 +162,9 @@
   <div id="mwHud" class="hidden"></div>
   <div id="gains" class="hidden">Laughs <span id="laughsN">0</span> &middot; Mask <span id="maskN">0</span><div id="carry"></div></div>
   <div id="thought" class="hidden"></div>
+  <div id="fallGoal" class="hidden"></div>
+  <div id="fallCap" class="hidden"></div>
+  <div id="fallCall" class="hidden"></div>
 </div></div>
 <div id="prep" class="hidden"><div class="t">Dressing table: spend Laughs before the Mirror</div></div>
 <div id="stick" class="hidden"><div id="knob"></div></div>
@@ -173,6 +181,7 @@
 <button id="verb" class="hidden"></button>
 <div id="mwTip"></div>
 <button id="actSkipBtn" class="hidden">Skip</button>
+<button id="fallBtn" class="hidden">Fall</button>
 <div id="pauseCard" class="card hidden"><h2>Paused</h2><table id="pauseList"></table><button id="resumeBtn">Resume</button></div>
 <button id="fsBtn" class="hidden" aria-label="Full screen">Full screen</button>
 <div id="pads" class="hidden"><button id="padSlap">SLAP</button><button id="padPie">PIE</button><button id="padFall">DODGE</button></div>
@@ -651,6 +660,8 @@ const CONFIG = Object.freeze({
     pie: { keys: ['KeyK'], mouse: [2], label: 'Throw a pie' },
     // owner 23 Nov 06:22 item 5 ("the first fall should be name as dodge but keep the animation"): the one name the player reads for the Mirror pratfall (pause card, pad, key hint); 'Pratfall' switches it back; the action id, animation and sound are unchanged
     fall: { keys: ['Space'], mouse: [], label: 'Dodge' },
+    // session 36: the live fall act's press (the same keys as the corridor's gold button: the trips there are its rehearsal)
+    drop: { keys: ['KeyE', 'Space', 'Enter'], mouse: [], label: 'Fall (in the light, on the crash)' },
     // session 24 batch 3: the ending's two worded buttons
     quit: { keys: ['Digit1'], mouse: [], label: 'Bow, say "I quit" and walk out' },
     again: { keys: ['Digit2'], mouse: [], label: 'Perform one last act' },
@@ -658,7 +669,7 @@ const CONFIG = Object.freeze({
   // which actions each scene listens to (the pause card lists these; a check fails if two share a key in one scene)
   bindScenes: {
     title: ['confirm'], paint: ['confirm', 'pause'], walk: ['up', 'down', 'left', 'right', 'interact', 'pause'], room: ['turnL', 'turnR', 'sit', 'pause'],
-    board: ['act1', 'act2', 'act3', 'act4', 'act5', 'pause'], note: ['confirm', 'back'], rehearse: ['back'], mirror: ['press', 'pause'], act: ['pause'], small: ['confirm', 'pause'],
+    board: ['act1', 'act2', 'act3', 'act4', 'act5', 'pause'], note: ['confirm', 'back'], rehearse: ['back'], mirror: ['press', 'pause'], act: ['up', 'down', 'left', 'right', 'drop', 'pause'], small: ['confirm', 'pause'],
     mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'], ending: ['quit', 'again', 'pause'],
   },
   // idle and walk blend time, s
@@ -1204,6 +1215,44 @@ const N1 = Object.freeze({
   darkLit: 0.28,
   // walk back: tempo stays (owner 22 Nov: keep the slow speed); the slump goes from min to max as the act's Laughs go from lo to hi
   slumpMin: { tempo: 0.78, chest: 6, neck: 4, head: 8 }, slumpMax: { tempo: 0.78, chest: 15, neck: 9, head: 19 }, slumpLo: 15, slumpHi: 140,
+  // ----- the live fall act (owner 24 Nov 2026, session 36: "Works: put it in night 1"; web/step0/fall_act.html ported into the ring) -----
+  // switch: the deliberate fall plays live in the ring (walk into the light, fall on the crash) in place of the mask-ring cue page; false = the cue page as before
+  fallLive: true,
+  // per night (index 0 = night 1; later nights use the last): pool radius m, drumroll s, perfect and good windows (plus or minus s), pool drift during the roll m/s, the whiteface's early "Now!"
+  fallNights: [
+    { pool: 1.2, roll: 1.6, perfect: 0.12, good: 0.25, drift: 0, fake: false },
+    { pool: 1.0, roll: 1.4, perfect: 0.10, good: 0.22, drift: 0.25, fake: false },
+    { pool: 0.9, roll: 1.2, perfect: 0.09, good: 0.19, drift: 0.3, fake: true },
+  ],
+  // seconds from the press to his belly on the floor (the trip clip's landing key, GPCLIP.trip 0.74) and of its stagger before the dive (0.42)
+  fallLand: 0.74, fallStagger: 0.42,
+  // a press is timed at its event's time stamp, at most this far back from when the handler runs, s (a slow frame does not make a good press late)
+  fallLagMax: 0.25,
+  // walk speed in the ring, m/s; the play area's half widths (x across, z toward the camera) about the spot, m (inside every screen's picture)
+  fallWalk: 1.6, fallArea: [4.2, 2.6],
+  // the pool settles and pulses this long before it can start a roll (place tell), s; the band leader's stick rises over the roll's last part (time tell, at least 0.4 s), s
+  fallSettle: 0.8, fallStick: 0.5,
+  // night 3: the whiteface calls "Now!" this long too early for a perfect landing, s; the call stays up this long, s
+  fallFakeLead: 0.25, fallFakeShow: 0.45,
+  // no press this long after the crash: the crash hit a clown still standing, s; the result stays this long before the next pool, s; he lies this long before he gets up, s
+  fallGiveUp: 0.6, fallResultSecs: 1.8, fallLie: 0.6,
+  // falls per act, and the misses that end it
+  fallCount: 3, fallMissesEnd: 2,
+  // the first pool (x, z m); each next pool lands this far from where he stands, m (min, max)
+  fallFirst: [1.6, 0.2], fallNext: [2.0, 3.6],
+  // Laughs per Perfect and Good, and paint layers (Mask) per Perfect (GDD Meters; the cue page pays 10 for a Perfect too)
+  fallLaughs: { perfect: 10, good: 5 }, fallPaint: 1,
+  // the band leader (left) and the whiteface (right, nights with the early call) beside the play area, inside a phone portrait picture (half width about 5.6 m) (x, z m); the stick's length m and its angle down and up, radians
+  fallLeader: [-4.5, 1.2], fallWhite: [4.5, 1.2], fallStickLen: 0.7, fallStickDown: -0.35, fallStickUp: 1.65,
+  // the words (prototype wording from fall_act.html, lead's; the owner edits): the board note, the goal line, the count, the hints, each result, the call, the act's end
+  fallText: {
+    note: 'Walk into the light. A drumroll starts; fall so you hit the floor on the crash. Watch the band leader\'s stick. Three falls, then a bow.',
+    goal: 'Fall in the light, on the crash.', count: 'Fall {f} of {t}',
+    hintKeys: 'Walk: {m}. Fall: {k}.', hintTouch: 'Walk: drag anywhere. Fall: the gold button.',
+    perfect: 'Perfect. He hits the floor with the crash.', good: 'Good. Close to the crash.', dark: 'Nobody saw it. He fell in the dark.',
+    early: 'Too early. He was already down when the crash came.', lateFell: 'Too late. He fell into silence.', lateStood: 'Too late. The crash hit a clown still standing.',
+    call: 'Now!', endOk: 'The act is over.', endCut: 'Two misses. The act ends.',
+  },
   // the bowler (Blender style units, clown.py): cut line under the brim, brim radius just outside the head, top of the head
   hatCutU: 52.6, hatRU: 8.2, hatTopU: 55.4,
 });
@@ -1237,6 +1286,7 @@ const el = {
   curtain: document.getElementById('curtain'), start: document.getElementById('start'), loadState: document.getElementById('loadState'), logo: document.getElementById('logo'),
   boardActs: document.getElementById('boardActs'), boardActBtns: [],
   padSlap: document.getElementById('padSlap'), padPie: document.getElementById('padPie'), padFall: document.getElementById('padFall'),
+  fallGoal: document.getElementById('fallGoal'), fallCap: document.getElementById('fallCap'), fallCall: document.getElementById('fallCall'), fallBtn: document.getElementById('fallBtn'),
 };
 const renderer = new THREE.WebGLRenderer({ canvas: el.canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
 renderer.autoClear = false;
@@ -2597,10 +2647,12 @@ function pickAct(id) {
   S.running = false;
   const tried = N1.tryAct && NS.tryLine ? `<small class="tried">${NS.tryLine}</small>` : '';
   const meters = N1.tryAct ? `<small>${N1.laughsLine}</small><small>${N1.maskLine}</small>` : '';
-  const tryBtn = N1.tryAct ? `<button id="tryAct" class="back">${N1.tryLabel}</button>` : '';
-  const d = show('note', `<div class="parchment"><h2>${a.title}</h2><p>${a.line}</p><small>${a.own}</small>${meters}${tried}<div class="row"><button id="perform">Perform it</button>${tryBtn}<button id="noteBack" class="back">Back</button></div></div>`);
+  // session 36: the live fall act has no cue page to try (the corridor trips are its rehearsal) and its own note
+  const live = a.id === 'fall' && N1.fallLive;
+  const tryBtn = N1.tryAct && !live ? `<button id="tryAct" class="back">${N1.tryLabel}</button>` : '';
+  const d = show('note', `<div class="parchment"><h2>${a.title}</h2><p>${live ? N1.fallText.note : a.line}</p><small>${a.own}</small>${meters}${tried}<div class="row"><button id="perform">Perform it</button>${tryBtn}<button id="noteBack" class="back">Back</button></div></div>`);
   d.querySelector('#perform').addEventListener('click', () => performAct(id));
-  if (N1.tryAct) d.querySelector('#tryAct').addEventListener('click', () => tryAct(id));
+  if (tryBtn) d.querySelector('#tryAct').addEventListener('click', () => tryAct(id));
   d.querySelector('#noteBack').addEventListener('click', noteBack);
 }
 function noteBack() { if (NS.scene !== 'note') return; NS.tryLine = ''; hideCard(); setScene('boardwall'); S.running = true; startLoop(); }
@@ -2713,8 +2765,9 @@ function hurtLaughs(i) {
   const h = { total: 0, rows: ['the act ' + i.actLaughs], best: '', bestN: 0, pie: false, falls: 0 };
   if (!N1.hurtPays) return h;
   const add = (what, n) => { if (n <= 0) return; h.total += n; h.rows.push(what + ' ' + n); if (n > h.bestN) { h.bestN = n; h.best = what; } };
-  const climbs = fallClimbs(i);
-  h.falls = climbs.length;
+  // the live fall act (session 36): every fall is the act itself, paid by its grade; none pays again here, each still feeds the Whisper
+  const climbs = i.game === 'fall' ? [] : fallClimbs(i);
+  h.falls = i.game === 'fall' ? i.falls : climbs.length;
   let pay = 0;
   climbs.forEach((k, j) => { pay += Math.round(N1.hurtFall * k * (j ? N1.fallRepeat : 1)); });
   add(climbs.length > 1 ? 'the falls' : 'the fall', pay);
@@ -2820,7 +2873,19 @@ function buildAct() {
   actObj.pan = new THREE.Mesh(merged([[new THREE.BoxGeometry(0.4, 0.05, 0.32), 0, 0.03, 0], [new THREE.BoxGeometry(0.05, 0.05, 0.4), 0, 0.12, -0.3, -0.5]]), rampMat('HAT'));
   actObj.pan.position.set(N1.actPan[0], 0, N1.actPan[1]);
   actScene.add(actObj.bar, actObj.rug, actObj.pan);
-  for (const o of [floor, curb, bank, wall, actObj.crowd, actObj.bar, actObj.rug, actObj.pan]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
+  // session 36: the live fall act's band leader (his stick rises before the crash: the time tell) and the whiteface (the early call), boxes and shapes until the art pass
+  const L = N1.fallLeader, W = N1.fallWhite, sl = N1.fallStickLen;
+  actObj.leader = new THREE.Mesh(merged([[new THREE.BoxGeometry(0.46, 1.45, 0.34), 0, 0.725, 0], [new THREE.SphereGeometry(0.15, 12, 8), 0, 1.62, 0]]), rampMat('BLACK'));
+  actObj.leader.position.set(L[0], 0, L[1]);
+  actObj.stick = new THREE.Mesh(merged([[new THREE.BoxGeometry(sl, 0.05, 0.05), sl / 2, 0, 0]]), rampMat('GOLD'));
+  actObj.stick.position.set(L[0] + 0.24, 1.2, L[1] + 0.1);
+  actObj.white = new THREE.Mesh(merged([[new THREE.BoxGeometry(0.46, 1.45, 0.34), 0, 0.725, 0]]), rampMat('CRIMSON'));
+  actObj.white.position.set(W[0], 0, W[1]);
+  actObj.whiteHead = new THREE.Mesh(merged([[new THREE.SphereGeometry(0.15, 12, 8), 0, 1.62, 0], [new THREE.ConeGeometry(0.12, 0.38, 12), 0, 1.95, 0]]), rampMat('SILVER'));
+  actObj.whiteHead.position.set(W[0], 0, W[1]);
+  actScene.add(actObj.leader, actObj.stick, actObj.white, actObj.whiteHead);
+  actObj.leader.visible = actObj.stick.visible = actObj.white.visible = actObj.whiteHead.visible = false;
+  for (const o of [floor, curb, bank, wall, actObj.crowd, actObj.bar, actObj.rug, actObj.pan, actObj.leader, actObj.white, actObj.whiteHead]) { o.updateMatrix(); o.matrixAutoUpdate = false; }
   actObj.broom = new THREE.Mesh(merged([[new THREE.CylinderGeometry(0.022, 0.022, 1.25, 8), 0, -0.25, 0], [new THREE.BoxGeometry(0.34, 0.13, 0.07), 0, -0.9, 0]]), rampMat('WOOL'));
   // the bowler: brim and crown from clown.py (style units), clean and dented
   const u = NS.unit;
@@ -2847,10 +2912,12 @@ function buildActFx() {
   actObj.pop = pop; actScene.add(pop);
   // drum roll and cymbal crash, rendered once in code (noise shaped; no filters or graphs per hit)
   actObj.roll = drumBuffer('roll'); actObj.crash = drumBuffer('crash'); actObj.breath = breathBuffer();
+  // session 36: the live fall act's roll, as long as the longest night's; a shorter roll starts into it so every roll ends on its loudest strokes
+  actObj.fallRoll = drumBuffer('roll', Math.max(...N1.fallNights.map((n) => n.roll)));
 }
-// a 44.1 kHz buffer: 'roll' = snare strokes speeding up and growing louder over N1.rollSecs; 'crash' = a bright decaying wash
-function drumBuffer(kind) {
-  const sr = 44100, secs = kind === 'roll' ? N1.rollSecs : 1.3, n = Math.floor(sr * secs), buf = new AudioBuffer({ length: n, sampleRate: sr, numberOfChannels: 1 }), d = buf.getChannelData(0);
+// a 44.1 kHz buffer: 'roll' = snare strokes speeding up and growing louder over len s (default N1.rollSecs); 'crash' = a bright decaying wash
+function drumBuffer(kind, len) {
+  const sr = 44100, secs = kind === 'roll' ? len || N1.rollSecs : 1.3, n = Math.floor(sr * secs), buf = new AudioBuffer({ length: n, sampleRate: sr, numberOfChannels: 1 }), d = buf.getChannelData(0);
   let seed = kind === 'roll' ? 17 : 29, prev = 0;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 * 2 - 1; };
   if (kind === 'roll') {
@@ -2871,10 +2938,12 @@ function breathBuffer() {
   for (let i = 0; i < n; i++) { const x = rnd(), hp = x - prev; prev = x; lp += (hp - lp) * 0.35; const k = i / n; d[i] = lp * N1.breathVol * Math.sin(Math.PI * Math.min(1, k * 1.25)) * (0.4 + 0.6 * k); }
   return buf;
 }
-function drum(buf) {
+function drum(buf) { const a = audio(); if (a) drumAt(buf, a.currentTime, 0); }
+// a drum buffer on the audio clock at when s, from offset s into it (the live fall act schedules its roll and crash ahead)
+function drumAt(buf, when, offset) {
   const a = audio(); if (!a) return;
   if (!NS.drumBus) { NS.drumBus = a.createGain(); NS.drumBus.gain.value = N1.drumVol; NS.drumBus.connect(a.destination); }
-  const s = a.createBufferSource(); s.buffer = buf; s.connect(NS.drumBus); s.start(a.currentTime); actObj.srcs.push(s);
+  const s = a.createBufferSource(); s.buffer = buf; s.connect(NS.drumBus); s.start(when, offset); actObj.srcs.push(s);
 }
 // accents (panel 22 Nov b item 5): 'perfect' = spot flash + popcorn, 'good' = a smaller flash, 'crash' = cymbal, camera shake, popcorn, the crowd roars twice
 function actFx(A, kind) {
@@ -2885,7 +2954,7 @@ function actPop(A) { actU.uBurstT.value = 0; actU.uTarget.value.set(A.x, 0, A.z)
 function actFxUpdate(A, dt) {
   if (actObj.pop.visible) { actU.uBurstT.value += dt; if (actU.uBurstT.value > 1.6) actObj.pop.visible = false; }
   A.flash = Math.max(0, A.flash - dt * 2.5);
-  actObj.spot.material.opacity = 0.34 * (1 + 1.6 * A.flash); actObj.beam.material.opacity = 0.09 * (1 + 2 * A.flash);
+  actObj.spot.material.opacity = 0.34 * A.spotA * (1 + 1.6 * A.flash); actObj.beam.material.opacity = 0.09 * A.spotA * (1 + 2 * A.flash);
   A.shake = Math.max(0, A.shake - dt * N1.shakeM * 3);
   const s = A.shake;
   actCam.position.set(actObj.camBase.x + s * Math.sin(actU.uTime.value * 61), actObj.camBase.y + s * Math.sin(actU.uTime.value * 47 + 1), actObj.camBase.z);
@@ -2977,7 +3046,7 @@ function actEnter() {
   S.mode = 'act'; setScene('act');
   NS.cueAct = -1; NS.cueBetween = false; NS.actLine = false;
   NS.A = { phase: 'walkon', t: 0, x: N1.walkOnFrom[0], z: N1.walkOnFrom[1], yaw: 0, rx: 0, y: 0, clip: 'idle', clipNow: 'idle', tempo: 1, face: 'smile',
-    mood: { tempo: 1, chest: -6, neck: -3, head: -4 }, excite: N1.exciteHouse, spotR: N1.actSpotR, spotX: N1.actSpotAt[0], spotZ: N1.actSpotAt[1], litNow: -1, lit: 1,
+    mood: { tempo: 1, chest: -6, neck: -3, head: -4 }, excite: N1.exciteHouse, spotR: N1.actSpotR, spotX: N1.actSpotAt[0], spotZ: N1.actSpotAt[1], spotA: 1, litNow: -1, lit: 1,
     segs: [], seg: 0, sx: 0, sz: 0, srx: 0, sy: 0, fired: {}, peaks: [], flash: 0, shake: 0, fxN: { roll: 0, crash: 0, flash: 0, burst: 0, shake: 0 }, hat: 'real', hatV: new THREE.Vector3(), hatSpin: 0, hatLift: 0, fitH: 0, hold: null, done: false };
   actU.uExcite.value = N1.exciteHouse;
   actLit(1);
@@ -2986,8 +3055,10 @@ function actEnter() {
   c.root.rotation.set(0, 0, 0);
   setGloom(0); shared.uGradeAmt.value = 0;
   hatTo('real');
-  const sweep = NS.act === 'sweep';
-  actObj.bar.visible = !sweep; actObj.rug.visible = actObj.pan.visible = actObj.broom.visible = sweep;
+  const sweep = NS.act === 'sweep', live = fallOn();
+  actObj.bar.visible = !sweep && !live; actObj.rug.visible = actObj.pan.visible = actObj.broom.visible = sweep;
+  actObj.leader.visible = actObj.stick.visible = live;
+  actObj.white.visible = actObj.whiteHead.visible = live && fallNight().fake;
   // the child from the corridor watches from the ring entrance: the one figure who does not laugh
   actObj.childAt.copy(ch.position); actObj.childYaw = ch.rotation.y;
   actScene.add(ch); ch.visible = true; ch.position.set(N1.actChild[0], 0, N1.actChild[1]); ch.rotation.y = Math.atan2(-N1.actChild[0], -N1.actChild[1]);
@@ -3205,8 +3276,9 @@ function actStep(A, dt) {
     A.x = lerp(f[0], s[0], k); A.z = lerp(f[1], s[1], k); A.yaw = 0;
     A.clip = k < 1 ? 'walk' : 'idle'; A.tempo = d / N1.walkOnSecs / S.speed;
     A.excite = N1.exciteHouse * (1 - k);
-    if (k >= 1) actCueOpen();
-  } else if (A.phase === 'seg') actSeg(A, dt);
+    if (k >= 1) { if (fallOn()) fallStart(A); else actCueOpen(); }
+  } else if (A.phase === 'fall') fallStep(A, dt);
+  else if (A.phase === 'seg') actSeg(A, dt);
   else if (A.phase === 'hold') actHoldStep(A);
   else if (A.phase === 'bow') actBowStep(A);
 }
@@ -3220,7 +3292,8 @@ function updateAct(dt) {
   hatFly(A, dt);
   if (A.hat === 'lift') actObj.hat.position.set(actObj.hatP.x, actObj.hatP.y + A.hatLift / Math.max(1e-6, actObj.hatS.y), actObj.hatP.z);
   // spotlight: a follow spot on him, except in the sweep, where the light itself is the gag
-  if (NS.act !== 'sweep' || A.phase === 'walkon') { const f = 1 - Math.exp(-N1.spotFollow * dt); A.spotX += (A.x - A.spotX) * f; A.spotZ += (A.z - A.spotZ) * f; }
+  // the live fall act's light is the pool he must stand in (fallStep moves it), not a follow spot
+  if (A.phase !== 'fall' && (NS.act !== 'sweep' || A.phase === 'walkon')) { const f = 1 - Math.exp(-N1.spotFollow * dt); A.spotX += (A.x - A.spotX) * f; A.spotZ += (A.z - A.spotZ) * f; }
   const r = Math.max(0.001, A.spotR);
   actObj.spot.visible = actObj.beam.visible = A.spotR > 0.01;
   actObj.spot.position.set(A.spotX, 0.02, A.spotZ); actObj.spot.scale.set(r, r, 1);
@@ -3235,6 +3308,7 @@ function updateAct(dt) {
   if (gpEval(c, dt)) { gpApply(c); noteFall(c, actCam); if ((c.gp.kind === 'up' || c.gp.kind === 'pop') && gpDone(c)) gpStop(c); }
   actFxUpdate(A, dt);
   if (A.fitH !== S.h) actFit();
+  fallUi(A);
 }
 // the cue page over the ring (zoom in); the loop stops behind it
 function actCueOpen() {
@@ -3244,6 +3318,150 @@ function actCueOpen() {
   openCue();
 }
 function actCueClose() { if (NS.cue) { NS.cue.src = 'about:blank'; NS.cue.remove(); NS.cue = null; } musicDuck(false); }
+
+// ----- the live fall act (owner 24 Nov 2026, session 36: the fall prototype works; fall_act.html's loop in the ring, GDD Stage "The deliberate fall as the act") -----
+// He walks into the light; standing in it starts a drumroll; the band leader's stick rises before the crash; he must press so the trip lands on the crash.
+// Graded on place (in the light) and time (landing error); three falls, then the hold and the bow; two misses end it. Judged on the audio clock when sound runs.
+function fallOn() { return N1.fallLive && NS.act === 'fall'; }
+function fallNight() { const n = N1.fallNights; return n[Math.min(Math.max(1, NS.night), n.length) - 1]; }
+function fallPlaying() { return !!(NS.A && NS.A.F && NS.A.phase === 'fall' && !NS.paused); }
+function fallInArea(x, z, m) { const rx = N1.fallArea[0] - m, rz = N1.fallArea[1] - m, dx = x - N1.actSpotAt[0], dz = z - N1.actSpotAt[1]; return (dx * dx) / (rx * rx) + (dz * dz) / (rz * rz) <= 1; }
+function fallInPool(A) { const F = A.F, dx = A.x - F.px, dz = A.z - F.pz; return dx * dx + dz * dz <= F.N.pool * F.N.pool; }
+function fallRollNow(F) { return F.audio ? NS.audio.currentTime - F.rollAt : F.rollT; }
+// after the walk-on: the act's state, the first pool, the hint
+function fallStart(A) {
+  A.F = { N: fallNight(), rnd: actRand(1795 + NS.night), stage: 'settle', st: 0, n: 0, misses: 0, perfects: 0, goods: 0, laughs: 0, mask: 0, falls: 0, grades: [],
+    px: 0, pz: 0, poolA: 0, rollT: 0, rollAt: 0, audio: false, crashed: false, fakeShown: false, fakeAt: 0, stick: 0,
+    on: false, t: 0, x0: 0, dir: 1, press: -1, inPool: false, landed: false, up: 0, cap: '', count: '' };
+  A.phase = 'fall'; A.t = 0; A.clip = 'idle'; A.excite = 0.1;
+  releaseHeld();
+  fallPool(A, true);
+  const T = N1.fallText;
+  el.hint.textContent = NS.touch ? T.hintTouch : T.hintKeys.replace('{m}', moveLabel()).replace('{k}', keyLabel('drop'));
+}
+// a new pool settles (the place tell); the next one lands away from where he stands, inside the play area
+function fallPool(A, first) {
+  const F = A.F, N = F.N;
+  let px = N1.fallFirst[0], pz = N1.fallFirst[1];
+  if (!first) {
+    let ok = false;
+    for (let i = 0; i < 30 && !ok; i++) {
+      const a = F.rnd() * Math.PI * 2, d = N1.fallNext[0] + F.rnd() * (N1.fallNext[1] - N1.fallNext[0]);
+      px = A.x + Math.cos(a) * d; pz = A.z + Math.sin(a) * d * 0.6; ok = fallInArea(px, pz, N.pool + 0.4);
+    }
+    if (!ok) { px = -Math.sign(A.x || 1) * 1.8; pz = 0; }
+  }
+  F.px = px; F.pz = pz; F.poolA = 0; F.landed = false; F.stage = 'settle'; F.st = 0; F.crashed = false; F.fakeShown = false; F.stick = 0; F.cap = '';
+  F.count = N1.fallText.count.replace('{f}', Math.min(F.n + 1, N1.fallCount)).replace('{t}', N1.fallCount);
+}
+// standing in the settled light: the roll and the crash are put on the audio clock together, so the picture and the crash agree
+function fallRoll(F) {
+  F.stage = 'roll'; F.st = 0; F.rollT = 0; F.crashed = false;
+  const a = NS.audio, R = F.N.roll;
+  F.audio = !!(a && a.state === 'running');
+  if (F.audio) { F.rollAt = a.currentTime + 0.03; drumAt(actObj.fallRoll, F.rollAt, actObj.fallRoll.duration - R); drumAt(actObj.crash, F.rollAt + R, 0); }
+}
+// the press (key or gold button, ts = the event's time stamp): the trip starts, timed on the roll clock at the moment of the press, not when a busy frame
+// got round to the handler (at most N1.fallLagMax s back); he dives side-on toward the middle of the light
+function fallPress(ts) {
+  const A = NS.A, F = A && A.F;
+  if (!fallPlaying() || F.on || F.up > 0 || F.stage === 'result' || F.stage === 'done') return;
+  const lag = ts > 0 ? Math.max(0, Math.min(N1.fallLagMax, (performance.now() - ts) / 1000)) : 0;
+  F.on = true; F.t = lag; F.x0 = A.x; F.landed = false; F.falls++;
+  F.dir = A.x <= F.px ? 1 : -1;
+  F.press = F.stage === 'roll' ? fallRollNow(F) - lag : -1;
+  F.inPool = fallInPool(A);
+  gpStart(chars.clown, 'trip'); A.face = 'startle';
+}
+function fallGrade(A, kind) {
+  const F = A.F, T = N1.fallText;
+  F.grades.push(kind); F.stage = 'result'; F.st = 0;
+  if (kind === 'perfect') { F.perfects++; F.laughs += N1.fallLaughs.perfect; F.mask += N1.fallPaint; A.excite = N1.excitePerfect; actLaugh('crowd'); actFx(A, 'perfect'); }
+  else if (kind === 'good') { F.goods++; F.laughs += N1.fallLaughs.good; A.excite = N1.exciteGood; actLaugh('small'); actFx(A, 'good'); }
+  else { F.misses++; A.excite = 0.05; A.face = 'wince'; }
+  F.cap = T[kind === 'late' ? (F.on || F.landed ? 'lateFell' : 'lateStood') : kind];
+}
+// the act is over (three falls, or two misses): its result goes to the pay, then the hold and the bow as for every act
+function fallEnd(A, ok) {
+  const F = A.F;
+  F.stage = 'done'; F.cap = ok ? N1.fallText.endOk : N1.fallText.endCut;
+  NS.actInfo = { game: 'fall', perfects: F.perfects, goods: F.goods, misses: F.misses, actLaughs: F.laughs, mask: F.mask, beatCount: F.grades.length, falls: F.falls, grades: F.grades.slice(), cut: !ok };
+  NS.actBeats = [];
+  actPay();
+  A.phase = 'hold'; A.t = 0; A.excite = 0; A.spotR = N1.actSpotR; A.spotA = 1;
+  segStart(A);
+  el.hint.textContent = '';
+}
+function fallStep(A, dt) {
+  const F = A.F, N = F.N, c = chars.clown;
+  F.st += dt;
+  if (F.up > 0) F.up = Math.max(0, F.up - dt);
+  if (F.stage === 'roll' && !F.audio) F.rollT += dt;
+  // walking, not while falling, lying or getting up
+  if (!F.on && F.up <= 0) {
+    const ix = input.tx || input.kx, iy = input.ty || input.ky, raw = Math.min(1, Math.hypot(ix, iy));
+    if (raw >= CONFIG.deadzone) {
+      const n = Math.hypot(ix, iy), d = N1.fallWalk * raw * dt, nx = A.x + ix / n * d, nz = A.z - iy / n * d;
+      if (fallInArea(nx, nz, 0.3)) { A.x = nx; A.z = nz; } else if (fallInArea(nx, A.z, 0.3)) A.x = nx; else if (fallInArea(A.x, nz, 0.3)) A.z = nz;
+      A.yaw = turnToward(A.yaw, Math.atan2(ix, -iy), 10, dt); A.clip = 'walk'; A.tempo = N1.fallWalk * raw / S.speed;
+    } else { A.clip = 'idle'; A.yaw = turnToward(A.yaw, 0, 4, dt); }
+  } else A.clip = 'idle';
+  // the light: settle (place tell), wait for him, roll (drifts on later nights), crash
+  if (F.stage === 'settle') { F.poolA = Math.min(1, F.st / N1.fallSettle); if (F.st >= N1.fallSettle) { F.stage = 'wait'; F.st = 0; } }
+  else if (F.stage === 'wait') { if (!F.on && F.up <= 0 && fallInPool(A)) fallRoll(F); }
+  if (F.stage === 'roll') {
+    const r = fallRollNow(F), R = N.roll;
+    if (N.drift > 0 && !F.crashed) { const nx = F.px + N.drift * dt * (F.px > 0 ? -1 : 1); if (fallInArea(nx, F.pz, N.pool)) F.px = nx; }
+    F.stick = Math.max(0, Math.min(1, (r - (R - N1.fallStick)) / N1.fallStick));
+    if (N.fake && !F.fakeShown && r >= R - N1.fallLand - N1.fallFakeLead) { F.fakeShown = true; F.fakeAt = r; }
+    if (!F.crashed && r >= R) { F.crashed = true; F.stick = 0; A.flash = 0.6; A.shake = N1.shakeM * 0.5; if (!F.audio) drum(actObj.crash); }
+    if (F.on && F.landed && F.crashed) {
+      if (F.press < 0 || !F.inPool) fallGrade(A, 'dark');
+      else { const err = F.press + N1.fallLand - R, e = Math.abs(err); fallGrade(A, e <= N.perfect ? 'perfect' : e <= N.good ? 'good' : err < 0 ? 'early' : 'late'); }
+    } else if (!F.on && F.crashed && r >= R + N1.fallGiveUp) fallGrade(A, 'late');
+  } else if (F.on && F.landed && F.stage !== 'result' && F.stage !== 'done') fallGrade(A, 'dark');
+  // the fall: the trip clip's stagger, then the dive carries him N1.tripStep across the house's view
+  if (F.on) {
+    F.t += dt;
+    A.yaw = turnToward(A.yaw, F.dir * Math.PI / 2, 14, dt);
+    if (F.t >= N1.fallStagger) A.x = F.x0 + F.dir * N1.tripStep * Math.min(1, (F.t - N1.fallStagger) / (N1.fallLand - N1.fallStagger));
+    if (!F.landed && F.t >= N1.fallLand) { F.landed = true; tone(90, 45, 0.2, 'sine', 0.5, 0); }
+  }
+  // after a result: he gets up, then the next light, or the end
+  if (F.stage === 'result') {
+    if (F.on && F.landed && F.st > N1.fallLie) { F.on = false; F.up = GPCLIP.up.secs; gpStart(c, 'up'); A.face = 'smile'; }
+    if (F.st >= N1.fallResultSecs && F.up <= 0 && !F.on) {
+      F.n++;
+      if (F.misses >= N1.fallMissesEnd) fallEnd(A, false);
+      else if (F.n >= N1.fallCount) fallEnd(A, true);
+      else fallPool(A, false);
+    }
+  }
+  // the pool is the act's light: its place and size, pulsing while it settles
+  if (F.stage !== 'done') { A.spotX = F.px; A.spotZ = F.pz; A.spotR = N.pool; A.spotA = (0.35 + 0.65 * F.poolA) * (F.stage === 'settle' ? 0.6 + 0.4 * Math.sin(F.st * 18) : 1); }
+  actObj.stick.rotation.z = N1.fallStickDown + (N1.fallStickUp - N1.fallStickDown) * F.stick;
+}
+// the act's words over the picture and the gold button, written only when they change
+const fallShown = { goal: null, cap: null, call: null, btn: null, x: -1, y: -1 };
+function fallSet(node, key, s) { if (fallShown[key] === s) return; fallShown[key] = s; node.textContent = s; node.classList.toggle('hidden', !s); }
+function fallUi(A) {
+  const F = A && A.F, live = !!F && A.phase === 'fall', T = N1.fallText;
+  fallSet(el.fallGoal, 'goal', live ? T.goal + '  ·  ' + F.count : '');
+  fallSet(el.fallCap, 'cap', F && (live || A.phase === 'hold') ? F.cap : '');
+  const call = live && F.fakeShown && F.stage === 'roll' && fallRollNow(F) - F.fakeAt < N1.fallFakeShow;
+  fallSet(el.fallCall, 'call', call ? T.call : '');
+  if (call) {
+    const v = actObj.v.set(N1.fallWhite[0], 2.3, N1.fallWhite[1]).project(actCam), x = Math.round((v.x + 1) / 2 * S.w), y = Math.round((1 - v.y) / 2 * S.h);
+    if (x !== fallShown.x || y !== fallShown.y) { fallShown.x = x; fallShown.y = y; el.fallCall.style.setProperty('--x', x); el.fallCall.style.setProperty('--y', y); }
+  }
+  if (fallShown.btn !== live) { fallShown.btn = live; el.fallBtn.classList.toggle('hidden', !live); }
+}
+// a hidden tab stops the picture but not the sound: a roll not yet answered starts again when he comes back (he is still in the light)
+document.addEventListener('visibilitychange', () => {
+  const A = NS.A, F = A && A.F;
+  if (document.hidden || !F || A.phase !== 'fall' || F.stage !== 'roll' || F.crashed || F.on) return;
+  actHush(); F.stage = 'wait'; F.st = 0; F.stick = 0; F.fakeShown = false;
+});
 // one-line caption over the bow (the fix-2 headline and the Laughs), then the walk back
 function actCaption() {
   const A = NS.A;
@@ -3279,6 +3497,7 @@ function slumpFor(laughs) {
 function actLeave() {
   const c = chars.clown, ch = cast.child, A = NS.A;
   actHush();
+  fallUi(null);
   S.mode = '';
   scene.add(c.root, c.blob); scene.add(ch);
   ch.position.copy(actObj.childAt); ch.rotation.y = actObj.childYaw;
@@ -3809,7 +4028,8 @@ function n1Key(e) {
   if (NS.scene === 'ending') { if (bound('quit', e.code)) endChoose('quit'); else if (bound('again', e.code)) endChoose('again'); return true; }
   if (NS.scene === 'boardwall') { let i = -1; for (let k = 0; k < NS.acts.length && k < 5; k++) if (bound('act' + (k + 1), e.code)) i = k; if (NS.acts[i]) pickAct(NS.acts[i].id); return true; }
   if (NS.scene === 'note') { if (bound('confirm', e.code)) performAct(NS.noteAct); else if (bound('back', e.code)) noteBack(); return true; }
-  if (S.mode === 'act') return true;
+  // the live fall act: walk keys move him (false: the key is held), the drop key falls
+  if (S.mode === 'act') { if (!fallPlaying()) return true; if (bound('drop', e.code)) { fallPress(e.timeStamp); return true; } return false; }
   if (S.mirror === 'entry') {
     if (NS.card && NS.card.id === 'card_nietzscheIn') { if (bound('confirm', e.code)) NS.card.querySelector('#goIn').click(); return true; }
     if (bound('press', e.code) && NS.sitTarget === 0 && !NS.pressing) pressStart();
@@ -3832,7 +4052,8 @@ function n1Pointer(e) {
   if (NS.scene === 'bravado') return true;
   if (S.mirror === 'entry') { if ((e.pointerType !== 'mouse' || CONFIG.binds.press.mouse.indexOf(e.button) >= 0) && NS.sitTarget === 0 && !NS.pressing) pressStart(); return true; }
   if (NS.scene === 'small') { smallPress(); return true; }
-  if (S.mode === 'act') return true;
+  // the live fall act: a touch anywhere but a button starts the walk stick
+  if (S.mode === 'act') return !fallPlaying();
   if (S.mode === 'mw' && e.pointerType === 'mouse') {
     aimMouse(e);
     if (CONFIG.binds.slap.mouse.indexOf(e.button) >= 0) gag('slap', NS.mouse); else if (CONFIG.binds.pie.mouse.indexOf(e.button) >= 0) gag('pie', NS.mouse);
@@ -3849,6 +4070,7 @@ function aimMouse(e) {
 el.padSlap.addEventListener('pointerdown', (e) => { e.preventDefault(); gag('slap', null); });
 el.padPie.addEventListener('pointerdown', (e) => { e.preventDefault(); gag('pie', null); });
 el.padFall.addEventListener('pointerdown', (e) => { e.preventDefault(); pratfall(); });
+el.fallBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); audio(); fallPress(e.timeStamp); });
 
 // ----- Mirror World: the ring relit cold, fixed-spot turning camera, the insecurities -----
 const foes = [];
@@ -5300,7 +5522,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly; session 25: killFoe for smoke_nights.cjs, which puts each space's figures down directly; stepFrame for gpu_night1.mjs)
-window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU, endObj, perfList, endChoose, killFoe, stepFrame, scenes: { walk: scene, plate: plateScene, room: roomScene, vig: vigScene, mw: mwScene, act: actScene, press: pressScene, end: endScene } };
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, fallPress, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU, endObj, perfList, endChoose, killFoe, stepFrame, scenes: { walk: scene, plate: plateScene, room: roomScene, vig: vigScene, mw: mwScene, act: actScene, press: pressScene, end: endScene } };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });
