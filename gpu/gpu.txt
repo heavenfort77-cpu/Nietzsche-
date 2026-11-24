@@ -1,0 +1,430 @@
+PASS route: Chrome draws WebGL on the GPU, not in software | {"vendor":"Google Inc. (Apple)","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple Paravirtual device, Unspecified Version)"}
+FAIL 1080p desktop (1920x1024, default tier, AO on): frame p95 <= 20 ms | {"median":15.4,"p95":28.7,"max":50.5}
+FAIL retina laptop (1800x1055, default tier, AO on): frame p95 <= 20 ms | {"median":16.8,"p95":36.9,"max":203.7}
+FAIL 1440p desktop (2560x1384, default tier, AO on): frame p95 <= 20 ms | {"median":22.5,"p95":25.6,"max":31.6}
+PASS 1080p desktop AO on: p95 not worse than the control page in the same job | {"page":28.7,"controlBefore":31.2,"controlAfter":25.2,"noise":6,"limit":40.32}
+FAIL 1080p desktop AO off: p95 not worse than the control page in the same job | {"page":34.7,"controlBefore":20.7,"controlAfter":15.6,"noise":5.1,"limit":27.87}
+FAIL retina laptop AO on: p95 not worse than the control page in the same job | {"page":36.9,"controlBefore":22,"controlAfter":22.7,"noise":0.7,"limit":25.67}
+PASS retina laptop AO off: p95 not worse than the control page in the same job | {"page":16.7,"controlBefore":13.4,"controlAfter":19.8,"noise":6.4,"limit":28.18}
+PASS 1440p desktop AO on: p95 not worse than the control page in the same job | {"page":25.6,"controlBefore":32.2,"controlAfter":28.2,"noise":4,"limit":39.42}
+PASS 1440p desktop AO off: p95 not worse than the control page in the same job | {"page":18.1,"controlBefore":24.2,"controlAfter":19.6,"noise":4.6,"limit":31.22}
+PASS timing sees GPU work: AO on costs more than AO off at every setup | [4.2,6.9,9.5]
+frame times, ms (each frame waited for on the real GPU):
+  control.html 1080p desktop  1920x1024  AO on   median 16.2  p95 31.2  max 77.7
+  control.html 1080p desktop  1920x1024  AO off  median 10.7  p95 20.7  max 62.5
+  control.html retina laptop  1800x1055  AO on   median 14.1  p95 22  max 64.8
+  control.html retina laptop  1800x1055  AO off  median 9.2  p95 13.4  max 65.6
+  control.html 1440p desktop  2560x1384  AO on   median 21.5  p95 32.2  max 71.8
+  control.html 1440p desktop  2560x1384  AO off  median 12.9  p95 24.2  max 89
+  index.html   1080p desktop  1920x1024  AO on   median 15.4  p95 28.7  max 50.5
+  index.html   1080p desktop  1920x1024  AO off  median 11.2  p95 34.7  max 72.9
+  index.html   retina laptop  1800x1055  AO on   median 16.8  p95 36.9  max 203.7
+  index.html   retina laptop  1800x1055  AO off  median 9.9  p95 16.7  max 80.3
+  index.html   1440p desktop  2560x1384  AO on   median 22.5  p95 25.6  max 31.6
+  index.html   1440p desktop  2560x1384  AO off  median 13  p95 18.1  max 52.7
+  control.html 1080p desktop  1920x1024  AO on   median 16  p95 25.2  max 58.6
+  control.html 1080p desktop  1920x1024  AO off  median 10.6  p95 15.6  max 34.3
+  control.html retina laptop  1800x1055  AO on   median 15.1  p95 22.7  max 53.7
+  control.html retina laptop  1800x1055  AO off  median 10.7  p95 19.8  max 71.5
+  control.html 1440p desktop  2560x1384  AO on   median 22.8  p95 28.2  max 57.6
+  control.html 1440p desktop  2560x1384  AO off  median 13.4  p95 19.6  max 53.3
+PASS no page or console errors | []
+RESULT gpu 7 of 12 pass
+PASS night1_prev.html ready with no page errors against the current step0 assets | {"ready":true,"errors":[]}
+PASS route: Chrome draws WebGL on the GPU, not in software | {"renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple Paravirtual device, Unspecified Version)"}
+capabilities | {"timerQuery":true,"parallelCompile":true}
+PASS 1080p desktop mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS 1080p desktop mirror world ring (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":19,"tris":97138}
+PASS 1080p desktop mirror world ring: frame p95 <= 16.7 ms | {"median":6.1,"p95":9.6,"max":31.4,"cpuP95":1.4,"gpuP95":8.5}
+PASS 1080p desktop act: still in the scene after 270 frames | {"mode":"act"}
+PASS 1080p desktop act (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":18,"tris":50936}
+PASS 1080p desktop act: frame p95 <= 16.7 ms | {"median":6.5,"p95":11.7,"max":29,"cpuP95":1.4,"gpuP95":10.6}
+PASS 1080p desktop mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS 1080p desktop mirror shop (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+FAIL 1080p desktop mirror shop: frame p95 <= 16.7 ms | {"median":6.6,"p95":19.5,"max":57.4,"cpuP95":1.2,"gpuP95":13.7}
+PASS 1080p desktop walk corridor: still in the scene after 270 frames | {"mode":"shot corridor"}
+PASS 1080p desktop walk corridor (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":140858}
+PASS 1080p desktop walk corridor: frame p95 <= 16.7 ms | {"median":6.6,"p95":9.6,"max":25.9,"cpuP95":1.1,"gpuP95":8.8}
+PASS 1080p desktop walk wings: still in the scene after 270 frames | {"mode":"shot wings"}
+PASS 1080p desktop walk wings (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":20,"tris":187682}
+PASS 1080p desktop walk wings: frame p95 <= 16.7 ms | {"median":7.2,"p95":13.1,"max":23.6,"cpuP95":1.1,"gpuP95":12.4}
+PASS 1080p desktop walk entrance: still in the scene after 270 frames | {"mode":"shot entrance"}
+PASS 1080p desktop walk entrance (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":14,"tris":132378}
+PASS 1080p desktop walk entrance: frame p95 <= 16.7 ms | {"median":5.2,"p95":6.5,"max":8.9,"cpuP95":0.7,"gpuP95":6}
+PASS retina laptop mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS retina laptop mirror world ring (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":19,"tris":97138}
+PASS retina laptop mirror world ring: frame p95 <= 16.7 ms | {"median":5.1,"p95":7,"max":8.9,"cpuP95":1,"gpuP95":6.3}
+PASS retina laptop act: still in the scene after 270 frames | {"mode":"act"}
+PASS retina laptop act (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":18,"tris":50936}
+PASS retina laptop act: frame p95 <= 16.7 ms | {"median":5.6,"p95":8.7,"max":19.1,"cpuP95":1,"gpuP95":7.7}
+PASS retina laptop mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS retina laptop mirror shop (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS retina laptop mirror shop: frame p95 <= 16.7 ms | {"median":4.9,"p95":6.9,"max":17.9,"cpuP95":0.8,"gpuP95":6.3}
+PASS retina laptop walk corridor: still in the scene after 270 frames | {"mode":"shot corridor"}
+PASS retina laptop walk corridor (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":140858}
+PASS retina laptop walk corridor: frame p95 <= 16.7 ms | {"median":6.9,"p95":11.4,"max":24.8,"cpuP95":1.3,"gpuP95":10.9}
+PASS retina laptop walk wings: still in the scene after 270 frames | {"mode":"shot wings"}
+PASS retina laptop walk wings (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":20,"tris":187682}
+FAIL retina laptop walk wings: frame p95 <= 16.7 ms | {"median":8.1,"p95":24.3,"max":49.9,"cpuP95":1.3,"gpuP95":22.6}
+PASS retina laptop walk entrance: still in the scene after 270 frames | {"mode":"shot entrance"}
+PASS retina laptop walk entrance (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":14,"tris":132378}
+PASS retina laptop walk entrance: frame p95 <= 16.7 ms | {"median":6.6,"p95":15.4,"max":29.7,"cpuP95":1.1,"gpuP95":14.5}
+PASS 1440p desktop mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS 1440p desktop mirror world ring (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":19,"tris":97138}
+PASS 1440p desktop mirror world ring: frame p95 <= 16.7 ms | {"median":7.8,"p95":12.7,"max":37.5,"cpuP95":1.2,"gpuP95":12}
+PASS 1440p desktop act: still in the scene after 270 frames | {"mode":"act"}
+PASS 1440p desktop act (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":18,"tris":50936}
+PASS 1440p desktop act: frame p95 <= 16.7 ms | {"median":7.5,"p95":14.7,"max":35,"cpuP95":1.6,"gpuP95":12.5}
+PASS 1440p desktop mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS 1440p desktop mirror shop (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS 1440p desktop mirror shop: frame p95 <= 16.7 ms | {"median":7.8,"p95":12.6,"max":24.4,"cpuP95":1.1,"gpuP95":11.4}
+PASS 1440p desktop walk corridor: still in the scene after 270 frames | {"mode":"shot corridor"}
+PASS 1440p desktop walk corridor (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":140858}
+PASS 1440p desktop walk corridor: frame p95 <= 16.7 ms | {"median":8.6,"p95":15.2,"max":42.7,"cpuP95":1.2,"gpuP95":14.6}
+PASS 1440p desktop walk wings: still in the scene after 270 frames | {"mode":"shot wings"}
+PASS 1440p desktop walk wings (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":20,"tris":187682}
+PASS 1440p desktop walk wings: frame p95 <= 16.7 ms | {"median":8.3,"p95":11.3,"max":31.9,"cpuP95":1.2,"gpuP95":10.9}
+PASS 1440p desktop walk entrance: still in the scene after 270 frames | {"mode":"shot entrance"}
+PASS 1440p desktop walk entrance (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":14,"tris":132378}
+PASS 1440p desktop walk entrance: frame p95 <= 16.7 ms | {"median":7.5,"p95":11.4,"max":33.5,"cpuP95":1,"gpuP95":10.8}
+PASS phone portrait mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS phone portrait mirror world ring (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":19,"tris":97138}
+PASS phone portrait mirror world ring: frame p95 <= 16.7 ms | {"median":3.7,"p95":5.6,"max":27.3,"cpuP95":1,"gpuP95":5.1}
+PASS phone portrait act: still in the scene after 270 frames | {"mode":"act"}
+PASS phone portrait act (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":18,"tris":50936}
+PASS phone portrait act: frame p95 <= 16.7 ms | {"median":3.9,"p95":7.1,"max":21.1,"cpuP95":1.1,"gpuP95":6.4}
+PASS phone portrait mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS phone portrait mirror shop (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS phone portrait mirror shop: frame p95 <= 16.7 ms | {"median":3.9,"p95":6.1,"max":11.9,"cpuP95":0.8,"gpuP95":5.6}
+PASS phone portrait walk corridor: still in the scene after 270 frames | {"mode":"shot corridor"}
+PASS phone portrait walk corridor (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":140858}
+PASS phone portrait walk corridor: frame p95 <= 16.7 ms | {"median":4.6,"p95":7.6,"max":18.4,"cpuP95":1.2,"gpuP95":7.1}
+PASS phone portrait walk wings: still in the scene after 270 frames | {"mode":"shot wings"}
+PASS phone portrait walk wings (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":20,"tris":187682}
+PASS phone portrait walk wings: frame p95 <= 16.7 ms | {"median":5.5,"p95":11.7,"max":31,"cpuP95":1.2,"gpuP95":10.6}
+PASS phone portrait walk entrance: still in the scene after 270 frames | {"mode":"shot entrance"}
+PASS phone portrait walk entrance (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":14,"tris":132378}
+PASS phone portrait walk entrance: frame p95 <= 16.7 ms | {"median":4.3,"p95":7.8,"max":18.2,"cpuP95":0.9,"gpuP95":7}
+PASS phone landscape mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS phone landscape mirror world ring (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":19,"tris":97138}
+PASS phone landscape mirror world ring: frame p95 <= 16.7 ms | {"median":4.7,"p95":8.8,"max":18.4,"cpuP95":1.3,"gpuP95":7.4}
+PASS phone landscape act: still in the scene after 270 frames | {"mode":"act"}
+PASS phone landscape act (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":18,"tris":50936}
+PASS phone landscape act: frame p95 <= 16.7 ms | {"median":4.4,"p95":7.4,"max":26.5,"cpuP95":1,"gpuP95":6.6}
+PASS phone landscape mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS phone landscape mirror shop (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS phone landscape mirror shop: frame p95 <= 16.7 ms | {"median":5.7,"p95":12,"max":37.1,"cpuP95":1,"gpuP95":11.2}
+PASS phone landscape walk corridor: still in the scene after 270 frames | {"mode":"shot corridor"}
+PASS phone landscape walk corridor (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":140858}
+PASS phone landscape walk corridor: frame p95 <= 16.7 ms | {"median":5.7,"p95":13.4,"max":53.6,"cpuP95":1.3,"gpuP95":12.4}
+PASS phone landscape walk wings: still in the scene after 270 frames | {"mode":"shot wings"}
+PASS phone landscape walk wings (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":20,"tris":187682}
+PASS phone landscape walk wings: frame p95 <= 16.7 ms | {"median":5.7,"p95":9.9,"max":36.3,"cpuP95":1.4,"gpuP95":9.5}
+PASS phone landscape walk entrance: still in the scene after 270 frames | {"mode":"shot entrance"}
+PASS phone landscape walk entrance (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":14,"tris":132378}
+PASS phone landscape walk entrance: frame p95 <= 16.7 ms | {"median":5.5,"p95":12,"max":61.7,"cpuP95":1.1,"gpuP95":11.4}
+night1 frame times, ms (update for 1/60 s plus draw, each waited for on the GPU; cpu = until the read back, gpu = the read back):
+  1080p desktop    control before     1920x1080  median 1.4  p95 2.1  max 2.8  cpu p95 0.1  gpu p95 2.1  over 16.7: 0 (cpu-led 0)
+  1080p desktop    mirror world ring  1920x1080  median 6.1  p95 9.6  max 31.4  cpu p95 1.4  gpu p95 8.5  over 16.7: 2 (cpu-led 0)  calls 19  tris 97138
+  1080p desktop    act                1920x1080  median 6.5  p95 11.7  max 29  cpu p95 1.4  gpu p95 10.6  over 16.7: 4 (cpu-led 0)  calls 18  tris 50936
+  1080p desktop    mirror shop        1920x1080  median 6.6  p95 19.5  max 57.4  cpu p95 1.2  gpu p95 13.7  over 16.7: 12 (cpu-led 1)  calls 15  tris 108068
+  1080p desktop    walk corridor      1920x1080  median 6.6  p95 9.6  max 25.9  cpu p95 1.1  gpu p95 8.8  over 16.7: 2 (cpu-led 0)  calls 23  tris 140858
+  1080p desktop    walk wings         1920x1080  median 7.2  p95 13.1  max 23.6  cpu p95 1.1  gpu p95 12.4  over 16.7: 4 (cpu-led 0)  calls 20  tris 187682
+  1080p desktop    walk entrance      1920x1080  median 5.2  p95 6.5  max 8.9  cpu p95 0.7  gpu p95 6  over 16.7: 0 (cpu-led 0)  calls 14  tris 132378
+  1080p desktop    control after      1920x1080  median 1.3  p95 2.1  max 5  cpu p95 0.1  gpu p95 2.1  over 16.7: 0 (cpu-led 0)
+  retina laptop    control before     1800x1125  median 1.1  p95 1.8  max 2.1  cpu p95 0  gpu p95 1.8  over 16.7: 0 (cpu-led 0)
+  retina laptop    mirror world ring  1800x1012  median 5.1  p95 7  max 8.9  cpu p95 1  gpu p95 6.3  over 16.7: 0 (cpu-led 0)  calls 19  tris 97138
+  retina laptop    act                1800x1012  median 5.6  p95 8.7  max 19.1  cpu p95 1  gpu p95 7.7  over 16.7: 1 (cpu-led 0)  calls 18  tris 50936
+  retina laptop    mirror shop        1800x1012  median 4.9  p95 6.9  max 17.9  cpu p95 0.8  gpu p95 6.3  over 16.7: 1 (cpu-led 0)  calls 15  tris 108068
+  retina laptop    walk corridor      1800x1012  median 6.9  p95 11.4  max 24.8  cpu p95 1.3  gpu p95 10.9  over 16.7: 1 (cpu-led 0)  calls 23  tris 140858
+  retina laptop    walk wings         1800x1012  median 8.1  p95 24.3  max 49.9  cpu p95 1.3  gpu p95 22.6  over 16.7: 21 (cpu-led 0)  calls 20  tris 187682
+  retina laptop    walk entrance      1800x1012  median 6.6  p95 15.4  max 29.7  cpu p95 1.1  gpu p95 14.5  over 16.7: 9 (cpu-led 0)  calls 14  tris 132378
+  retina laptop    control after      1800x1125  median 1.9  p95 3.6  max 9.2  cpu p95 0.1  gpu p95 3.6  over 16.7: 0 (cpu-led 0)
+  1440p desktop    control before     2560x1440  median 2.4  p95 6.6  max 28.7  cpu p95 0.1  gpu p95 6.6  over 16.7: 2 (cpu-led 0)
+  1440p desktop    mirror world ring  2560x1440  median 7.8  p95 12.7  max 37.5  cpu p95 1.2  gpu p95 12  over 16.7: 5 (cpu-led 0)  calls 19  tris 97138
+  1440p desktop    act                2560x1440  median 7.5  p95 14.7  max 35  cpu p95 1.6  gpu p95 12.5  over 16.7: 7 (cpu-led 1)  calls 18  tris 50936
+  1440p desktop    mirror shop        2560x1440  median 7.8  p95 12.6  max 24.4  cpu p95 1.1  gpu p95 11.4  over 16.7: 5 (cpu-led 0)  calls 15  tris 108068
+  1440p desktop    walk corridor      2560x1440  median 8.6  p95 15.2  max 42.7  cpu p95 1.2  gpu p95 14.6  over 16.7: 10 (cpu-led 0)  calls 23  tris 140858
+  1440p desktop    walk wings         2560x1440  median 8.3  p95 11.3  max 31.9  cpu p95 1.2  gpu p95 10.9  over 16.7: 2 (cpu-led 0)  calls 20  tris 187682
+  1440p desktop    walk entrance      2560x1440  median 7.5  p95 11.4  max 33.5  cpu p95 1  gpu p95 10.8  over 16.7: 5 (cpu-led 0)  calls 14  tris 132378
+  1440p desktop    control after      2560x1440  median 2.1  p95 3.3  max 20.6  cpu p95 0.1  gpu p95 3.2  over 16.7: 2 (cpu-led 0)
+  phone portrait   control before     488x1055   median 1.6  p95 5.6  max 52  cpu p95 0.1  gpu p95 5.6  over 16.7: 4 (cpu-led 0)
+  phone portrait   mirror world ring  487x273    median 3.7  p95 5.6  max 27.3  cpu p95 1  gpu p95 5.1  over 16.7: 2 (cpu-led 0)  calls 19  tris 97138
+  phone portrait   act                487x273    median 3.9  p95 7.1  max 21.1  cpu p95 1.1  gpu p95 6.4  over 16.7: 1 (cpu-led 0)  calls 18  tris 50936
+  phone portrait   mirror shop        487x273    median 3.9  p95 6.1  max 11.9  cpu p95 0.8  gpu p95 5.6  over 16.7: 0 (cpu-led 0)  calls 15  tris 108068
+  phone portrait   walk corridor      487x273    median 4.6  p95 7.6  max 18.4  cpu p95 1.2  gpu p95 7.1  over 16.7: 1 (cpu-led 0)  calls 23  tris 140858
+  phone portrait   walk wings         487x273    median 5.5  p95 11.7  max 31  cpu p95 1.2  gpu p95 10.6  over 16.7: 4 (cpu-led 0)  calls 20  tris 187682
+  phone portrait   walk entrance      487x273    median 4.3  p95 7.8  max 18.2  cpu p95 0.9  gpu p95 7  over 16.7: 1 (cpu-led 0)  calls 14  tris 132378
+  phone portrait   control after      488x1055   median 2.1  p95 4.7  max 28.3  cpu p95 0.1  gpu p95 4.7  over 16.7: 2 (cpu-led 0)
+  phone landscape  control before     1055x488   median 2  p95 7.3  max 41.6  cpu p95 0.1  gpu p95 7.3  over 16.7: 6 (cpu-led 0)
+  phone landscape  mirror world ring  866x486    median 4.7  p95 8.8  max 18.4  cpu p95 1.3  gpu p95 7.4  over 16.7: 1 (cpu-led 0)  calls 19  tris 97138
+  phone landscape  act                866x486    median 4.4  p95 7.4  max 26.5  cpu p95 1  gpu p95 6.6  over 16.7: 2 (cpu-led 0)  calls 18  tris 50936
+  phone landscape  mirror shop        866x486    median 5.7  p95 12  max 37.1  cpu p95 1  gpu p95 11.2  over 16.7: 7 (cpu-led 0)  calls 15  tris 108068
+  phone landscape  walk corridor      866x486    median 5.7  p95 13.4  max 53.6  cpu p95 1.3  gpu p95 12.4  over 16.7: 6 (cpu-led 0)  calls 23  tris 140858
+  phone landscape  walk wings         866x486    median 5.7  p95 9.9  max 36.3  cpu p95 1.4  gpu p95 9.5  over 16.7: 5 (cpu-led 0)  calls 20  tris 187682
+  phone landscape  walk entrance      866x486    median 5.5  p95 12  max 61.7  cpu p95 1.1  gpu p95 11.4  over 16.7: 8 (cpu-led 0)  calls 14  tris 132378
+  phone landscape  control after      1055x488   median 1.7  p95 5.9  max 32.1  cpu p95 0.1  gpu p95 5.9  over 16.7: 2 (cpu-led 0)
+frames over 16.7 ms (first 6 per row: frame index, total, cpu, gpu):
+  1080p desktop | mirror world ring | #34 31.4 (0.9 / 30.5), #94 19.7 (2.1 / 17.6)
+  1080p desktop | act | #83 17 (0.6 / 16.4), #90 29 (0.5 / 28.5), #191 17.1 (2.5 / 14.6), #236 18.5 (0.4 / 18.1)
+  1080p desktop | mirror shop | #2 19.9 (0.5 / 19.4), #73 55.2 (0.5 / 54.7), #74 51.2 (1.2 / 50), #75 36.2 (0.3 / 35.9), #85 26.4 (0.3 / 26.1), #86 25.8 (0.5 / 25.3)
+  1080p desktop | walk corridor | #88 25.9 (0.5 / 25.4), #90 18.6 (0.6 / 18)
+  1080p desktop | walk wings | #28 23.6 (1.4 / 22.2), #32 22.6 (1.5 / 21.1), #139 21.3 (0.5 / 20.8), #213 23 (0.4 / 22.6)
+  retina laptop | act | #165 19.1 (9.1 / 10)
+  retina laptop | mirror shop | #58 17.9 (0.3 / 17.6)
+  retina laptop | walk corridor | #202 24.8 (0.4 / 24.4)
+  retina laptop | walk wings | #22 17.4 (1 / 16.4), #25 17.4 (0.9 / 16.5), #26 31.3 (1.1 / 30.2), #33 19.4 (1 / 18.4), #49 19.9 (6.6 / 13.3), #76 17 (0.4 / 16.6)
+  retina laptop | walk entrance | #53 16.9 (1 / 15.9), #97 17.3 (0.4 / 16.9), #98 29.7 (0.4 / 29.3), #99 24.5 (3.6 / 20.9), #102 23.8 (0.9 / 22.9), #104 21.7 (0.8 / 20.9)
+  1440p desktop | control before | #48 20.9 (0 / 20.9), #98 28.7 (0 / 28.7)
+  1440p desktop | mirror world ring | #27 27.1 (0.7 / 26.4), #28 31.8 (0.7 / 31.1), #62 24.8 (0.5 / 24.3), #63 22.7 (0.3 / 22.4), #65 37.5 (0.7 / 36.8)
+  1440p desktop | act | #3 31.3 (2.7 / 28.6), #11 18.6 (0.4 / 18.2), #38 23.5 (0.4 / 23.1), #41 16.9 (9 / 7.9), #43 32.5 (0.7 / 31.8), #114 35 (1.5 / 33.5)
+  1440p desktop | mirror shop | #13 21.6 (1.8 / 19.8), #149 19.1 (1.1 / 18), #197 24.4 (0.4 / 24), #203 17 (5.6 / 11.4), #227 17.4 (1.7 / 15.7)
+  1440p desktop | walk corridor | #2 33.5 (0.8 / 32.7), #3 36 (0.6 / 35.4), #8 42.7 (3 / 39.7), #34 29.2 (1.1 / 28.1), #36 23.1 (0.7 / 22.4), #64 33.6 (1 / 32.6)
+  1440p desktop | walk wings | #54 31.9 (1.2 / 30.7), #55 17.5 (0.4 / 17.1)
+  1440p desktop | walk entrance | #36 23.5 (0.3 / 23.2), #37 33.5 (0.8 / 32.7), #103 17.2 (0.8 / 16.4), #104 18.7 (1.2 / 17.5), #105 22.6 (0.4 / 22.2)
+  1440p desktop | control after | #97 20.6 (0 / 20.6), #98 16.8 (0 / 16.8)
+  phone portrait | control before | #69 30.7 (0 / 30.7), #70 52 (0 / 52), #71 23.6 (0 / 23.6), #220 19.5 (0 / 19.5)
+  phone portrait | mirror world ring | #15 27.3 (1.6 / 25.7), #17 22.6 (0.5 / 22.1)
+  phone portrait | act | #214 21.1 (0.6 / 20.5)
+  phone portrait | walk corridor | #209 18.4 (1.9 / 16.5)
+  phone portrait | walk wings | #43 20.2 (0.9 / 19.3), #121 31 (0.4 / 30.6), #124 20 (0.6 / 19.4), #203 25.4 (0.7 / 24.7)
+  phone portrait | walk entrance | #232 18.2 (0.4 / 17.8)
+  phone portrait | control after | #118 17.8 (0 / 17.8), #119 28.3 (0 / 28.3)
+  phone landscape | control before | #162 41.6 (0 / 41.6), #163 22.8 (0 / 22.8), #164 19.3 (0 / 19.3), #165 23.5 (0 / 23.5), #166 29.1 (0 / 29.1), #168 24.3 (0 / 24.3)
+  phone landscape | mirror world ring | #61 18.4 (1 / 17.4)
+  phone landscape | act | #52 26.5 (0.5 / 26), #53 26.4 (0.4 / 26)
+  phone landscape | mirror shop | #35 25.8 (0.6 / 25.2), #36 18 (0.3 / 17.7), #132 25.1 (0.3 / 24.8), #172 17.1 (0.4 / 16.7), #176 18.2 (0.3 / 17.9), #179 19.2 (1 / 18.2)
+  phone landscape | walk corridor | #11 53.6 (1 / 52.6), #12 33.1 (0.6 / 32.5), #13 42.9 (0.6 / 42.3), #17 34.7 (1.6 / 33.1), #24 17.2 (0.5 / 16.7), #115 48.5 (0.5 / 48)
+  phone landscape | walk wings | #23 20.1 (1.6 / 18.5), #24 22.7 (1 / 21.7), #117 36.3 (0.5 / 35.8), #118 22.2 (0.9 / 21.3), #181 22.2 (0.6 / 21.6)
+  phone landscape | walk entrance | #152 20.5 (1.3 / 19.2), #153 21.6 (1.9 / 19.7), #184 20.4 (0.4 / 20), #198 49.2 (0.3 / 48.9), #199 33.9 (0.3 / 33.6), #200 25.9 (0.3 / 25.6)
+  phone landscape | control after | #167 32.1 (0 / 32.1), #168 29.4 (0 / 29.4)
+PASS 1080p desktop: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":1.4,"p95":2.1,"max":2.8}},{"control after":{"median":1.3,"p95":2.1,"max":5}}]
+PASS retina laptop: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":1.1,"p95":1.8,"max":2.1}},{"control after":{"median":1.9,"p95":3.6,"max":9.2}}]
+PASS 1440p desktop: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":2.4,"p95":6.6,"max":28.7}},{"control after":{"median":2.1,"p95":3.3,"max":20.6}}]
+PASS phone portrait: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":1.6,"p95":5.6,"max":52}},{"control after":{"median":2.1,"p95":4.7,"max":28.3}}]
+PASS phone landscape: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":2,"p95":7.3,"max":41.6}},{"control after":{"median":1.7,"p95":5.9,"max":32.1}}]
+PASS load sweep: every material of every scene (113) has a program drawn at load, none first used during play | {"neverCompiled":0,"compiledNotDrawn":0,"byScene":{},"first":[]}
+PASS probe 1440p desktop mirror shop: every frame logged | {"logged":270}
+probe 1440p desktop mirror shop: median 12.2 p95 25.6 max 47.3 cpu p95 1.6 gpu p95 24.6 over 16.7: 31 | timer query true lost 0 disjoint 0
+  pass room layers 1      GPU ms median 2.61 p95 3.67 max 17.16 (480 frames)
+  pass room layers 2      GPU ms median 0.07 p95 2.43 max 14.29 (240 frames)
+  events in the 30 settle frames {"link":0,"first":0,"tex":123,"drawn":14}; in the 240 timed frames {"link":0,"first":0,"tex":960,"drawn":0}; frame lines are index, total, cpu / gpu:
+  texture uploads per timed frame: min 4 max 4; first timed frame: texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data
+  frames with events: 0
+  frames over budget, no events: 31
+    #0 25.8 (0.6 / 25.2) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #6 20.3 (2.4 / 17.9) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #26 19.6 (0.4 / 19.2) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #42 22.5 (3.6 / 18.9) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #44 18.8 (0.9 / 17.9) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #66 18.9 (0.7 / 18.2) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #70 23.9 (1.2 / 22.7) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #75 32.0 (0.6 / 31.4) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #76 25.1 (0.5 / 24.6) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #77 20.0 (0.5 / 19.5) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #79 31.5 (0.5 / 31.0) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #80 47.3 (1.1 / 46.2) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    +19 more
+  reflection ladder probe 1440p desktop mirror shop (5 rounds x 60 frames, total ms; median of the round medians, then each round; texture uploads per frame):
+    base                                         8.4  [9.3, 8.4, 8.5, 7.5, 8]  tex/frame 4
+    no reflection pass                           7.1  [7.8, 7.8, 7, 6.7, 7.1]  tex/frame 1
+    reflection, no second skeleton update        8.6  [8.9, 9, 8.3, 8.6, 8.4]  tex/frame 4
+    reflection, tiny scene                       8.7  [8.9, 8.7, 8.8, 8.5, 8.2]  tex/frame 4
+    reflection, tiny scene, one skeleton update  8.1  [8.1, 8.9, 7.9, 8.3, 7.5]  tex/frame 4
+  ladder probe 1440p desktop mirror shop (60 frames each, total ms): base before median 7 p95 8.8, after median 8.5 p95 9.9; minus reflection pass median 6.5 p95 10
+    hide Scene                              saves median -0.4 p95 -1.1 | tris 36012 meshes 3
+    hide Scene                              saves median -0.5 p95 -0.4 | tris 36824 meshes 6
+    hide Group                              saves median -0.9 p95 -1.9 | tris 6 meshes 3
+    hide Points Buffer 0.0x0.0x0.0 Shader   saves median -1.4 p95 -1.6 | tris 233 meshes 1
+    hide Mesh Circle 0.8x0.8x0.0 MeshBasic transp noZ saves median -1.4 p95 -3.1 | tris 24 meshes 1
+  inside Group:
+    hide Mesh Plane 2.7x1.5x0.0 Shader transp noZ tex 1600x900 saves median -1.2 p95 -2.1 | tris 2 meshes 1
+    hide Mesh Plane 7.5x4.2x0.0 Shader tex 1600x900 saves median -1.4 p95 -7.3 | tris 2 meshes 1
+    hide Mesh Plane 5.4x3.1x0.0 Shader transp noZ tex 1600x900 saves median -1.8 p95 -5.6 | tris 2 meshes 1
+PASS probe 1080p desktop mirror shop: every frame logged | {"logged":270}
+probe 1080p desktop mirror shop: median 9.2 p95 21.1 max 38 cpu p95 1.3 gpu p95 20.2 over 16.7: 19 | timer query true lost 0 disjoint 0
+  pass room layers 1      GPU ms median 1.67 p95 3.48 max 10.37 (480 frames)
+  pass room layers 2      GPU ms median 0.39 p95 3.36 max 14.34 (240 frames)
+  events in the 30 settle frames {"link":0,"first":0,"tex":123,"drawn":14}; in the 240 timed frames {"link":0,"first":0,"tex":960,"drawn":0}; frame lines are index, total, cpu / gpu:
+  texture uploads per timed frame: min 4 max 4; first timed frame: texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data
+  frames with events: 0
+  frames over budget, no events: 19
+    #17 31.3 (0.8 / 30.5) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #43 21.7 (0.9 / 20.8) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #44 21.7 (1.1 / 20.6) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #46 29.0 (0.4 / 28.6) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #63 17.7 (1.0 / 16.7) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #66 22.6 (0.5 / 22.1) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #86 21.1 (0.9 / 20.2) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #88 18.1 (0.8 / 17.3) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #89 33.6 (2.2 / 31.4) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #90 16.7 (1.4 / 15.3) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #96 17.3 (0.4 / 16.9) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #97 16.7 (0.7 / 16.0) calls 15 link 0 firstUse 0 tex 4 [texSubImage2D 12x12 data; texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    +7 more
+  reflection ladder probe 1080p desktop mirror shop (5 rounds x 60 frames, total ms; median of the round medians, then each round; texture uploads per frame):
+    base                                         6.4  [6.3, 6.4, 6.6, 6.6, 5.8]  tex/frame 4
+    no reflection pass                           5.8  [5.6, 5.8, 5.8, 6, 5.2]  tex/frame 1
+    reflection, no second skeleton update        6.9  [6.9, 6.1, 8.2, 7.1, 6.5]  tex/frame 4
+    reflection, tiny scene                       6.7  [6.7, 6.4, 7.7, 6.8, 6.4]  tex/frame 4
+    reflection, tiny scene, one skeleton update  6.6  [6.9, 6.6, 6.2, 6.7, 6.6]  tex/frame 4
+PASS probe retina laptop mirror world ring: every frame logged | {"logged":270}
+probe retina laptop mirror world ring: median 6.8 p95 16.6 max 41 cpu p95 1.7 gpu p95 16 over 16.7: 11 | timer query true lost 0 disjoint 0
+  pass mw layers 1        GPU ms median 2 p95 3.92 max 15.69 (240 frames)
+  events in the 30 settle frames {"link":0,"first":0,"tex":90,"drawn":23}; in the 240 timed frames {"link":0,"first":0,"tex":720,"drawn":0}; frame lines are index, total, cpu / gpu:
+  texture uploads per timed frame: min 3 max 3; first timed frame: texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data
+  frames with events: 0
+  frames over budget, no events: 11
+    #6 41.0 (0.5 / 40.5) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #7 20.9 (0.5 / 20.4) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #36 18.7 (0.5 / 18.2) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #37 33.1 (0.6 / 32.5) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #100 20.3 (0.5 / 19.8) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #136 39.0 (0.6 / 38.4) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #143 22.9 (0.8 / 22.1) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #168 30.2 (0.5 / 29.7) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #169 32.1 (0.5 / 31.6) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #205 17.7 (0.6 / 17.1) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+    #216 19.0 (1.0 / 18.0) calls 19 link 0 firstUse 0 tex 3 [texSubImage2D 12x12 data; texSubImage2D 8x8 data; texSubImage2D 8x8 data] buf 0
+  ladder probe retina laptop mirror world ring (60 frames each, total ms): base before median 5.9 p95 8.2, after median 6.5 p95 11.3; minus reflection pass median 6.1 p95 7.9
+    hide Scene..                            saves median 0.6 p95 1.7 | tris 35246 meshes 3
+    hide Scene..                            saves median -0.2 p95 -0.4 | tris 24052 meshes 3
+    hide Mesh Box 0.4x0.8x0.1 MeshBasic x46 saves median -0.4 p95 -9.1 | tris 552 meshes 1
+    hide Group                              saves median -0.4 p95 0 | tris 38 meshes 4
+    hide Group                              saves median -0.4 p95 -1.1 | tris 86 meshes 8
+    hide Mesh Box 6.4x4.5x0.2 MeshBasic     saves median -0.4 p95 -2.3 | tris 12 meshes 1
+    hide Mesh Ring 2.5x2.5x0.0 MeshBasic transp add noZ saves median -0.4 p95 -1.9 | tris 96 meshes 1
+    hide Mesh Plane 3.4x6.0x0.0 MeshBasic x8 saves median -0.5 p95 -4 | tris 16 meshes 1
+    hide Mesh Plane 5.0x15.6x0.0 MeshBasic  saves median -0.5 p95 -2.4 | tris 2 meshes 1
+    hide Mesh Plane 1.2x2.4x0.0 MeshBasic   saves median -0.5 p95 -20 | tris 2 meshes 1
+    hide Group                              saves median -0.6 p95 -1.2 | tris 172 meshes 15
+    hide Mesh Box 0.0x0.0x1.0 MeshBasic x0  saves median -0.6 p95 -2.6 | tris 0 meshes 1
+  inside Group:
+    hide Mesh Box 0.0x2.2x0.0 MeshBasic     saves median -0.3 p95 -7.1 | tris 12 meshes 1
+    hide Mesh Plane 1.1x2.2x0.0 MeshBasic   saves median -0.6 p95 -1.8 | tris 2 meshes 1
+    hide Mesh Box 0.0x2.2x0.0 MeshBasic     saves median -0.8 p95 -4.3 | tris 12 meshes 1
+    hide Mesh Box 1.1x0.0x0.0 MeshBasic     saves median -0.8 p95 -15.2 | tris 12 meshes 1
+  inside Group:
+    hide Mesh Box 9.6x0.0x0.0 MeshBasic     saves median 0.1 p95 -0.9 | tris 12 meshes 1
+    hide Mesh Box 9.6x0.0x0.0 MeshBasic     saves median -0.4 p95 -2.1 | tris 12 meshes 1
+    hide Mesh Plane 16.0x17.2x0.0 MeshBasic saves median -0.6 p95 -1.9 | tris 2 meshes 1
+    hide Mesh Box 9.6x0.0x0.0 MeshBasic     saves median -1.2 p95 -10.7 | tris 12 meshes 1
+    hide Mesh Box 1.0x2.1x0.1 MeshBasic     saves median -1.3 p95 -6.9 | tris 12 meshes 1
+    hide Mesh Box 9.6x0.0x0.0 MeshBasic     saves median -1.4 p95 -18.2 | tris 12 meshes 1
+    hide Mesh Box 16.0x0.5x0.2 MeshBasic    saves median -1.9 p95 -18.6 | tris 12 meshes 1
+    hide Mesh Box 9.6x0.0x0.0 MeshBasic     saves median -2 p95 -2.6 | tris 12 meshes 1
+PASS probe 1080p desktop act: every frame logged | {"logged":270}
+probe 1080p desktop act: median 6.9 p95 16.7 max 41.8 cpu p95 1.6 gpu p95 16 over 16.7: 12 | timer query true lost 0 disjoint 0
+  pass act layers 1       GPU ms median 1.9 p95 3.57 max 9.2 (240 frames)
+  events in the 30 settle frames {"link":0,"first":0,"tex":60,"drawn":16}; in the 240 timed frames {"link":0,"first":0,"tex":480,"drawn":3}; frame lines are index, total, cpu / gpu:
+  texture uploads per timed frame: min 2 max 2; first timed frame: texSubImage2D 12x12 data; texSubImage2D 12x12 data
+  frames with events: 2
+    #26 9.5 (1.9 / 7.6) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0 drawnFirstSinceProbe Mesh Buffer 0.6x0.2x0.6 Shader, Mesh Box 0.1x0.1x0.1 Shader x120
+    #210 32.9 (0.6 / 32.3) calls 17 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0 drawnFirstSinceProbe Mesh Buffer 0.6x0.2x0.6 Shader
+  frames over budget, no events: 11
+    #18 18.0 (1.2 / 16.8) calls 16 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #107 17.3 (0.6 / 16.7) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #109 18.7 (0.6 / 18.1) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #110 22.5 (0.6 / 21.9) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #111 25.2 (0.6 / 24.6) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #112 16.7 (0.7 / 16.0) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #139 19.7 (1.4 / 18.3) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #163 19.9 (0.8 / 19.1) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #184 22.1 (0.6 / 21.5) calls 17 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #235 21.1 (0.6 / 20.5) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #236 41.8 (0.6 / 41.2) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+PASS probe phone landscape act: every frame logged | {"logged":270}
+probe phone landscape act: median 5.1 p95 9 max 31.7 cpu p95 1.5 gpu p95 8.4 over 16.7: 5 | timer query true lost 0 disjoint 0
+  pass act layers 1       GPU ms median 1.31 p95 2.71 max 6.96 (240 frames)
+  events in the 30 settle frames {"link":0,"first":0,"tex":60,"drawn":16}; in the 240 timed frames {"link":0,"first":0,"tex":480,"drawn":3}; frame lines are index, total, cpu / gpu:
+  texture uploads per timed frame: min 2 max 2; first timed frame: texSubImage2D 12x12 data; texSubImage2D 12x12 data
+  frames with events: 2
+    #27 4.8 (0.9 / 3.9) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0 drawnFirstSinceProbe Mesh Buffer 0.6x0.2x0.6 Shader, Mesh Box 0.1x0.1x0.1 Shader x120
+    #211 4.2 (0.5 / 3.7) calls 17 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0 drawnFirstSinceProbe Mesh Buffer 0.6x0.2x0.6 Shader
+  frames over budget, no events: 5
+    #93 23.6 (0.5 / 23.1) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #102 17.4 (0.5 / 16.9) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #103 19.6 (2.1 / 17.5) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #133 29.2 (0.5 / 28.7) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+    #134 31.7 (0.7 / 31.0) calls 18 link 0 firstUse 0 tex 2 [texSubImage2D 12x12 data; texSubImage2D 12x12 data] buf 0
+PASS interleave retina laptop act: every round ran in the scene | {"mode":"act","rounds":8}
+interleave retina laptop act (8 rounds x 60 frames each page): frames over 16.7 ms scene 20 (gpu-led 19), control 7 (gpu-led 7); rounds with long frames: scene 7, control 3, both in the same round 3
+  round p95 scene [21.3, 22.6, 11.2, 9, 22.7, 16.3, 23.8, 10] control [3.9, 3.5, 23.9, 7.1, 4.3, 14.4, 6.3, 3.1]; round long frames scene [3, 4, 1, 0, 3, 2, 6, 1] control [0, 0, 3, 0, 0, 2, 2, 0]
+PASS interleave retina laptop mirror shop: every round ran in the scene | {"mode":"room","rounds":8}
+interleave retina laptop mirror shop (8 rounds x 60 frames each page): frames over 16.7 ms scene 23 (gpu-led 23), control 2 (gpu-led 2); rounds with long frames: scene 7, control 1, both in the same round 1
+  round p95 scene [22.5, 19.8, 32, 10, 18.6, 12.3, 10.6, 31.6] control [6, 6.5, 5.1, 13, 4.2, 4.3, 4, 3.7]; round long frames scene [3, 4, 7, 1, 3, 1, 0, 4] control [0, 0, 0, 0, 0, 2, 0, 0]
+PASS interleave phone landscape act: every round ran in the scene | {"mode":"act","rounds":8}
+interleave phone landscape act (8 rounds x 60 frames each page): frames over 16.7 ms scene 13 (gpu-led 13), control 7 (gpu-led 7); rounds with long frames: scene 6, control 4, both in the same round 4
+  round p95 scene [13.9, 13.3, 32.5, 15.6, 10.7, 18.6, 10.6, 16.2] control [5.5, 4.5, 17.9, 15.4, 3.7, 4.2, 13.1, 5]; round long frames scene [0, 1, 5, 1, 0, 3, 1, 2] control [0, 0, 3, 1, 0, 1, 2, 0]
+shop A/B 1080p desktop: now medians [7.2, 7.1, 7.3, 7.2] p95s [13.3, 15, 16.9, 14.6]; prev (night1_prev.html) medians [10.5, 9.5, 9.4, 8.8] p95s [18.2, 16.2, 13.7, 13.6]
+PASS 1080p desktop mirror shop: this page not slower than the previous page (median of round p95s, noise band) | {"now":15,"prev":16.2,"noise":4.6}
+shop A/B 1440p desktop: now medians [7.3, 8.6, 7.7, 7.6] p95s [15, 23.4, 13.2, 25.9]; prev (night1_prev.html) medians [11.7, 10.9, 12, 11.3] p95s [36.3, 28, 27.4, 26.3]
+PASS 1440p desktop mirror shop: this page not slower than the previous page (median of round p95s, noise band) | {"now":23.4,"prev":28,"noise":12.7}
+profile 1080p desktop mirror world ring: 2609 ms sampled over 270 frames; top self time:
+   2221.9 ms   85.2%  readPixels :0
+    194.6 ms    7.5%  (program) :0
+     15.5 ms    0.6%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:1
+     10.0 ms    0.4%  multiplyMatrices three.core.js:10564
+      9.7 ms    0.4%  getProgram three.module.js:18033
+      8.7 ms    0.3%  setProgram three.module.js:18220
+      7.5 ms    0.3%  texSubImage2D :0
+      7.5 ms    0.3%  updateMatrixWorld three.core.js:13071
+      6.8 ms    0.3%  updateMW night1.html:4809
+      5.4 ms    0.2%  updateWorldMatrix three.core.js:13120
+profile 1080p desktop act: 2243 ms sampled over 270 frames; top self time:
+   1918.2 ms   85.5%  readPixels :0
+    152.1 ms    6.8%  (program) :0
+     11.6 ms    0.5%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:1
+     10.6 ms    0.5%  (garbage collector) :0
+      9.1 ms    0.4%  getParameters three.module.js:7132
+      6.9 ms    0.3%  getProgram three.module.js:18033
+      5.6 ms    0.3%  bindTexture :0
+      5.0 ms    0.2%  uniformMatrix4fv :0
+      4.8 ms    0.2%  texSubImage2D :0
+      4.1 ms    0.2%  uploadTexture three.module.js:11780
+profile 1080p desktop mirror shop: 2666 ms sampled over 270 frames; top self time:
+   2432.2 ms   91.2%  readPixels :0
+    108.9 ms    4.1%  (program) :0
+      7.2 ms    0.3%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:1
+      7.1 ms    0.3%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:4
+      6.6 ms    0.2%  texSubImage2D :0
+      5.2 ms    0.2%  bindTexture :0
+      4.9 ms    0.2%  compose three.core.js:11024
+      4.9 ms    0.2%  uploadTexture three.module.js:11780
+      4.5 ms    0.2%  bindVertexArray :0
+      3.7 ms    0.1%  convert three.module.js:13391
+profile 1080p desktop walk corridor: 2310 ms sampled over 270 frames; top self time:
+   2009.6 ms   87.0%  readPixels :0
+    146.6 ms    6.3%  (program) :0
+     11.7 ms    0.5%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:1
+      7.4 ms    0.3%  setProgram three.module.js:18220
+      6.7 ms    0.3%  updateMatrixWorld three.core.js:13071
+      5.1 ms    0.2%  updateWorldMatrix three.core.js:13120
+      5.0 ms    0.2%  projectObject three.module.js:17696
+      5.0 ms    0.2%  (garbage collector) :0
+      4.9 ms    0.2%  stepFrame night1.html:1874
+      4.8 ms    0.2%  texSubImage2D :0
+profile 1080p desktop walk wings: 2388 ms sampled over 270 frames; top self time:
+   2136.7 ms   89.5%  readPixels :0
+    113.6 ms    4.8%  (program) :0
+     10.4 ms    0.4%  projectObject three.module.js:17696
+      7.1 ms    0.3%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:4
+      6.9 ms    0.3%  updateMatrixWorld three.core.js:13071
+      6.8 ms    0.3%  multiplyMatrices three.core.js:10564
+      5.2 ms    0.2%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:0
+      5.1 ms    0.2%  bindTexture :0
+      5.1 ms    0.2%  useProgram :0
+      4.5 ms    0.2%  evaluate three.core.js:42745
+profile 1080p desktop walk entrance: 2380 ms sampled over 270 frames; top self time:
+   2094.1 ms   88.0%  readPixels :0
+    151.9 ms    6.4%  (program) :0
+     14.1 ms    0.6%  updateMatrixWorld three.core.js:13071
+     10.1 ms    0.4%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:1
+      7.9 ms    0.3%  updateClown night1.html:1764
+      7.3 ms    0.3%  multiplyMatrices three.core.js:10564
+      7.0 ms    0.3%  getWorldQuaternion three.core.js:12902
+      5.7 ms    0.2%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A393%3A13:4
+      5.2 ms    0.2%  uniform2f :0
+      4.9 ms    0.2%  useProgram :0
+PASS no page or console errors | []
+RESULT gpu night1 106 of 108 pass

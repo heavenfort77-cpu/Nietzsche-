@@ -1,0 +1,86 @@
+PASS bpy version | 5.3.0
+PASS glTF exporter params | 9 present
+PASS export_animation_mode has ACTIONS | ['ACTIONS', 'ACTIVE_ACTIONS', 'BROADCAST', 'NLA_TRACKS', 'SCENE']
+00:00.360  cycles           | WARNING CUEW initialization failed: Error opening the library
+00:00.360  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+PASS Cycles GPU devices | none (CPU only)
+Info: Baking map saved to internal image, save it externally or pack it
+PASS Cycles DIFFUSE colour bake 512 CPU | 0.2s red_px=155359 white_px=7010
+Info: Baking map saved to internal image, save it externally or pack it
+PASS Cycles AO bake 512 CPU 64spp | 2.4s
+PASS ARMATURE_AUTO weights in background | 2912/2912 weighted
+PASS Scripted keyframes on 5.x actions (NLA stash) | slots_api=False
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+10:34:45 | INFO: Starting glTF 2.0 export
+10:34:45 | INFO: Extracting primitive: Cylinder
+10:34:45 | INFO: Primitives created: 1
+10:34:45 | INFO: Finished glTF 2.0 export in 0.02930593490600586 s
+
+PASS GLB export ACTIONS mode: one animation per action | ['bend', 'twist']
+PASS GLB has skin | 1
+PASS Voxel remesh + decimate modifiers | 23154 faces -> 4630 tris in 0.3s
+Info: Saved as "high.blend"
+PASS chars.clown: 129 parts tagged; untagged meshes: []
+00:00.197  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out/high.blend"
+PASS body: parts joined, hidden faces removed | 128 parts, 24464 tris before, 4944 hidden faces removed, 15798 tris, 0.6s
+PASS body UVs: no overlaps | 0 overlapping faces, 276 islands
+PASS head UV: one island | 1 islands
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS body bakes (colour, AO, edge/top/noise) | 0.5s / 19.5s / 0.3s
+PASS body regions: every part ramp present in the atlas | {'HAT': 204862, 'OCHRE': 167903, 'PAINT': 84953, 'RED': 8264, 'RUST_DARK': 82942, 'RUST_HAIR': 118585, 'SHOE': 39212, 'SKIN': 51808, 'WARM_WHITE': 290047}
+PASS body regions: faces of each ramp read back as that ramp (>= 95%) | {'SHOE': 1.0, 'HAT': 1.0, 'OCHRE': 1.0, 'WARM_WHITE': 1.0, 'RED': 1.0, 'SKIN': 1.0, 'PAINT': 1.0, 'RUST_HAIR': 1.0, 'RUST_DARK': 1.0}
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake sad | 0.3s, feature texels 30561
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer sad: paint present, eyes cut it | 5.3% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake smile | 0.3s, feature texels 27186
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer smile: paint present, eyes cut it | 5.4% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake startle | 0.3s, feature texels 31045
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer startle: paint present, eyes cut it | 4.2% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake wince | 0.3s, feature texels 25861
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer wince: paint present, eyes cut it | 6.2% of the cell painted
+PASS spec mask: some body vertices shine, most do not | 557 of 9502 vertices
+Info: Deleted 447 data-block(s)
+PASS triangles <= 30k (body + head) | 15798 + 2208 = 18006
+PASS materials (= draw calls before hull) <= 2 | ['body', 'face']
+Info: Saved as "low.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+10:35:26 | INFO: Starting glTF 2.0 export
+10:35:26 | INFO: Extracting primitive: Sphere.152
+10:35:26 | INFO: Primitives created: 1
+10:35:26 | INFO: Extracting primitive: Sphere.258
+10:35:26 | INFO: Primitives created: 1
+10:35:26 | INFO: Finished glTF 2.0 export in 0.053780317306518555 s
+
+PASS total time | 39s
+00:00.197  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out/low.blend"
+PASS armature | 21 deform bones
+PASS weights: every vertex weighted, <= 4 influences | unweighted 0, max influences 4
+Info: Saved as "rigged.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+10:35:27 | INFO: Starting glTF 2.0 export
+10:35:27 | INFO: Extracting primitive: Sphere.152
+10:35:27 | INFO: Primitives created: 1
+10:35:27 | INFO: Extracting primitive: Sphere.258
+10:35:27 | INFO: Primitives created: 1
+10:35:27 | INFO: Finished glTF 2.0 export in 0.25278806686401367 s
+
+PASS GLB: 3 clips, durations = photographs x interval | {'idle': 2, 'slap': 1.2, 'walk': 1} expected {'idle': 2.0, 'walk': 1.0, 'slap': 1.232}
+PASS GLB size | 2321 KB, skins 1, meshes 2
+PASS  clip idle: frame furthest from its neighbours' midpoint 0.0 deg, spine at frame 26 (max 4)
+PASS  clip walk: frame furthest from its neighbours' midpoint 2.3 deg, shin_L at frame 7 (max 4)
+RESULT PASS
+PASS clip loop mutation: a 20 deg pop is caught

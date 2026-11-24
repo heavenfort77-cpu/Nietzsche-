@@ -1,0 +1,120 @@
+Info: Saved as "high.blend"
+PASS chars.rigger: 155 parts tagged; untagged meshes: []
+00:00.302  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_rigger/high.blend"
+PASS body: parts joined, hidden faces removed | 154 parts, 25852 tris before, 4447 hidden faces removed, 17993 tris, 0.7s
+PASS body UVs: no overlaps | 0 overlapping faces, 267 islands
+PASS head UV: one island | 1 islands
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS body bakes (colour, AO, edge/top/noise) | 0.7s / 32.6s / 0.4s
+PASS body regions: every part ramp present in the atlas | {'BLACK': 186459, 'CANVAS': 872, 'HAT': 123516, 'HAT_BAND': 73129, 'JACKET': 352947, 'OCHRE': 65824, 'RED': 3442, 'RUST_DARK': 72042, 'RUST_HAIR': 32539, 'SHOE': 89220, 'SILVER': 10644, 'SKIN': 30793, 'WARM_WHITE': 7149}
+PASS body regions: faces of each ramp read back as that ramp (>= 95%) | {'SHOE': 1.0, 'BLACK': 1.0, 'HAT': 1.0, 'HAT_BAND': 1.0, 'JACKET': 1.0, 'SILVER': 1.0, 'RED': 1.0, 'WARM_WHITE': 1.0, 'OCHRE': 1.0, 'SKIN': 1.0, 'RUST_DARK': 1.0, 'RUST_HAIR': 1.0}
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake focus | 0.7s, feature texels 32136
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer focus: empty (no face paint) | 0.00% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake grin | 0.8s, feature texels 30088
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer grin: empty (no face paint) | 0.00% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake startle | 0.7s, feature texels 24949
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer startle: empty (no face paint) | 0.00% of the cell painted
+Info: Baking map saved to internal image, save it externally or pack it
+PASS face bake frown | 0.8s, feature texels 30943
+Info: Baking map saved to internal image, save it externally or pack it
+PASS paint layer frown: empty (no face paint) | 0.00% of the cell painted
+PASS spec mask: some body vertices shine, most do not | 294 of 10441 vertices
+Info: Deleted 597 data-block(s)
+PASS triangles <= 30k (body + head) | 17993 + 2208 = 20201
+PASS materials (= draw calls before hull) <= 2 | ['body', 'face']
+Info: Saved as "low.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+10:38:19 | INFO: Starting glTF 2.0 export
+10:38:19 | INFO: Extracting primitive: Sphere.175
+10:38:19 | INFO: Primitives created: 1
+10:38:19 | INFO: Extracting primitive: Sphere.284
+10:38:19 | INFO: Primitives created: 1
+10:38:19 | INFO: Finished glTF 2.0 export in 0.0692286491394043 s
+
+PASS total time | 65s
+00:00.276  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_rigger/low.blend"
+PASS armature | 21 deform bones
+PASS weights: every vertex weighted, <= 4 influences | unweighted 0, max influences 4
+Info: Saved as "rigged.blend"
+ERROR Draco is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_draco_bridge.so
+ERROR MeshOptimizer is not available because library could not be found at /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/site-packages/bpy/lib/libbf_intern_meshopt_bridge.so
+10:38:20 | INFO: Starting glTF 2.0 export
+10:38:20 | INFO: Extracting primitive: Sphere.175
+10:38:20 | INFO: Primitives created: 1
+10:38:20 | INFO: Extracting primitive: Sphere.284
+10:38:20 | INFO: Primitives created: 1
+10:38:21 | INFO: Finished glTF 2.0 export in 0.41346073150634766 s
+
+PASS GLB: 3 clips, durations = photographs x interval | {'idle': 2, 'slap': 1.2, 'walk': 1} expected {'idle': 2.0, 'walk': 1.0, 'slap': 1.232}
+PASS GLB size | 2431 KB, skins 1, meshes 2
+PASS  clip idle: frame furthest from its neighbours' midpoint 0.0 deg, chest at frame 17 (max 4)
+PASS  clip walk: frame furthest from its neighbours' midpoint 1.8 deg, foot_L at frame 1 (max 4)
+RESULT PASS
+00:00.280  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_rigger/rigged.blend"
+PASS bone names have no dots
+PASS every mesh visible
+PASS every vertex weighted (sum 1) | 0 vertices off
+PASS <= 4 influences per vertex | 4
+PASS coordinates finite
+PASS height 1.8-1.95 m | 1.875 m
+PASS feet on the floor (z = 0) | min z -0.0037
+PASS no degenerate faces
+PASS head sits on its bone | 2.2 cm from the head bone
+PASS materials <= 2 | 2
+PASS body UVs: no overlaps | 0 faces
+PASS head UV: one island | 1
+PASS head UVs inside cell 0 (u 0..0.5, v 0.5..1) | u 0.000..0.500 v 0.500..1.000
+PASS the 4 face cells all differ | smallest mean difference 4.7
+RESULT 14 of 14 pass
+PASS clips are idle, walk, slap | ['idle', 'slap', 'walk']
+PASS clip lengths match the plates (within 1 frame) | {'idle': 2, 'slap': 1.2, 'walk': 1}
+PASS one skin | 1
+PASS two meshes (body, face) | 2
+PASS node names have no dots
+PASS at most 4 joints per vertex (no JOINTS_1)
+PASS no vertex colours (COLOR_0)
+PASS shine mask _SPEC on every mesh | [['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC'], ['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0', '_SPEC']]
+PASS file <= 4096 KB before compression | 2431 KB
+PASS animation channels target real nodes
+RESULT 10 of 10 pass
+00:00.281  blend            | Read blend: "/home/runner/work/Nietzsche-/Nietzsche-/clown_v2/out_rigger/rigged.blend"
+PASS rest pose = bind mesh | max 0.000 mm
+touching pairs at rest: 272
+part groups at rest: 4
+PASS idle: edge stretch p99.9 <= 1.6 | p99.9 1.55, max 1.81 on part [foot_R,shin_R]
+PASS idle: head tipped forward (looks down) on every sample | least forward lean y = -0.76
+PASS idle: nothing floats free (part groups stay 4) | max groups 4; parts with no contact: []
+PASS walk: edge stretch p99.9 <= 1.6 | p99.9 1.24, max 1.57 on part [foot_R,shin_R]
+PASS walk: nothing floats free (part groups stay 4) | max groups 4; parts with no contact: []
+PASS slap: edge stretch p99.9 <= 1.6 | p99.9 1.35, max 1.81 on part [chest,clavicle_R,upper_arm_R,forearm_R]
+PASS slap: nothing floats free (part groups stay 4) | max groups 4; parts with no contact: []
+FAIL pose sheets: figure inside the frame on every sampled frame | extent 0.481 of 0.480, scale x0.821 of the approved
+00:37.916  render           | Saved: '/tmp/sheet_idle_0.png'
+00:40.431  render           | Saved: '/tmp/sheet_idle_1.png'
+00:42.892  render           | Saved: '/tmp/sheet_idle_2.png'
+00:45.325  render           | Saved: '/tmp/sheet_idle_3.png'
+00:47.782  render           | Saved: '/tmp/sheet_idle_4.png'
+00:50.225  render           | Saved: '/tmp/sheet_idle_5.png'
+00:52.880  render           | Saved: '/tmp/sheet_walk_0.png'
+00:55.318  render           | Saved: '/tmp/sheet_walk_1.png'
+00:57.780  render           | Saved: '/tmp/sheet_walk_2.png'
+01:00.192  render           | Saved: '/tmp/sheet_walk_3.png'
+01:02.630  render           | Saved: '/tmp/sheet_walk_4.png'
+01:05.051  render           | Saved: '/tmp/sheet_walk_5.png'
+01:07.632  render           | Saved: '/tmp/sheet_slap_0.png'
+01:10.102  render           | Saved: '/tmp/sheet_slap_1.png'
+01:12.595  render           | Saved: '/tmp/sheet_slap_2.png'
+01:15.060  render           | Saved: '/tmp/sheet_slap_3.png'
+01:17.843  render           | Saved: '/tmp/sheet_slap_4.png'
+01:20.311  render           | Saved: '/tmp/sheet_slap_5.png'

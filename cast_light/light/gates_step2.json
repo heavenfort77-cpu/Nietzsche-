@@ -1,0 +1,92 @@
+[
+ {
+  "name": "body: parts joined, hidden faces removed",
+  "ok": true,
+  "info": "118 parts, 14860 tris before, 2634 hidden faces removed, 9818 tris, 0.5s"
+ },
+ {
+  "name": "body UVs: no overlaps",
+  "ok": true,
+  "info": "0 overlapping faces, 208 islands"
+ },
+ {
+  "name": "head UV: one island",
+  "ok": true,
+  "info": "1 islands"
+ },
+ {
+  "name": "body bakes (colour, AO, edge/top/noise)",
+  "ok": true,
+  "info": "0.6s / 30.5s / 0.4s"
+ },
+ {
+  "name": "body regions: every part ramp present in the atlas",
+  "ok": true,
+  "info": "{'BLACK': 70560, 'M_DARK': 613082, 'M_MID': 317283, 'SILVER': 47651}"
+ },
+ {
+  "name": "body regions: faces of each ramp read back as that ramp (>= 95%)",
+  "ok": true,
+  "info": "{'M_DARK': 1.0, 'M_MID': 1.0, 'SILVER': 1.0, 'BLACK': 1.0}"
+ },
+ {
+  "name": "face bake watch",
+  "ok": true,
+  "info": "0.2s, feature texels 208830"
+ },
+ {
+  "name": "paint layer watch: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "face bake flare",
+  "ok": true,
+  "info": "0.4s, feature texels 223910"
+ },
+ {
+  "name": "paint layer flare: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "face bake wince",
+  "ok": true,
+  "info": "0.2s, feature texels 175740"
+ },
+ {
+  "name": "paint layer wince: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "face bake dark",
+  "ok": true,
+  "info": "0.2s, feature texels 208830"
+ },
+ {
+  "name": "paint layer dark: empty (no face paint)",
+  "ok": true,
+  "info": "0.00% of the cell painted"
+ },
+ {
+  "name": "spec mask: some body vertices shine, most do not",
+  "ok": true,
+  "info": "602 of 5865 vertices"
+ },
+ {
+  "name": "triangles <= 30k (body + head)",
+  "ok": true,
+  "info": "9818 + 2208 = 12026"
+ },
+ {
+  "name": "materials (= draw calls before hull) <= 2",
+  "ok": true,
+  "info": "['body', 'face']"
+ },
+ {
+  "name": "total time",
+  "ok": true,
+  "info": "47s"
+ }
+]
