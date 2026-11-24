@@ -1,0 +1,5 @@
+PASS mutation maxdpr -> "6. desktop starts" fires | FAIL 6. desktop starts at a medium pixel ratio, not the maximum | start 2 on a 2x screen
+PASS mutation aosamples -> "2. ambient occlusion" fires | FAIL 2. ambient occlusion: no second scene render, full-screen passes only, half resolution | {"extraCalls":13,"extraTris":563,"halfRes":tru
+PASS mutation govstuck -> "6. governor: never above" fires | FAIL 6. governor: never above 1.25, softer on slow frames, never back to a level that was slow, AO off last | {"start":1.25,"afterFast":1.25
+PASS mutation sixlights -> "7. lights" fires | FAIL 7. lights <= 1, none at intensity 0, no lit (Standard/Physical/Lambert/Phong) materials | {"lights":7,"zero":6,"lit":[]}
+RESULT perf mutations 4 of 4 fired

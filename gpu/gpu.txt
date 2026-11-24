@@ -1,0 +1,161 @@
+PASS route: Chrome draws WebGL on the GPU, not in software | {"vendor":"Google Inc. (Apple)","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple Paravirtual device, Unspecified Version)"}
+FAIL 1080p desktop (1920x1024, default tier, AO on): frame p95 <= 20 ms | {"median":15,"p95":20.1,"max":31.4}
+FAIL retina laptop (1800x1055, default tier, AO on): frame p95 <= 20 ms | {"median":15.3,"p95":31.6,"max":84.9}
+FAIL 1440p desktop (2560x1384, default tier, AO on): frame p95 <= 20 ms | {"median":20.9,"p95":25.2,"max":46.3}
+PASS 1080p desktop AO on: p95 not worse than the control page in the same job | {"page":20.1,"controlBefore":34.7,"controlAfter":19.1,"noise":15.6,"limit":53.77}
+PASS 1080p desktop AO off: p95 not worse than the control page in the same job | {"page":16.7,"controlBefore":18.5,"controlAfter":12.4,"noise":6.1,"limit":26.45}
+FAIL retina laptop AO on: p95 not worse than the control page in the same job | {"page":31.6,"controlBefore":25.7,"controlAfter":24.7,"noise":1,"limit":29.27}
+FAIL retina laptop AO off: p95 not worse than the control page in the same job | {"page":27.2,"controlBefore":18.8,"controlAfter":19.6,"noise":0.8,"limit":22.36}
+PASS 1440p desktop AO on: p95 not worse than the control page in the same job | {"page":25.2,"controlBefore":30.4,"controlAfter":27.6,"noise":2.8,"limit":36.24}
+PASS 1440p desktop AO off: p95 not worse than the control page in the same job | {"page":13.5,"controlBefore":25.9,"controlAfter":19.8,"noise":6.1,"limit":34.59}
+PASS timing sees GPU work: AO on costs more than AO off at every setup | [4.2,3.7,9.7]
+frame times, ms (each frame waited for on the real GPU):
+  control.html 1080p desktop  1920x1024  AO on   median 15.7  p95 34.7  max 109
+  control.html 1080p desktop  1920x1024  AO off  median 10.6  p95 18.5  max 49
+  control.html retina laptop  1800x1055  AO on   median 15.9  p95 25.7  max 50.1
+  control.html retina laptop  1800x1055  AO off  median 10.7  p95 18.8  max 43.3
+  control.html 1440p desktop  2560x1384  AO on   median 24.5  p95 30.4  max 49
+  control.html 1440p desktop  2560x1384  AO off  median 13.8  p95 25.9  max 193.8
+  index.html   1080p desktop  1920x1024  AO on   median 15  p95 20.1  max 31.4
+  index.html   1080p desktop  1920x1024  AO off  median 10.8  p95 16.7  max 50
+  index.html   retina laptop  1800x1055  AO on   median 15.3  p95 31.6  max 84.9
+  index.html   retina laptop  1800x1055  AO off  median 11.6  p95 27.2  max 47.6
+  index.html   1440p desktop  2560x1384  AO on   median 20.9  p95 25.2  max 46.3
+  index.html   1440p desktop  2560x1384  AO off  median 11.2  p95 13.5  max 22.4
+  control.html 1080p desktop  1920x1024  AO on   median 14.6  p95 19.1  max 31.7
+  control.html 1080p desktop  1920x1024  AO off  median 8  p95 12.4  max 39.8
+  control.html retina laptop  1800x1055  AO on   median 14.7  p95 24.7  max 57.5
+  control.html retina laptop  1800x1055  AO off  median 9.5  p95 19.6  max 39.3
+  control.html 1440p desktop  2560x1384  AO on   median 22.8  p95 27.6  max 43
+  control.html 1440p desktop  2560x1384  AO off  median 13.3  p95 19.8  max 56.2
+PASS no page or console errors | []
+RESULT gpu 7 of 12 pass
+PASS route: Chrome draws WebGL on the GPU, not in software | {"renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple Paravirtual device, Unspecified Version)"}
+capabilities | {"timerQuery":true,"parallelCompile":true}
+PASS 1080p desktop mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS 1080p desktop mirror world ring (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":22,"tris":50796}
+PASS 1080p desktop mirror world ring: frame p95 <= 16.7 ms | {"median":6.5,"p95":11.7,"max":34.4,"cpuP95":1.8,"gpuP95":10.2}
+PASS 1080p desktop act: still in the scene after 270 frames | {"mode":"act"}
+PASS 1080p desktop act (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":44368}
+PASS 1080p desktop act: frame p95 <= 16.7 ms | {"median":5.4,"p95":8.8,"max":22.7,"cpuP95":1.1,"gpuP95":7.5}
+PASS 1080p desktop mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS 1080p desktop mirror shop (1920x1080, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS 1080p desktop mirror shop: frame p95 <= 16.7 ms | {"median":7.9,"p95":13.9,"max":30.7,"cpuP95":0.9,"gpuP95":13.1}
+PASS retina laptop mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS retina laptop mirror world ring (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":22,"tris":50796}
+FAIL retina laptop mirror world ring: frame p95 <= 16.7 ms | {"median":6,"p95":17.9,"max":45.1,"cpuP95":1.5,"gpuP95":11.5}
+PASS retina laptop act: still in the scene after 270 frames | {"mode":"act"}
+PASS retina laptop act (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":44368}
+PASS retina laptop act: frame p95 <= 16.7 ms | {"median":5.5,"p95":9.7,"max":27,"cpuP95":1.4,"gpuP95":9.2}
+PASS retina laptop mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS retina laptop mirror shop (1800x1012, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS retina laptop mirror shop: frame p95 <= 16.7 ms | {"median":6.9,"p95":9.4,"max":15.3,"cpuP95":0.7,"gpuP95":9}
+PASS 1440p desktop mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS 1440p desktop mirror world ring (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":22,"tris":50796}
+PASS 1440p desktop mirror world ring: frame p95 <= 16.7 ms | {"median":7.4,"p95":9.6,"max":15.5,"cpuP95":1.1,"gpuP95":9.1}
+PASS 1440p desktop act: still in the scene after 270 frames | {"mode":"act"}
+PASS 1440p desktop act (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":44368}
+PASS 1440p desktop act: frame p95 <= 16.7 ms | {"median":7.3,"p95":11.5,"max":29.2,"cpuP95":1.5,"gpuP95":10.1}
+PASS 1440p desktop mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS 1440p desktop mirror shop (2560x1440, pixel ratio 1): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+FAIL 1440p desktop mirror shop: frame p95 <= 16.7 ms | {"median":10.9,"p95":21.7,"max":43.6,"cpuP95":1.3,"gpuP95":21.4}
+PASS phone portrait mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS phone portrait mirror world ring (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":22,"tris":50796}
+PASS phone portrait mirror world ring: frame p95 <= 16.7 ms | {"median":3.1,"p95":6.2,"max":11.3,"cpuP95":1,"gpuP95":5.4}
+PASS phone portrait act: still in the scene after 270 frames | {"mode":"act"}
+PASS phone portrait act (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":44368}
+PASS phone portrait act: frame p95 <= 16.7 ms | {"median":4.3,"p95":9.5,"max":31.4,"cpuP95":1.3,"gpuP95":8.1}
+PASS phone portrait mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS phone portrait mirror shop (487x273, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS phone portrait mirror shop: frame p95 <= 16.7 ms | {"median":6,"p95":12.8,"max":64.5,"cpuP95":1,"gpuP95":12.4}
+PASS phone landscape mirror world ring: still in the scene after 270 frames | {"mode":"mw"}
+PASS phone landscape mirror world ring (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":22,"tris":50796}
+PASS phone landscape mirror world ring: frame p95 <= 16.7 ms | {"median":3.6,"p95":5.8,"max":8.6,"cpuP95":0.9,"gpuP95":5}
+PASS phone landscape act: still in the scene after 270 frames | {"mode":"act"}
+PASS phone landscape act (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":23,"tris":44368}
+PASS phone landscape act: frame p95 <= 16.7 ms | {"median":2.2,"p95":4.5,"max":25.4,"cpuP95":0.6,"gpuP95":3.8}
+PASS phone landscape mirror shop: still in the scene after 270 frames | {"mode":"room"}
+PASS phone landscape mirror shop (866x486, pixel ratio 1.25): draw calls <= 500, triangles <= 500000 | {"calls":15,"tris":108068}
+PASS phone landscape mirror shop: frame p95 <= 16.7 ms | {"median":3.6,"p95":7.9,"max":13.8,"cpuP95":0.6,"gpuP95":7.4}
+night1 frame times, ms (update for 1/60 s plus draw, each waited for on the GPU; cpu = until the read back, gpu = the read back):
+  1080p desktop    control before     1920x1080  median 1.7  p95 3.3  max 7.2  cpu p95 0.1  gpu p95 3.3  over 16.7: 0 (cpu-led 0)
+  1080p desktop    mirror world ring  1920x1080  median 6.5  p95 11.7  max 34.4  cpu p95 1.8  gpu p95 10.2  over 16.7: 5 (cpu-led 0)  calls 22  tris 50796
+  1080p desktop    act                1920x1080  median 5.4  p95 8.8  max 22.7  cpu p95 1.1  gpu p95 7.5  over 16.7: 2 (cpu-led 0)  calls 23  tris 44368
+  1080p desktop    mirror shop        1920x1080  median 7.9  p95 13.9  max 30.7  cpu p95 0.9  gpu p95 13.1  over 16.7: 5 (cpu-led 0)  calls 15  tris 108068
+  1080p desktop    control after      1920x1080  median 1.5  p95 2.3  max 3.2  cpu p95 0  gpu p95 2.3  over 16.7: 0 (cpu-led 0)
+  retina laptop    control before     1800x1125  median 2.2  p95 4.3  max 46.9  cpu p95 0.1  gpu p95 4.3  over 16.7: 1 (cpu-led 0)
+  retina laptop    mirror world ring  1800x1012  median 6  p95 17.9  max 45.1  cpu p95 1.5  gpu p95 11.5  over 16.7: 12 (cpu-led 2)  calls 22  tris 50796
+  retina laptop    act                1800x1012  median 5.5  p95 9.7  max 27  cpu p95 1.4  gpu p95 9.2  over 16.7: 3 (cpu-led 0)  calls 23  tris 44368
+  retina laptop    mirror shop        1800x1012  median 6.9  p95 9.4  max 15.3  cpu p95 0.7  gpu p95 9  over 16.7: 0 (cpu-led 0)  calls 15  tris 108068
+  retina laptop    control after      1800x1125  median 1.8  p95 3.3  max 6.5  cpu p95 0.1  gpu p95 3.3  over 16.7: 0 (cpu-led 0)
+  1440p desktop    control before     2560x1440  median 1.8  p95 2.9  max 29.3  cpu p95 0.1  gpu p95 2.9  over 16.7: 1 (cpu-led 0)
+  1440p desktop    mirror world ring  2560x1440  median 7.4  p95 9.6  max 15.5  cpu p95 1.1  gpu p95 9.1  over 16.7: 0 (cpu-led 0)  calls 22  tris 50796
+  1440p desktop    act                2560x1440  median 7.3  p95 11.5  max 29.2  cpu p95 1.5  gpu p95 10.1  over 16.7: 2 (cpu-led 0)  calls 23  tris 44368
+  1440p desktop    mirror shop        2560x1440  median 10.9  p95 21.7  max 43.6  cpu p95 1.3  gpu p95 21.4  over 16.7: 30 (cpu-led 0)  calls 15  tris 108068
+  1440p desktop    control after      2560x1440  median 2.4  p95 4.8  max 20.7  cpu p95 0.1  gpu p95 4.8  over 16.7: 1 (cpu-led 0)
+  phone portrait   control before     488x1055   median 1.4  p95 3.2  max 72  cpu p95 0  gpu p95 3.2  over 16.7: 1 (cpu-led 0)
+  phone portrait   mirror world ring  487x273    median 3.1  p95 6.2  max 11.3  cpu p95 1  gpu p95 5.4  over 16.7: 0 (cpu-led 0)  calls 22  tris 50796
+  phone portrait   act                487x273    median 4.3  p95 9.5  max 31.4  cpu p95 1.3  gpu p95 8.1  over 16.7: 2 (cpu-led 0)  calls 23  tris 44368
+  phone portrait   mirror shop        487x273    median 6  p95 12.8  max 64.5  cpu p95 1  gpu p95 12.4  over 16.7: 6 (cpu-led 2)  calls 15  tris 108068
+  phone portrait   control after      488x1055   median 1.5  p95 2.5  max 5.6  cpu p95 0.1  gpu p95 2.5  over 16.7: 0 (cpu-led 0)
+  phone landscape  control before     1055x488   median 2.4  p95 8.5  max 25.3  cpu p95 0.1  gpu p95 8.5  over 16.7: 3 (cpu-led 0)
+  phone landscape  mirror world ring  866x486    median 3.6  p95 5.8  max 8.6  cpu p95 0.9  gpu p95 5  over 16.7: 0 (cpu-led 0)  calls 22  tris 50796
+  phone landscape  act                866x486    median 2.2  p95 4.5  max 25.4  cpu p95 0.6  gpu p95 3.8  over 16.7: 3 (cpu-led 0)  calls 23  tris 44368
+  phone landscape  mirror shop        866x486    median 3.6  p95 7.9  max 13.8  cpu p95 0.6  gpu p95 7.4  over 16.7: 0 (cpu-led 0)  calls 15  tris 108068
+  phone landscape  control after      1055x488   median 1.1  p95 2.1  max 9  cpu p95 0.1  gpu p95 2.1  over 16.7: 0 (cpu-led 0)
+frames over 16.7 ms (first 6 per row: frame index, total, cpu, gpu):
+  1080p desktop | mirror world ring | #32 34.4 (3.7 / 30.7), #45 20.6 (1.1 / 19.5), #47 29.4 (2.6 / 26.8), #92 16.9 (0.4 / 16.5), #180 19.7 (0.3 / 19.4)
+  1080p desktop | act | #26 22.7 (1.4 / 21.3), #205 17.9 (0.6 / 17.3)
+  1080p desktop | mirror shop | #25 30.7 (0.7 / 30), #27 24.9 (1.2 / 23.7), #62 16.8 (0.5 / 16.3), #63 22.9 (0.4 / 22.5), #113 17.7 (0.9 / 16.8)
+  retina laptop | control before | #218 46.9 (0 / 46.9)
+  retina laptop | mirror world ring | #37 17.9 (0.7 / 17.2), #38 25.5 (1.5 / 24), #39 17.9 (1.3 / 16.6), #40 33.8 (1 / 32.8), #41 45.1 (6.5 / 38.6), #71 29.8 (20.2 / 9.6)
+  retina laptop | act | #27 27 (3.5 / 23.5), #32 17.6 (0.7 / 16.9), #34 18.7 (3 / 15.7)
+  1440p desktop | control before | #125 29.3 (0 / 29.3)
+  1440p desktop | act | #27 29.2 (3.1 / 26.1), #77 19.3 (1.1 / 18.2)
+  1440p desktop | mirror shop | #0 17.5 (1.9 / 15.6), #3 21.2 (0.6 / 20.6), #4 34.3 (0.5 / 33.8), #5 17.1 (2.1 / 15), #9 19.7 (0.9 / 18.8), #10 18.4 (0.6 / 17.8)
+  1440p desktop | control after | #12 20.7 (0 / 20.7)
+  phone portrait | control before | #100 72 (0 / 72)
+  phone portrait | act | #27 31.4 (2.6 / 28.8), #48 27.2 (0.7 / 26.5)
+  phone portrait | mirror shop | #64 64.5 (32.9 / 31.6), #104 23 (0.4 / 22.6), #126 18.4 (1.8 / 16.6), #157 26.6 (20.5 / 6.1), #191 34 (0.3 / 33.7), #231 19.2 (1 / 18.2)
+  phone landscape | control before | #103 17.7 (0 / 17.7), #118 25.3 (0 / 25.3), #121 22.2 (0 / 22.2)
+  phone landscape | act | #27 18.4 (2.9 / 15.5), #37 21.4 (0.3 / 21.1), #38 25.4 (0.7 / 24.7)
+PASS 1080p desktop: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":1.7,"p95":3.3,"max":7.2}},{"control after":{"median":1.5,"p95":2.3,"max":3.2}}]
+PASS retina laptop: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":2.2,"p95":4.3,"max":46.9}},{"control after":{"median":1.8,"p95":3.3,"max":6.5}}]
+PASS 1440p desktop: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":1.8,"p95":2.9,"max":29.3}},{"control after":{"median":2.4,"p95":4.8,"max":20.7}}]
+PASS phone portrait: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":1.4,"p95":3.2,"max":72}},{"control after":{"median":1.5,"p95":2.5,"max":5.6}}]
+PASS phone landscape: control page (empty WebGL frame) p95 <= 16.7 ms, so this runner can show the budget | [{"control before":{"median":2.4,"p95":8.5,"max":25.3}},{"control after":{"median":1.1,"p95":2.1,"max":9}}]
+profile 1080p desktop mirror world ring: 2216 ms sampled over 270 frames; top self time:
+   1786.8 ms   80.6%  readPixels :0
+    234.5 ms   10.6%  (program) :0
+     17.6 ms    0.8%  getProgramInfoLog :0
+     12.9 ms    0.6%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A132%3A13:1
+      8.3 ms    0.4%  getProgram three.module.js:18033
+      6.7 ms    0.3%  setProgram three.module.js:18220
+      6.6 ms    0.3%  multiplyMatrices three.core.js:10564
+      5.7 ms    0.3%  getParameters three.module.js:7132
+      5.7 ms    0.3%  WebGLRenderer.renderBufferDirect three.module.js:17023
+      4.9 ms    0.2%  updateMW night1.html:4634
+profile 1080p desktop act: 1795 ms sampled over 270 frames; top self time:
+   1495.9 ms   83.3%  readPixels :0
+    138.7 ms    7.7%  (program) :0
+     15.7 ms    0.9%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A132%3A13:1
+     15.1 ms    0.8%  getProgramInfoLog :0
+      6.0 ms    0.3%  WebGLRenderer.render three.module.js:17464
+      5.7 ms    0.3%  WebGLRenderer.renderBufferDirect three.module.js:17023
+      5.7 ms    0.3%  getProgram three.module.js:18033
+      5.1 ms    0.3%  (idle) :0
+      4.9 ms    0.3%  setTexture2D three.module.js:11432
+      4.8 ms    0.3%  texSubImage2D :0
+profile 1080p desktop mirror shop: 2166 ms sampled over 270 frames; top self time:
+   1938.5 ms   89.5%  readPixels :0
+     98.6 ms    4.6%  (program) :0
+     13.2 ms    0.6%  getProgramInfoLog :0
+     10.1 ms    0.5%  (anonymous) pptr:evaluate;file%3A%2F%2F%2FUsers%2Frunner%2Fwork%2FNietzsche-%2FNietzsche-%2Fweb%2Fgpu_night1.mjs%3A132%3A13:1
+      4.7 ms    0.2%  setProgram three.module.js:18220
+      3.8 ms    0.2%  stepFrame night1.html:1792
+      3.3 ms    0.2%  bindTexture :0
+      3.2 ms    0.1%  toArray three.core.js:11296
+      3.2 ms    0.1%  setValue three.module.js:5925
+      3.1 ms    0.1%  upload three.module.js:5941
+PASS no page or console errors | []
+RESULT gpu night1 50 of 52 pass
