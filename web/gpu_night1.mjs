@@ -29,14 +29,15 @@ const CONFIG = {
   // frames over the budget listed per scene and setup (the rest are counted)
   longList: 6,
   // probe pass (session 31, rule 28): [setup, scene, part ladder on/off]; the run 118 misses (1440p shop, retina ring) and the act's long frame #26-27
-  probes: [['1440p desktop', 'mirror shop', true], ['1080p desktop', 'mirror shop', false], ['retina laptop', 'mirror world ring', true], ['1080p desktop', 'act', false]],
+  // session 32: plus the act at phone landscape (run 121 act max 31.0 ms, 5 frames over)
+  probes: [['1440p desktop', 'mirror shop', true], ['1080p desktop', 'mirror shop', false], ['retina laptop', 'mirror world ring', true], ['1080p desktop', 'act', false], ['phone landscape', 'act', false]],
   // probe pass: frames listed per probe (over the budget, or something linked, first used, uploaded or first drawn)
   probeList: 12,
   // part ladder: frames settled, then frames timed, with one part of the scene hidden
   ladderWarm: 10, ladderFrames: 60,
   // part ladder: parts printed per level (largest saving first); groups opened one level down
   ladderTop: 12, ladderOpen: 2,
-  // reflection ladder in every shop probe: rounds of the four variants (base, no reflection pass, its clearDepth skipped, its scissor off) interleaved
+  // reflection ladder in every shop probe: rounds of the variants interleaved (session 32: base, no reflection pass, no second skeleton update, tiny scene, both)
   reflRounds: 5,
   // shop A/B (session 31): this page against the previous one (env NIGHT1_PREV, a file in the step0 dir), alternated in the same job
   abSetups: ['1080p desktop', '1440p desktop'],
@@ -190,12 +191,29 @@ const PROBE = `(() => {
   const hookOwn = (s) => s.traverse((o) => { if (Object.prototype.hasOwnProperty.call(o, 'onBeforeRender') && !o.__probeHook) { const f = o.onBeforeRender; o.__probeHook = 1; o.onBeforeRender = function (...a) { mark(this); return f.apply(this, a); }; } });
   { const o = R.clearDepth.bind(R); R.clearDepth = () => { if (!P.noClearDepth) o(); }; }
   { const o = R.setScissorTest.bind(R); R.setScissorTest = (v) => o(P.noScissor ? false : v); }
+  // session 32: the reflection pass is a second render() of the whole roomScene at layers 2; three.js counts it as a new frame, so every skinned mesh it
+  // draws updates its skeleton again (the clown is on layers 0 and 1: his bone texture is uploaded again after pass 1 drew with it).
+  // P.oneSkel: skeletons already updated by pass 1 are not updated again (their bones have not moved between the passes); P.tiny: the pass draws a scene
+  // holding only the layer-1 objects (the reflection and the clown, moved there for that render and put back at the same index), not the whole roomScene
+  const T = new W.roomScene.constructor(); T.fog = W.roomScene.fog; T.matrixWorldAutoUpdate = W.roomScene.matrixWorldAutoUpdate;
+  const both = () => { const out = []; W.roomScene.traverse((o) => { if (o.isSkinnedMesh && (o.layers.mask & 3) === 3 && !out.includes(o.skeleton)) out.push(o.skeleton); }); return out; };
+  const l1 = () => [N.refl.root, N.chars.clown.root].filter((o) => o && o.parent === W.roomScene);
   const orig = R.render.bind(R);
   R.render = (s, c) => {
     const L = c.layers.mask;
     if (!P.hooked.has(s)) { P.hooked.add(s); hookOwn(s); }
     if (!P.main && L === 1) P.main = s;
     if (L === 2 && P.skipL1) return;
+    if (L === 2 && (P.oneSkel || P.tiny)) {
+      const sk = P.oneSkel ? both() : [], up = sk.map((k) => k.update);
+      for (const k of sk) k.update = () => {};
+      const mv = P.tiny ? l1().map((o) => [o, W.roomScene.children.indexOf(o)]) : [];
+      for (const [o] of mv) T.add(o);
+      orig(P.tiny ? T : s, c);
+      for (const [o, i] of mv.reverse()) { T.remove(o); W.roomScene.children.splice(i, 0, o); o.parent = W.roomScene; }
+      sk.forEach((k, i) => { k.update = up[i]; });
+      return;
+    }
     const h = s === P.main ? P.hide : null, was = h ? h.visible : false;
     if (h) h.visible = false;
     let q = null;
@@ -256,14 +274,15 @@ for (const [label, scene, ladder] of CONFIG.probes) {
   }
   // part ladder: same page, timer queries off; baseline before and after (noise band); the reflection pass skipped; each part hidden in turn
   await pp.evaluate(() => { window.__probe.timing = false; });
-  const time = async (expr) => { await pp.evaluate(expr); const r = await pp.evaluate(`(${LOOP})((k) => window.__night.stepFrame(1 / 60), window.__walkTest.renderer.getContext(), ${CONFIG.ladderFrames}, ${CONFIG.ladderWarm})`); return { tot: stats(r.tot), gpu: stats(r.gpu) }; };
+  const time = async (expr) => { await pp.evaluate(expr); const r = await pp.evaluate(`(${LOOP})((k) => { if (k === ${CONFIG.ladderWarm}) window.__probe.cur = window.__probe.fresh(); window.__night.stepFrame(1 / 60); }, window.__walkTest.renderer.getContext(), ${CONFIG.ladderFrames}, ${CONFIG.ladderWarm})`); const tex = await pp.evaluate(() => window.__probe.cur.tex); return { tot: stats(r.tot), gpu: stats(r.gpu), tex: +(tex / CONFIG.ladderFrames).toFixed(1) }; };
   if (scene === 'mirror shop') {
     // reflection ladder (session 31): which part of the reflection pass costs; variants interleaved per round, so VM drift hits them alike
-    const V = { base: '', 'no reflection pass': 'P.skipL1 = true', 'reflection, clearDepth skipped': 'P.noClearDepth = true', 'reflection, scissor off': 'P.noScissor = true' }, res = {};
-    for (let r = 0; r < CONFIG.reflRounds; r++) for (const [n, e] of Object.entries(V)) { const t = await time(`{ const P = window.__probe; P.skipL1 = P.noClearDepth = P.noScissor = false; ${e}; }`); (res[n] = res[n] || []).push(t.tot.median); }
-    await pp.evaluate(() => { const P = window.__probe; P.skipL1 = P.noClearDepth = P.noScissor = false; });
-    console.log(`  reflection ladder ${tag} (${CONFIG.reflRounds} rounds x ${CONFIG.ladderFrames} frames, total ms; median of the round medians, then each round):`);
-    for (const [n, a] of Object.entries(res)) console.log(`    ${n.padEnd(32)} ${stats(a).median}  [${a.join(', ')}]`);
+    // session 32: clearDepth and scissor rungs dropped (run 121: no saving); the split asked by run 121's Next step: skeleton re-update vs scene traversal
+    const V = { base: '', 'no reflection pass': 'P.skipL1 = true', 'reflection, no second skeleton update': 'P.oneSkel = true', 'reflection, tiny scene': 'P.tiny = true', 'reflection, tiny scene, one skeleton update': 'P.tiny = P.oneSkel = true' }, res = {}, tex = {};
+    for (let r = 0; r < CONFIG.reflRounds; r++) for (const [n, e] of Object.entries(V)) { const t = await time(`{ const P = window.__probe; P.skipL1 = P.noClearDepth = P.noScissor = P.oneSkel = P.tiny = false; ${e}; }`); (res[n] = res[n] || []).push(t.tot.median); (tex[n] = tex[n] || []).push(t.tex); }
+    await pp.evaluate(() => { const P = window.__probe; P.skipL1 = P.noClearDepth = P.noScissor = P.oneSkel = P.tiny = false; });
+    console.log(`  reflection ladder ${tag} (${CONFIG.reflRounds} rounds x ${CONFIG.ladderFrames} frames, total ms; median of the round medians, then each round; texture uploads per frame):`);
+    for (const [n, a] of Object.entries(res)) console.log(`    ${n.padEnd(44)} ${stats(a).median}  [${a.join(', ')}]  tex/frame ${stats(tex[n]).median}`);
   }
   if (!ladder) continue;
   const base0 = await time('window.__probe.hide = null; window.__probe.skipL1 = false');
