@@ -63,7 +63,8 @@ const MUTS = {
   hideseen: ['night1.html', "wings: ['stagehand', 'child'],", "wings: ['stagehand', 'child', 'rigger'],"],
   lodfar: ['night1.html', 'lodFar: 8,', 'lodFar: 99,'],
   nofree: ['night1.html', 'freeAfterWalk: true,', 'freeAfterWalk: false,'],
-  freechild: ['night1.html', ".filter((id) => id !== 'child');", ".filter((id) => id !== 'none');"],
+  // the keep filter bypassed for one resource still in use (the clown's body material, drawn in the room right after the free)
+  freeused: ['night1.html', '  for (const r of drop) r.dispose();', '  if (window.__keepFreed) drop.add(chars.clown.body.material);\n  for (const r of drop) r.dispose();'],
   falls: ['night1.html', "else if (once(A, 'fall')) { A.falls++; gpStart(c, 'prat');", "else if (once(A, 'fall')) { A.falls++;"],
   intense: ['night1.html', "  if (once(A, 'roll')) { drum(actObj.roll); A.fxN.roll++; }", ''],
   vanity: ['night1.html', "  const vanity = kind === 'paint';", '  const vanity = false;'],

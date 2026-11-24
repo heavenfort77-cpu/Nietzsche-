@@ -68,5 +68,5 @@ unseen	crew on no pixel
 hideseen	crew on no pixel
 lodfar	LOD distance
 nofree	sets freed
-freechild	stay freed
+freeused	stay freed
 belong	his thought after the child
