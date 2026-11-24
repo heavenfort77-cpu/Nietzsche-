@@ -1,0 +1,20 @@
+PASS mutation unweighted -> model gate "every vertex weighted" fires | FAIL every vertex weighted (sum 1) | 50 vertices off
+PASS mutation influence5 -> model gate "influences per vertex" fires | FAIL <= 4 influences per vertex | 5
+PASS mutation uvoverlap -> model gate "body UVs: no overlaps" fires | FAIL body UVs: no overlaps | 2 faces
+PASS mutation headfloat -> model gate "head sits on its bone" fires | FAIL head sits on its bone | 110.6 cm from the head bone
+PASS mutation hidden -> model gate "every mesh visible" fires | FAIL every mesh visible | ['body']
+PASS mutation dotname -> model gate "bone names have no dots" fires | FAIL bone names have no dots | ['hand.R']
+PASS mutation dotname -> glb gate "node names have no dots" fires | FAIL node names have no dots | ['hand.R']
+PASS mutation drawcalls -> model gate "materials <=" fires | FAIL materials <= 2 | 4
+PASS mutation drawcalls -> web gate "draw calls <= 3" fires | FAIL draw calls <= 3 (body, face; hull not added yet) | calls 4, triangles 18006
+PASS mutation faceswap -> model gate "the 4 face cells all differ" fires | FAIL the 4 face cells all differ | smallest mean difference 0.0
+PASS mutation faceswap -> web gate "face cell swap changes the face" fires | FAIL face cell swap changes the face (texture.offset) | sad 0.0, smile 0.0, startle 0.0, wince 0.0
+PASS mutation badbind -> deform:idle gate "rest pose = bind mesh" fires | FAIL rest pose = bind mesh | max 33.290 mm
+PASS mutation floating -> deform:slap gate "slap: nothing floats free" fires | FAIL slap: nothing floats free (part groups stay 3) | max groups 4; parts with no contact: []
+PASS mutation stretch -> deform:walk gate "walk: edge stretch" fires | FAIL walk: edge stretch p99.9 <= 1.6 | p99.9 5.68, max 7.11 on part [hips,thigh_L,shin_L]
+PASS mutation headup -> deform:idle gate "idle: head tipped forward" fires | FAIL idle: head tipped forward (looks down) on every sample | least forward lean y = 0.28
+PASS mutation walklen -> glb gate "clip lengths match the plates" fires | FAIL clip lengths match the plates (within 1 frame) | {'walk': (0.833, 0.996)}
+PASS mutation vcolor -> glb gate "no vertex colours" fires | FAIL no vertex colours (COLOR_0)
+PASS real build: 39 of 39 gates pass
+PASS real build files unchanged by the mutation run (sha256)
+RESULT mutations 17 of 17 fired; real build PASS; files unchanged
