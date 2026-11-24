@@ -1875,13 +1875,11 @@ async function boot() {
   placeStart(false);
   fit();
   // warm-up: every shader and texture once under the loading panel (walk, room with the clown and flakes, vignette)
-  renderer.compile(scene, camera);
-  renderer.compile(plateScene, plateCam);
-  renderer.compile(vigScene, plateCam);
+  warmDraw(scene, camera);
+  warmDraw(plateScene, plateCam);
+  warmDraw(vigScene, plateCam);
   roomScene.add(chars.clown.root);
-  for (const n of CONFIG.roomOrder) room.rigs[n].visible = true;
-  renderer.compile(roomScene, roomCam);
-  for (const n of CONFIG.roomOrder) room.rigs[n].visible = false;
+  warmDraw(roomScene, roomCam);
   scene.add(chars.clown.root);
   for (const c of Object.values(chars)) for (const t of c.textures) renderer.initTexture(t);
   for (const p of Object.values(plates)) { renderer.initTexture(p.color); renderer.initTexture(p.depth); }
@@ -2220,6 +2218,23 @@ async function n1Load() {
   // H8: the laughs are rendered here, under the loading card (first use is never a render)
   NS.laughBuf = await window.makeLaughs();
 }
+// warm-up draw (session 31): every object of a scene drawn once under the loading card, so no shader program is used for the first time during
+// play (run 119: act frame #27, 17.4 ms, popcorn's first use). renderer.compile skips hidden objects and does not use the program. For this one
+// draw only: hidden objects shown, empty instanced meshes given one instance, culling off (load only, never during play), every camera layer on.
+function warmDraw(scn, cam) {
+  const undo = [];
+  scn.traverse((o) => {
+    if (!o.visible) { o.visible = true; undo.push(() => { o.visible = false; }); }
+    if (o.isInstancedMesh && o.count === 0) { o.count = 1; undo.push(() => { o.count = 0; }); }
+    if (o.frustumCulled) { o.frustumCulled = false; undo.push(() => { o.frustumCulled = true; }); }
+  });
+  const mask = cam.layers.mask;
+  cam.layers.enableAll();
+  renderer.render(scn, cam);
+  cam.layers.mask = mask;
+  for (const f of undo) f();
+  renderer.clear();
+}
 function n1Warm() {
   const c = chars.clown;
   mwScene.add(c.root);
@@ -2228,23 +2243,18 @@ function n1Warm() {
   mwScene.add(pool.stripe, pool.weighRing);
   const pr = chars.performer ? chars.performer.root : null, prAt = pr && pr.parent;
   if (pr) mwScene.add(pr);
-  endScene.add(c.root); endObj.crowd.count = 1; renderer.compile(endScene, mwCam); endObj.crowd.count = 0; mwScene.add(c.root);
-  // session 23: the photograph room's lens and cone and the void's outlines, line and door fill compile here too (shown for the compile only)
-  for (const h of NS.castHulls) h.visible = true;
-  NS.voidLine.count = 1; mwScene.add(pool.lens, pool.wedge);
-  renderer.compile(mwScene, mwCam);
-  for (const h of NS.castHulls) h.visible = false;
+  endScene.add(c.root); endObj.crowd.count = 0; warmDraw(endScene, mwCam); mwScene.add(c.root);
+  // session 23: the photograph room's lens and cone and the void's outlines, line and door fill are drawn here too
+  mwScene.add(pool.lens, pool.wedge);
+  warmDraw(mwScene, mwCam);
   NS.voidLine.count = 0; mwScene.remove(pool.lens, pool.wedge, pool.stripe, pool.weighRing);
   for (const k of MW_KINDS) mwScene.remove(cast[k]);
   if (pr) { if (prAt) prAt.add(pr); else mwScene.remove(pr); }
-  // the act's ring, props, hat and broom compile here (hidden props shown for the compile only)
+  // the act's ring, props, hat, broom and popcorn are drawn here
   actScene.add(c.root, cast.child);
-  const hide = [actObj.hat, actObj.dent, actObj.broom];
-  for (const o of hide) o.visible = true;
   actFit();
-  renderer.compile(actScene, actCam);
-  renderer.compile(pressScene, pressCam);
-  for (const o of hide) o.visible = false;
+  warmDraw(actScene, actCam);
+  warmDraw(pressScene, pressCam);
   scene.add(c.root, cast.child);
 }
 
