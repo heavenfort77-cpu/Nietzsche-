@@ -28,6 +28,14 @@ const CONFIG = {
   profUs: 200, profTop: 10,
   // frames over the budget listed per scene and setup (the rest are counted)
   longList: 6,
+  // probe pass (session 31, rule 28): [setup, scene, part ladder on/off]; the run 118 misses (1440p shop, retina ring) and the act's long frame #26-27
+  probes: [['1440p desktop', 'mirror shop', true], ['retina laptop', 'mirror world ring', true], ['1080p desktop', 'act', false]],
+  // probe pass: frames listed per probe (over the budget, or something linked, first used, uploaded or first drawn)
+  probeList: 12,
+  // part ladder: frames settled, then frames timed, with one part of the scene hidden
+  ladderWarm: 10, ladderFrames: 60,
+  // part ladder: parts printed per level (largest saving first); groups opened one level down
+  ladderTop: 12, ladderOpen: 2,
 };
 const root = process.argv[2] || 'step0';
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.json': 'application/json', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg', '.wasm': 'application/wasm' };
@@ -117,6 +125,118 @@ for (const r of rows) if (r.list.length) console.log(`  ${r.setup} | ${r.scene} 
 if (!process.env.EXTRA_ARGS) for (const [, , , label] of CONFIG.setups) {
   const c = rows.filter((r) => r.setup === label && /^control/.test(r.scene)), worst = Math.max(...c.map((r) => r.p95));
   gate(`${label}: control page (empty WebGL frame) p95 <= ${CONFIG.budgetMs} ms, so this runner can show the budget`, worst <= CONFIG.budgetMs, c.map((r) => ({ [r.scene]: { median: r.median, p95: r.p95, max: r.max } })));
+}
+// Probe pass (session 31, rule 28: name the cause before any fix). A separate pass on a fresh page, so the hooks do not touch the timings above.
+// Test-side hooks only, no game change: renderer.render is wrapped (GPU timer query per pass, labelled by scene and camera layers; a part of the
+// main scene can be hidden for that render only, so game logic cannot undo it; the reflection pass (layers mask 2) can be skipped); gl calls are
+// counted per frame (program links, first useProgram of a program, texture uploads, buffer uploads); Object3D.onBeforeRender marks objects drawn
+// for the first time (objects with their own onBeforeRender are hooked when their scene is first rendered).
+const PROBE = `(() => {
+  const W = window.__walkTest, N = window.__night, R = W.renderer, gl = R.getContext(), X = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+  const P = window.__probe = { k: 0, ev: [], q: [], timing: true, hide: null, skipL1: false, main: null, seen: new Set(), used: new Set(), hooked: new Set(), cur: null, X: !!X };
+  const fresh = () => ({ link: 0, first: 0, tex: 0, texs: [], buf: 0, drawn: [] });
+  P.cur = fresh(); P.fresh = fresh;
+  // label: name (or first named descendant), geometry type and size (m), material type, transparent / additive / no depth write, texture size
+  const named = (o) => { let n = o.name; if (!n) o.traverse((d) => { if (!n && d.name) n = d.name + '..'; }); return n || o.type; };
+  const lab = (o) => {
+    let s = named(o); const g = o.geometry, m = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (g && g.attributes && g.attributes.position) { if (!g.boundingBox) g.computeBoundingBox(); const b = g.boundingBox; s += ' ' + g.type.replace('Geometry', '') + ' ' + [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z].map((v) => v.toFixed(1)).join('x'); }
+    if (m) { const tx = m.map || (m.uniforms && Object.values(m.uniforms).map((u) => u && u.value).find((v) => v && v.isTexture)), im = tx && tx.image; s += ' ' + (m.name || m.type.replace('Material', '')) + (m.transparent ? ' transp' : '') + (m.blending === 2 ? ' add' : '') + (m.depthWrite === false ? ' noZ' : '') + (im ? ' tex ' + (im.width || '?') + 'x' + (im.height || '?') : ''); }
+    if (o.isInstancedMesh) s += ' x' + o.count;
+    return s;
+  };
+  P.lab = lab;
+  const mark = (o) => { if (!P.seen.has(o)) { P.seen.add(o); P.cur.drawn.push(lab(o)); } };
+  // texture uploads: count, and the source size and kind of the first three per frame
+  const src = (fn, a) => { const v = a[a.length - 1]; return v && v.width ? v.width + 'x' + v.height + ' ' + v.constructor.name : fn === 'texSubImage2D' ? a[4] + 'x' + a[5] + ' data' : a[3] + 'x' + a[4] + ' data'; };
+  for (const fn of ['texImage2D', 'texSubImage2D', 'compressedTexImage2D', 'compressedTexSubImage2D', 'texStorage2D', 'texImage3D', 'texStorage3D']) { const o = gl[fn].bind(gl); gl[fn] = (...a) => { P.cur.tex++; if (P.cur.texs.length < 3) P.cur.texs.push(fn + ' ' + src(fn, a)); return o(...a); }; }
+  for (const fn of ['bufferData', 'bufferSubData']) { const o = gl[fn].bind(gl); gl[fn] = (...a) => { P.cur.buf++; return o(...a); }; }
+  { const o = gl.linkProgram.bind(gl); gl.linkProgram = (p) => { P.cur.link++; return o(p); }; }
+  { const o = gl.useProgram.bind(gl); gl.useProgram = (p) => { if (p && !P.used.has(p)) { P.used.add(p); P.cur.first++; } return o(p); }; }
+  const O3 = Object.getPrototypeOf(Object.getPrototypeOf(W.scene)), ob = O3.onBeforeRender;
+  O3.onBeforeRender = function (...a) { mark(this); return ob.apply(this, a); };
+  const hookOwn = (s) => s.traverse((o) => { if (Object.prototype.hasOwnProperty.call(o, 'onBeforeRender') && !o.__probeHook) { const f = o.onBeforeRender; o.__probeHook = 1; o.onBeforeRender = function (...a) { mark(this); return f.apply(this, a); }; } });
+  const orig = R.render.bind(R);
+  R.render = (s, c) => {
+    const L = c.layers.mask;
+    if (!P.hooked.has(s)) { P.hooked.add(s); hookOwn(s); }
+    if (!P.main && L === 1) P.main = s;
+    if (L === 2 && P.skipL1) return;
+    const h = s === P.main ? P.hide : null, was = h ? h.visible : false;
+    if (h) h.visible = false;
+    let q = null;
+    if (X && P.timing) { q = gl.createQuery(); gl.beginQuery(X.TIME_ELAPSED_EXT, q); }
+    orig(s, c);
+    if (q) { gl.endQuery(X.TIME_ELAPSED_EXT); P.q.push([P.k, (s === W.roomScene ? 'room' : N.S.mode) + ' layers ' + L, q]); }
+    if (h) h.visible = was;
+  };
+  // GPU timer results, once available: per label, ms per frame index; disjoint frames dropped and counted
+  P.read = async () => {
+    const out = {}, t0 = performance.now(); let lost = 0, disjoint = 0;
+    while (P.q.length && !gl.getQueryParameter(P.q[P.q.length - 1][2], gl.QUERY_RESULT_AVAILABLE) && performance.now() - t0 < 3000) await new Promise((r) => setTimeout(r, 50));
+    if (X && gl.getParameter(X.GPU_DISJOINT_EXT)) disjoint++;
+    for (const [k, l, q] of P.q) { if (gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) (out[l] = out[l] || []).push([k, gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6]); else lost++; gl.deleteQuery(q); }
+    P.q.length = 0; return { out, lost, disjoint };
+  };
+  // parts of a group: label, triangles (instances counted), visible now
+  P.parts = (g) => g.children.map((c, i) => { let tris = 0, meshes = 0; c.traverse((o) => { if (o.geometry && o.geometry.attributes && o.geometry.attributes.position) { meshes++; const n = o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count; tris += Math.round(n / 3) * (o.isInstancedMesh ? o.count : 1); } }); return { i, label: lab(c), tris, meshes, kids: c.children.length, vis: c.visible }; });
+})()`;
+const pstats = (a) => a.length ? stats(a) : { median: 0, p95: 0, max: 0 };
+for (const [label, scene, ladder] of CONFIG.probes) {
+  const [w, h, sf] = CONFIG.setups.find((s) => s[3] === label);
+  await p.setViewport({ width: w, height: h, deviceScaleFactor: sf, isMobile: /phone/.test(label), hasTouch: /phone/.test(label) });
+  await p.goto(`http://localhost:${srv.address().port}/night1.html`, { waitUntil: 'load' });
+  await p.waitForFunction(() => window.__night && window.__night.S.ready && window.__night.stepFrame);
+  await p.evaluate(SCENES[scene]);
+  await p.evaluate(() => { const N = window.__night, R = window.__walkTest.renderer; N.S.running = false; if (N.S.raf) { cancelAnimationFrame(N.S.raf); N.S.raf = 0; } R.info.autoReset = false; });
+  await p.evaluate(PROBE);
+  const run = `(k) => { const P = window.__probe, R = window.__walkTest.renderer; P.k = k; P.cur = P.fresh(); R.info.reset(); window.__night.stepFrame(1 / 60); P.cur.calls = R.info.render.calls; P.ev[k] = P.cur; }`;
+  const lr = await p.evaluate(`(${LOOP})(${run}, window.__walkTest.renderer.getContext(), ${CONFIG.frames}, ${CONFIG.warm})`);
+  const ev = await p.evaluate(() => window.__probe.ev);
+  const tq = await p.evaluate(() => window.__probe.read());
+  const st = split(lr), tag = `probe ${label} ${scene}`;
+  gate(`${tag}: every frame logged`, ev.length === CONFIG.frames + CONFIG.warm, { logged: ev.length });
+  console.log(`${tag}: median ${st.median} p95 ${st.p95} max ${st.max} cpu p95 ${st.cpuP95} gpu p95 ${st.gpuP95} over ${CONFIG.budgetMs}: ${st.long} | timer query ${await p.evaluate(() => window.__probe.X)} lost ${tq.lost} disjoint ${tq.disjoint}`);
+  for (const [l, a] of Object.entries(tq.out)) { const t = a.filter(([k]) => k >= CONFIG.warm).map(([, ms]) => ms), s = pstats(t); console.log(`  pass ${l.padEnd(18)} GPU ms median ${s.median} p95 ${s.p95} max ${s.max} (${t.length} frames)`); }
+  // frames with events, timed frames only (k counted from the first timed frame, as in the lists above)
+  const tot = { link: 0, first: 0, tex: 0, drawn: 0 }, listed = [], evList = [];
+  for (let k = CONFIG.warm; k < ev.length; k++) {
+    const e = ev[k], i = k - CONFIG.warm, ms = lr.tot[i];
+    tot.link += e.link; tot.first += e.first; tot.tex += e.tex; tot.drawn += e.drawn.length;
+    const hasEv = e.link || e.first || e.drawn.length;
+    if (!hasEv && ms <= CONFIG.budgetMs) continue;
+    (hasEv ? evList : listed).push(`#${i} ${ms.toFixed(1)} (${lr.cpu[i].toFixed(1)} / ${lr.gpu[i].toFixed(1)}) calls ${e.calls} link ${e.link} firstUse ${e.first} tex ${e.tex}${e.texs.length ? ' [' + e.texs.join('; ') + ']' : ''} buf ${e.buf}${e.drawn.length ? ' firstDrawn ' + e.drawn.slice(0, 5).join(', ') + (e.drawn.length > 5 ? ` +${e.drawn.length - 5}` : '') : ''}`);
+  }
+  const warmEv = ev.slice(0, CONFIG.warm).reduce((a, e) => ({ link: a.link + e.link, first: a.first + e.first, tex: a.tex + e.tex, drawn: a.drawn + e.drawn.length }), { link: 0, first: 0, tex: 0, drawn: 0 });
+  console.log(`  events in the ${CONFIG.warm} settle frames ${JSON.stringify(warmEv)}; in the ${CONFIG.frames} timed frames ${JSON.stringify(tot)}; frame lines are index, total, cpu / gpu:`);
+  { const tc = ev.slice(CONFIG.warm).map((e) => e.tex), f = ev[CONFIG.warm]; console.log(`  texture uploads per timed frame: min ${Math.min(...tc)} max ${Math.max(...tc)}; first timed frame: ${f.texs.join('; ') || 'none'}`); }
+  for (const [name, list] of [['with events', evList], ['over budget, no events', listed]]) {
+    console.log(`  frames ${name}: ${list.length}`);
+    for (const l of list.slice(0, CONFIG.probeList)) console.log('    ' + l);
+    if (list.length > CONFIG.probeList) console.log(`    +${list.length - CONFIG.probeList} more`);
+  }
+  if (!ladder) continue;
+  // part ladder: same page, timer queries off; baseline before and after (noise band); the reflection pass skipped; each part hidden in turn
+  await p.evaluate(() => { window.__probe.timing = false; });
+  const time = async (expr) => { await p.evaluate(expr); const r = await p.evaluate(`(${LOOP})((k) => window.__night.stepFrame(1 / 60), window.__walkTest.renderer.getContext(), ${CONFIG.ladderFrames}, ${CONFIG.ladderWarm})`); return { tot: stats(r.tot), gpu: stats(r.gpu) }; };
+  const base0 = await time('window.__probe.hide = null; window.__probe.skipL1 = false');
+  const noRefl = await time('window.__probe.skipL1 = true');
+  await p.evaluate(() => { window.__probe.skipL1 = false; });
+  const lad = async (path) => {
+    const parts = await p.evaluate(`window.__probe.parts(${path})`), out = [];
+    for (const pt of parts) { if (!pt.vis || !pt.meshes) continue; const r = await time(`window.__probe.hide = (${path}).children[${pt.i}]`); out.push({ ...pt, path: `${path}.children[${pt.i}]`, save: +(base0.tot.median - r.tot.median).toFixed(2), saveP95: +(base0.tot.p95 - r.tot.p95).toFixed(2), gpuMed: r.gpu.median }); }
+    await p.evaluate(() => { window.__probe.hide = null; });
+    return out.sort((a, b) => b.save - a.save);
+  };
+  const top = await lad('window.__probe.main');
+  const base1 = await time('window.__probe.hide = null');
+  console.log(`  ladder ${tag} (${CONFIG.ladderFrames} frames each, total ms): base before median ${base0.tot.median} p95 ${base0.tot.p95}, after median ${base1.tot.median} p95 ${base1.tot.p95}; minus reflection pass median ${noRefl.tot.median} p95 ${noRefl.tot.p95}`);
+  for (const r of top.slice(0, CONFIG.ladderTop)) console.log(`    hide ${r.label.padEnd(34)} saves median ${r.save} p95 ${r.saveP95} | tris ${r.tris} meshes ${r.meshes}`);
+  for (const g of top.filter((r) => r.kids > 1).slice(0, CONFIG.ladderOpen)) {
+    const sub = await lad(g.path);
+    console.log(`  inside ${g.label}:`);
+    for (const r of sub.slice(0, CONFIG.ladderTop)) console.log(`    hide ${r.label.padEnd(34)} saves median ${r.save} p95 ${r.saveP95} | tris ${r.tris} meshes ${r.meshes}`);
+  }
 }
 // CPU profile per scene at the first setup (a separate pass, so sampling does not touch the timings above): top functions by self time
 {
