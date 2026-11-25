@@ -1,0 +1,69 @@
+entry 4: step0/smoke_walk.cjs sha db8f5f1
+PASS desktop 1280x720: loads, no page error 
+PASS desktop 1280x720: walk speed from planted feet 0.748 m/s (94 planted steps)
+PASS desktop 1280x720: walk out starts with its first shot only (cuts 1, want 1)
+PASS desktop 1280x720: bot reaches the ring edge (waypoint 6 of 7, at -1.30,18.43)
+PASS desktop 1280x720: shots corridor > wings > entrance, cuts 3
+PASS desktop 1280x720: performers met 2 of 2
+PASS desktop 1280x720: clown feet and head in frame every tick (0 of 448 out)
+PASS desktop 1280x720: no page error after the walk 
+PASS desktop 1280x720: walk back starts with its first shot only (cuts 1, want 1)
+PASS desktop 1280x720: walk back reaches the cube room flap (waypoint 6 of 7, at 0.01,2.50)
+PASS desktop 1280x720: walk back shots entrance > wings > corridor, cuts 3
+PASS desktop 1280x720: walk back, clown feet and head in frame every tick (0 of 666 out) 
+PASS desktop 1280x720: gloom rises to the flap and never falls (end 0.349, max 0.349, want 0.35; largest drop 0.0000)
+PASS desktop 1280x720: in the cube room (view exit, gloom 1, face sad, tempo 1)
+PASS desktop 1280x720: good act pays out: HUD Laughs 60 Mask 2 (want 60 / 2), paint 0.560 (want 0.560)
+PASS desktop 1280x720: turning shows all 4 walls (ring, dressing, mirror, exit), dressing table on none (prepOn off)
+PASS desktop 1280x720: no dressing table: all 60 Laughs go into the Mirror (Laughs 60, Mask 2, "Into the Mirror: 60 Laughs")
+FAIL desktop 1280x720: room HUD written only on change (26 writes, 1 repeats laughsN '0')
+PASS desktop 1280x720: 'Walk back again' leaves the room clean (room false, HUD false, table false, gloom 0, paint 0.400, cuts 1)
+PASS flop pays 12 Laughs, Mask 0 (want 12 / 0), "Into the Mirror: 12 Laughs"
+PASS walk out from the room: walk scene, gloom 0, face smile, tempo 1.18, HUD false, paint 0.400, cuts 1
+PASS desktop 1280x720: no page error after the walk back and the room 
+PASS stick wobbling at the dead zone for 60 frames: walk restarts 1 (max 1)
+PASS depth: behind the rack 55.6% hidden, in the open 0.0% hidden (5986 px)
+PASS phone portrait 390x844: loads, no page error 
+PASS phone portrait 390x844: walk speed from planted feet 0.748 m/s (94 planted steps)
+PASS phone portrait 390x844: walk out starts with its first shot only (cuts 1, want 1)
+PASS phone portrait 390x844: bot reaches the ring edge (waypoint 6 of 7, at -1.30,18.42)
+PASS phone portrait 390x844: shots corridor > wings > entrance, cuts 3
+PASS phone portrait 390x844: performers met 2 of 2
+PASS phone portrait 390x844: clown feet and head in frame every tick (0 of 558 out)
+PASS phone portrait 390x844: no page error after the walk 
+PASS phone portrait 390x844: walk back starts with its first shot only (cuts 1, want 1)
+PASS phone portrait 390x844: walk back reaches the cube room flap (waypoint 6 of 7, at 0.01,2.49)
+PASS phone portrait 390x844: walk back shots entrance > wings > corridor, cuts 3
+PASS phone portrait 390x844: walk back, clown feet and head in frame every tick (0 of 814 out) 
+PASS phone portrait 390x844: gloom rises to the flap and never falls (end 0.350, max 0.350, want 0.35; largest drop 0.0000)
+PASS phone portrait 390x844: in the cube room (view exit, gloom 1, face sad, tempo 1)
+PASS phone portrait 390x844: good act pays out: HUD Laughs 60 Mask 2 (want 60 / 2), paint 0.560 (want 0.560)
+PASS phone portrait 390x844: turning shows all 4 walls (ring, dressing, mirror, exit), dressing table on none (prepOn off)
+PASS phone portrait 390x844: no dressing table: all 60 Laughs go into the Mirror (Laughs 60, Mask 2, "Into the Mirror: 60 Laughs")
+FAIL phone portrait 390x844: room HUD written only on change (40 writes, 1 repeats laughsN '0')
+PASS phone portrait 390x844: touch stick never shown in the room (shown 0 times)
+PASS phone portrait 390x844: 'Walk back again' leaves the room clean (room false, HUD false, table false, gloom 0, paint 0.400, cuts 1)
+PASS phone portrait 390x844: no page error after the walk back and the room 
+PASS phone landscape 844x390: loads, no page error 
+PASS phone landscape 844x390: walk speed from planted feet 0.748 m/s (94 planted steps)
+PASS phone landscape 844x390: walk out starts with its first shot only (cuts 1, want 1)
+PASS phone landscape 844x390: bot reaches the ring edge (waypoint 6 of 7, at -1.30,18.40)
+PASS phone landscape 844x390: shots corridor > wings > entrance, cuts 3
+PASS phone landscape 844x390: performers met 2 of 2
+PASS phone landscape 844x390: clown feet and head in frame every tick (0 of 494 out)
+PASS phone landscape 844x390: no page error after the walk 
+PASS phone landscape 844x390: walk back starts with its first shot only (cuts 1, want 1)
+PASS phone landscape 844x390: walk back reaches the cube room flap (waypoint 6 of 7, at 0.01,2.49)
+PASS phone landscape 844x390: walk back shots entrance > wings > corridor, cuts 3
+PASS phone landscape 844x390: walk back, clown feet and head in frame every tick (0 of 716 out) 
+PASS phone landscape 844x390: gloom rises to the flap and never falls (end 0.350, max 0.350, want 0.35; largest drop 0.0000)
+PASS phone landscape 844x390: in the cube room (view exit, gloom 1, face sad, tempo 1)
+PASS phone landscape 844x390: good act pays out: HUD Laughs 60 Mask 2 (want 60 / 2), paint 0.560 (want 0.560)
+PASS phone landscape 844x390: turning shows all 4 walls (ring, dressing, mirror, exit), dressing table on none (prepOn off)
+PASS phone landscape 844x390: no dressing table: all 60 Laughs go into the Mirror (Laughs 60, Mask 2, "Into the Mirror: 60 Laughs")
+FAIL phone landscape 844x390: room HUD written only on change (30 writes, 1 repeats laughsN '0')
+PASS phone landscape 844x390: touch stick never shown in the room (shown 0 times)
+PASS phone landscape 844x390: 'Walk back again' leaves the room clean (room false, HUD false, table false, gloom 0, paint 0.400, cuts 1)
+PASS phone landscape 844x390: no page error after the walk back and the room 
+RESULT walk smoke 63 of 66 pass
+exit 1, 210 s
