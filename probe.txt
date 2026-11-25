@@ -1,0 +1,15 @@
+entry 0: ONLY=phone step0/probe_s44_faults.cjs sha b1820db
+PASS phone board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,343,390,362],"goalShown":true,"notes":[["The fall",[110,336,164,405]],["The sweep",[228,336,279,405]]]}}
+FAIL phone mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":415,"webgl":24,"page":405,"rect":[156,95,234,149]}
+PASS phone mirror paint: no text over other text | []
+FAIL phone mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":1521,"webgl":67,"page":1521,"rect":[151,67,241,219]}
+PASS phone mirror entry: no text over other text | []
+FAIL phone mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":888,"webgl":41,"page":888,"rect":[151,67,241,219]}
+PASS phone mirror after: no text over other text | []
+FAIL phone mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":889,"webgl":45,"page":889,"rect":[151,67,241,219]}
+PASS phone mirror shop: no text over other text | []
+FAIL phone mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":0,"webgl":0,"page":0,"rect":[416,-242,763,415]}
+PASS phone mirror press: no text over other text | []
+PASS phone no page errors | []
+RESULT s44 faults 7 of 12 pass
+exit 1, 24 s
