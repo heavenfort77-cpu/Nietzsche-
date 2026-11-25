@@ -1,0 +1,25 @@
+entry 2: step0/smoke_nights.cjs sha ee40546
+    routes checked 28 | rooms seen photo, void, parade, tilt
+PASS routes: corridor first, the arena last with the Light, every space a group of 2 types, no more spaces than the night allows
+    lens tell 0.60 s | flash cost 8.4 Laughs | froze true
+PASS photo room: sepia and border, the lens tells 0.6 s, the flash in the cone costs Laughs and freezes, the door opens when the group is down
+    strokes 18 | Shame reach before the cling 0.45 s
+PASS void: paper and dark text, his walk draws the line, Shame reaches with a tell and clings, the drawn door, the ring after
+    flats scrolled 6 | line tells 1.23 s 
+PASS parade: the Sergeant strides on the drum beat, marks its line 2 beats before the thrust, parries on the beat, is hit between beats
+    Weigher 1.58 m/s at 90 Laughs, 0.31 at 6 | roll -8.3 deg | tell 0.63
+PASS scale room: the Weigher is faster the more Laughs he holds, rises 0.6 s before it drops, the room leans by his Laughs
+    night 2 | Mask 3 | shards 9 | bought dash | Light 1.25 -> 1.4375 | board fall,scale
+    after Go on: #n=3&m=6&s=4&b=sweep.scale&t=scale&lo=1&sp=
+PASS night 2 from the hash: Mask, shards, bought acts and the wider Light carried; tonight's board and quote; next night writes the run
+PASS night 3 is the last: the drill is tonight's tryout, no next night, start again clears the run
+    Performer HP 16 | attacks fall,sweep,scale,dash
+    tells fall 0.72, sweep 0.70, scale 0.83, dash 0.60 | Laughs per hit standing 10.4, 8.4, 10.4, 9.4
+PASS Performer: HP by Mask, its opening run cannot be hurt, each bought act is an attack with a tell of at least 0.6 s that costs Laughs
+PASS Performer: with nothing bought at Mask 0 it has HP 12 and only the fall
+    quit: end done | from the exit 0.18 m | buttons again1
+PASS ending: quit: the line, his warm light with the paint off, the audience one by one, two buttons; he bows, says "I quit", walks out; only the restart button
+PASS ending: one last act: three falls on the player's presses, no words left, then the restart button
+PASS no page errors
+RESULT nights 12 of 12 pass
+exit 0, 186 s
