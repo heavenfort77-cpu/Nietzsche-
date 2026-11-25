@@ -1,4 +1,4 @@
-# The Clown and the Mirror: current design (jam build, 18 Nov 2026; owner decisions to 25 Nov 2026)
+# The Clown and the Mirror: current design (jam build, 18 Nov 2026; owner decisions to 25 Nov 2026, session 44)
 
 Copy of the "Current design" part of the live design doc: https://claude.ai/artifact/Dg9iLQj6ZrECRh79T4vsow
 The live doc also keeps the earlier design (before 16 Nov 2026) for history; where they differ, this part wins. All features and graphics quality are required: nothing here is cut for scope.
@@ -25,6 +25,11 @@ The live doc also keeps the earlier design (before 16 Nov 2026) for history; whe
 - **C10: the last act falls on his will.** "Perform one last act" has no drum, no gold button and no timer: the player falls him (tap or click on the picture, or E / Space / Enter) and the crash follows his landing; three falls, then black. One line until the first fall, "Fall when you choose." (lead's wording). (`endFallOnWill`.)
 - **C1: insecurities are driven off, never killed.** A figure put down turns its back and walks out of the space; it does not sink and drops no glass, and it is there again the next night. Glass pays for lasting: each space he gets out of pays 4 glass, coming out of the night pays 4 more (lead's number; a loss keeps half). This replaces "Insecurity is only beaten by acting" in the wording only: acting still drives them off, standing still still gnaws. (`mwDriveOff`, `mwSpacePay`.)
 - **C11: the end card drops "The shame of living:".** The list of what he bought and "He got up." stay. (`endKnowsOn` false.)
+
+**Owner decisions, 25 Nov 2026, session 44 (owner 13:52: "would it be better for him to play escape?"; 13:55: "do b then do a actual build"; panel `design/PANEL-mirror-escape-25nov.md`). Built behind CONFIG switches; they replace C1's drive-off and the rule that a space's door opens when its group is down:**
+- **E1: the Mirror World is an escape (13 of 13).** The line on entering is "Get out." (X5, 13 of 13). Each space's way out is open from the start; one figure of the space's group stands between him and it (X4, 11 of 13). The figures cannot be beaten or driven off: a gag (slap, pie, dodge-fall; each still costs Laughs) knocks one back and over, holds it 2 s, and it gets up and comes again (X3, 13 of 13). The hints say how to slip past each one. The arena's way out is a pale door across the ring. Glass still pays for each space he gets out of, and once more for getting out of the night. Standing still still gnaws. (`mwEscape`, `escHold`, `escGuard`, `escName`, `escHint`.)
+- **E2: on the last night there is no way out of the Performer (13 of 13).** The arena's door leads back into the same ring with the Performer in it; each return the Performer starts nearer and the door is just behind it, and the Mirror warps more (X2, 13 of 13). The ending starts when he stops running and stands while it gnaws: the Performer walks up and its touch starts the ending; while he stands, Laughs at 0 do not end the night (X1a, 12 of 13). After the third return it walks up anyway. The Performer no longer shatters on this route. (`lastNoExit`, `escNear`, `escStand`, `escCap`.)
+- Not built (below 75%, owner's call): X8 the way out shown only after the space's figure has made its tell once (8 of 13); X9 a 40 s cap on the last night (4 of 13).
 
 ## Concept and theme
 

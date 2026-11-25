@@ -12,7 +12,10 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const srv = http.createServer((q, r) => {
   const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; }
-  r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); r.end(fs.readFileSync(f));
+  r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
+  // MUT=off: night1.html served with both switches off (N1 is frozen: the page's own config is the only way to change it)
+  if (MUT === 'off' && path.basename(f) === 'night1.html') { let t = fs.readFileSync(f, 'utf8'); for (const k of ['mwEscape', 'lastNoExit']) { if (t.split(`  ${k}: true,`).length !== 2) throw new Error('switch not found once: ' + k); t = t.replace(`  ${k}: true,`, `  ${k}: false,`); } r.end(t); return; }
+  r.end(fs.readFileSync(f));
 });
 let pass = 0, all = 0;
 const report = (ok, name, info) => { all++; if (ok) pass++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name} | ${JSON.stringify(info)}`); };
@@ -23,7 +26,6 @@ async function open(b, hash) {
   await pg.goto(`http://127.0.0.1:${srv.address().port}/${PAGE}${hash}`); if (hash) await pg.reload();
   await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 180000 });
   await pg.waitForSelector('#logo.hidden', { state: 'attached', timeout: 30000 });
-  if (MUT === 'off') await pg.evaluate(() => { window.__night.N1.mwEscape = false; window.__night.N1.lastNoExit = false; });
   const gameWait = (secs) => pg.waitForFunction((s) => { const M = window.__night.NS.mw; window.__w0 = window.__w0 ?? M.t; if (M.t - window.__w0 >= s) { window.__w0 = undefined; return true; } return false; }, secs, { timeout: 180000 });
   return { ctx, pg, errs, gameWait };
 }
@@ -38,6 +40,8 @@ const into = (style) => {
   if (leg < 0) return { route: M.route.map((l) => l.style) };
   M.bag.length = 0; M.brk = null;
   for (const f of N.foes) f.alive = false;
+  // as the game's cut does (mwCut, F25): the last space's tips go before the next space's
+  M.tip = ''; M.tipT = 0; M.tips.length = 0;
   N.mwLeaveLeg(); M.leg = leg; N.mwEnterLeg(M); M.t = 0;
   return { route: M.route.map((l) => l.style), leg };
 };
