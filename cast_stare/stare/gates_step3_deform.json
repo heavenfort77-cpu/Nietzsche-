@@ -1,0 +1,62 @@
+[
+ {
+  "name": "rest pose = bind mesh",
+  "ok": true,
+  "info": "max 0.000 mm"
+ },
+ {
+  "name": "idle: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.06, max 1.07 on part [crowd,heads_L]"
+ },
+ {
+  "name": "idle: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "gaze: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.08, max 1.15 on part [base,crowd]"
+ },
+ {
+  "name": "gaze: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "judge: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.11, max 1.19 on part [base,crowd]"
+ },
+ {
+  "name": "judge: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "hit: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.16, max 1.17 on part [crowd,heads_L]"
+ },
+ {
+  "name": "hit: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "out: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.27, max 1.30 on part [crowd,heads_L]"
+ },
+ {
+  "name": "out: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "pose sheets: figure inside the frame on every sampled frame",
+  "ok": true,
+  "info": "extent 0.480 of 0.480, scale x0.878 of the approved"
+ }
+]

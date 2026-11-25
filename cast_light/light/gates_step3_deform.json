@@ -1,0 +1,52 @@
+[
+ {
+  "name": "rest pose = bind mesh",
+  "ok": true,
+  "info": "max 0.000 mm"
+ },
+ {
+  "name": "idle: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.03, max 1.04 on part [column,neck]"
+ },
+ {
+  "name": "idle: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "flare: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.02, max 1.03 on part [column,neck]"
+ },
+ {
+  "name": "flare: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "hit: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.02, max 1.03 on part [column,neck]"
+ },
+ {
+  "name": "hit: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "out: edge stretch p99.9 <= 1.6",
+  "ok": true,
+  "info": "p99.9 1.07, max 1.11 on part [column,neck]"
+ },
+ {
+  "name": "out: nothing floats free (part groups stay 1)",
+  "ok": true,
+  "info": "max groups 1; parts with no contact: []"
+ },
+ {
+  "name": "pose sheets: figure inside the frame on every sampled frame",
+  "ok": true,
+  "info": "extent 0.475 of 0.480, scale x0.707 of the approved"
+ }
+]
