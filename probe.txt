@@ -1,0 +1,6 @@
+entry 3: ONLY_CHECK=ending step0/smoke_nights.cjs sha b9ef341
+    quit: end done | from the exit 0.18 m | buttons again1
+PASS ending: quit: the line, his warm light with the paint off, the audience one by one, two buttons; he bows, says "I quit", walks out; only the restart button
+PASS ending: one last act: three falls on the player's presses, no words left, then the restart button
+RESULT nights 2 of 2 pass
+exit 0, 111 s
