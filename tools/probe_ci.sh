@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # Session 42 (owner 25 Nov 12:33): browser probes and smokes run on GitHub runners, all at once, never on the session box.
-# Usage: tools/probe_ci.sh "<entry>,<entry>,..." [ref]
+# Usage: tools/probe_ci.sh "<entry>,<entry>,..." [ref] [commit]
 #   entry = optional VAR=value words, then a .cjs path under web/, e.g. "step0/probe_s42_stranger.cjs,ONLY=desk step0/smoke_night1.cjs"
 #   ref   = branch to dispatch on (default main; the commit must be pushed first)
+#   commit = an older pushed commit to test instead of the branch head (a control run; the workflow file comes from ref)
 # Dispatches .github/workflows/probe.yml through the REST API, waits for the run, fetches each job's log from ci-out/probe-<run>-<i>
 # and prints only: per entry its RESULT lines, FAIL lines and exit line; then "probe run <n>: N of M entries passed". Exit 1 if any failed.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-LIST=${1:?entries}; REF=${2:-main}
+LIST=${1:?entries}; REF=${2:-main}; SHA=${3:-}
 REPO=heavenfort77-cpu/Nietzsche-
 since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-gh api -X POST "repos/$REPO/actions/workflows/probe.yml/dispatches" -f ref="$REF" -f "inputs[probes]=$LIST" > /dev/null || { echo "FAIL dispatch"; exit 2; }
+gh api -X POST "repos/$REPO/actions/workflows/probe.yml/dispatches" -f ref="$REF" -f "inputs[probes]=$LIST" -f "inputs[ref]=$SHA" > /dev/null || { echo "FAIL dispatch"; exit 2; }
 run=""; num=""
 for i in $(seq 1 30); do
   sleep 5
