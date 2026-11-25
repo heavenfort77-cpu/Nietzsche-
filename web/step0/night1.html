@@ -1777,9 +1777,9 @@ function readKeys() {
 }
 // touch stick: appears where the finger lands; one pointer owns it
 window.addEventListener('pointerdown', (e) => {
-  // no stick where he cannot walk: the room, the panel and the walk's end
+  // no stick where he cannot walk: the room, the panel and the walk's end (F46: the live fall act comes after the walk's end and walks by the stick)
   if (n1 && n1Pointer(e)) return;
-  if (e.pointerType === 'mouse' || input.touchId !== -1 || !S.running || S.room || S.ended) return;
+  if (e.pointerType === 'mouse' || input.touchId !== -1 || !S.running || S.room || (S.ended && !(n1 && fallPlaying()))) return;
   input.touchId = e.pointerId; input.ox = e.clientX; input.oy = e.clientY; input.tx = 0; input.ty = 0;
   el.stick.style.setProperty('--sx', e.clientX); el.stick.style.setProperty('--sy', e.clientY);
   el.knob.style.setProperty('--kx', 0); el.knob.style.setProperty('--ky', 0);
