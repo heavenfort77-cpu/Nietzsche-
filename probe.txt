@@ -1,0 +1,5 @@
+entry 5: ONLY_CHECK=ending step0/smoke_nights.cjs sha c04832a
+FAIL ending: quit: the line, his warm light with the paint off, the audience one by one, two buttons; he bows, says "I quit", walks out; only the restart button: {"q":"\"I refuse to be a saint; I would rather be a clown.\"Nietzsche, Ecce Homo, \"Why I am a Fatality\" 1 (Ludovici)","crowd":{"n":36,"want":36,"paint":0.56}}
+PASS ending: one last act: three falls on the player's presses, no words left, then the restart button
+RESULT nights 1 of 2 pass
+exit 1, 100 s
