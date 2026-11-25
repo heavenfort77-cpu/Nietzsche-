@@ -1,0 +1,5 @@
+entry 4: MUTATE=endquit ONLY_CHECK=ending step0/smoke_nights.cjs sha b9ef341
+FAIL ending: quit: the line, his warm light with the paint off, the audience one by one, two buttons; he bows, says "I quit", walks out; only the restart button: page.waitForFunction: Timeout 60000ms exceeded.
+PASS nights mutation endquit: caught (ending: quit)
+RESULT nights mutations 1 of 1 caught
+exit 0, 102 s
