@@ -1096,6 +1096,13 @@ const N1 = Object.freeze({
   mwNameText: 'These are his insecurities. Face each one.',
   // how long that line stays, s (the action is not paused)
   mwNameSecs: 3.5,
+  // owner 25 Nov ~13:00 (theme panel C1, design/PANEL-theme-core-message-25nov.md): Mirror figures are never killed, only driven off for the night (they turn and walk away, no sinking,
+  // no glass dropped) and are back the next night; glass pays for lasting: each space he gets out of pays mwSpacePay, coming out of the night pays it once more; false = they sink and drop glass
+  mwDriveOff: true,
+  // a driven-off figure walks away this long, s, at this speed, m/s, then leaves the space
+  mwOffSecs: 1.2, mwOffSpeed: 2.2,
+  // glass per space he lasts (lead's number: night 1 has 3 spaces, 12 glass; a figure used to drop 3-4) and its tip ({n} = the glass)
+  mwSpacePay: 4, mwSpacePayTip: 'He got through. +{n} glass.',
   // owner 23 Nov 00:32 "player must know laugh is limited else they will spam": the cost shows on each gag button and in the hint; the Laughs count shows the spend for spendShow s and turns red at lowLaughs or under
   spendShow: 0.7, lowLaughs: 20,
   // F35 (session 25): the shop panel at the mirror keeps this gap (px) from the glass, and a free part of the screen narrower or lower than shopMinPx is not used for it
@@ -4885,7 +4892,7 @@ function buildUnworld() {
 function lightStartR() { return N1.light.spotR * (1 + N1.lightWiden * NS.lightOuts); }
 function addFoe(kind) {
   const cfg = N1[kind], root = cast[kind];
-  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, spotX: 0, spotZ: 0, seen: false, r: kind === 'light' ? lightStartR() : 0, hits: 0, stunT: 0, dark: false, clickT: 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0, ph: 0, phT: 0,
+  const f = { kind, cfg, root, x: cfg.at[0], z: cfg.at[1], yaw: 0, hp: cfg.hp || 1, alive: true, pop: 0, tell: -1, tx: 0, tz: 0, gazeT: 0, judgeT: 0, cling: false, stun: 0, reach: 0, sink: 0, off: 0, gone: false, spotX: 0, spotZ: 0, seen: false, r: kind === 'light' ? lightStartR() : 0, hits: 0, stunT: 0, dark: false, clickT: 0, leaves: 0, tellT: 0, inPrev: false, leftT: -1, moveT: -1, inT: 0, chaseT: 0, loseT: 0, loses: 0, ph: 0, phT: 0,
     beatT: 0, beatN: 0, strikeOn: false, strikeAt: 0, sx: 0, sz: 1, lift: 0, needle: kind === 'weigher' ? root.getObjectByName('needle') : null, hold: '', holdT: 0 };
   if (root.userData.acts) { castClip(root, 'idle'); castFace(root, 0); }
   root.position.set(f.x, 0, f.z); root.rotation.set(0, 0, 0); root.scale.setScalar(1); root.visible = true;
@@ -5142,6 +5149,7 @@ function mwCut() {
     M.tip = ''; M.tipT = 0; M.tips.length = 0;
     if (M.group) mwLeaveLeg();
     M.leg++; mwEnterLeg(M);
+    if (N1.mwDriveOff) mwPay(M);
     mwTipShow(M);
   });
 }
@@ -5227,13 +5235,24 @@ function killFoe(f) {
   // A4: the Light is put out, never beaten: no sinking, the dark lamp stays with a glint on its lens
   if (f.kind === 'light') { f.dark = true; f.clickT = 0; NS.lightOuts++; mwScene.remove(pool.beam, pool.spot, pool.rim); mwScene.add(pool.glint); }
   else if (f.kind === 'performer') { NS.mw.beaten.push(f.kind); perfShatter(f); }
+  else if (N1.mwDriveOff) { f.off = N1.mwOffSecs; NS.mw.beaten.push(f.kind); }
   else { f.sink = 0.6; NS.mw.beaten.push(f.kind); }
   if (f.kind === 'stare') mwScene.remove(pool.lens, pool.wedge);
   if (f.kind === 'sergeant') { f.strikeOn = false; mwScene.remove(pool.stripe); }
   if (f.kind === 'weigher') { f.lift = 0; mwScene.remove(pool.weighRing); }
-  dropShards(f.kind === 'light' ? f.spotX : f.x, f.kind === 'light' ? f.spotZ : f.z, f.cfg.shards);
+  if (!N1.mwDriveOff) dropShards(f.kind === 'light' ? f.spotX : f.x, f.kind === 'light' ? f.spotZ : f.z, f.cfg.shards);
   tone(1600, 600, 0.35, 'triangle', 0.07);
 }
+// C1: driven off: it turns its back on him and walks out of the space, then leaves it (removed, not destroyed)
+function mwOff(M, f, dt) {
+  f.off -= dt;
+  const dx = f.x - M.x, dz = f.z - M.z, d = Math.hypot(dx, dz) || 1;
+  f.x += dx / d * N1.mwOffSpeed * dt; f.z += dz / d * N1.mwOffSpeed * dt; f.yaw = Math.atan2(dx, dz);
+  f.root.position.set(f.x, 0, f.z); f.root.rotation.y = f.yaw;
+  if (f.off <= 0) { f.off = 0; f.gone = true; mwScene.remove(f.root); }
+}
+// C1: a space lasted pays its glass
+function mwPay(M) { M.shards += N1.mwSpacePay; tip(N1.mwSpacePayTip.replace('{n}', N1.mwSpacePay)); tone(1800, 2400, 0.12, 'sine', 0.06); }
 function dropShards(x, z, n) {
   for (let i = 0, k = 0; i < pool.shards.length && k < n; i++) {
     const s = pool.shards[i];
@@ -5469,7 +5488,7 @@ function foeAnim(f, dt) {
   if (f.holdT > 0) f.holdT -= dt;
   let c = 'idle', face = 0;
   if (f.dark) face = 3;
-  else if (!f.alive) { c = 'out'; face = 3; }
+  else if (!f.alive) { c = f.off > 0 ? 'walk' : 'out'; face = 3; }
   else if (f.holdT > 0) { c = f.hold; face = f.hold === 'hit' ? 2 : 1; }
   else if (f.kind === 'light') { if (f.stunT > 0) { c = 'hit'; face = 2; } else if (f.tellT > 0) { c = 'flare'; face = 1; } }
   else if (f.kind === 'whisper') { if (f.tell > 0) { c = 'copy'; face = 1; } }
@@ -5482,7 +5501,7 @@ function mwFoes(M, dt) {
   for (let fi = 0; fi < foes.length; fi++) {
     const f = foes[fi];
     foeAnim(f, dt);
-    if (!f.alive) { if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt); continue; }
+    if (!f.alive) { if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt); else if (f.off > 0) mwOff(M, f, dt); continue; }
     alive++;
     if (!f.seen) { f.seen = true; if (!N1.mwHints) tip(TIPS[f.kind]); }
     const dx = M.x - f.x, dz = M.z - f.z, d = Math.hypot(dx, dz) || 0.001;
@@ -5571,6 +5590,7 @@ function endMW(result) {
   if (M.over) return;
   M.over = result;
   NS.result = result;
+  if (N1.mwDriveOff && result === 'win') M.shards += N1.mwSpacePay;
   const kept = result === 'win' ? M.shards : Math.floor(M.shards / 2);
   NS.shards += kept; NS.mwKept = kept; NS.mwTime = M.t; NS.mwLaughs = Math.ceil(M.laughs);
   // route mixer: the fallen leave foes at each cut, so who he met and beat is kept on M
@@ -5737,7 +5757,7 @@ function endCard() {
     Corridor: jumped the cable ${v.jump ? 'yes' : 'no'}, took the pie ${v.take ? 'yes' : 'no'}, honked the horn ${v.honk ? 'yes' : 'no'}, tripped for the child ${v.trip ? 'yes' : 'no'}<br>
     Act: ${actTitle(NS.act)}${NS.act === NS.tryId ? ' (tryout)' : ''}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
     Crowd: ${NS.crowd}<br>
-    Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; beaten ${(NS.beaten || []).join(', ') || 'none'}${NS.putOut ? '; the Light put out' : ''}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
+    Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; ${N1.mwDriveOff ? 'driven off' : 'beaten'} ${(NS.beaten || []).join(', ') || 'none'}${NS.putOut ? '; the Light put out' : ''}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
     Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>${N1.endBrief ? '</details>' : ''}
     ${NS.night < N1.nights ? `<button id="nextNight">Go on to night ${NS.night + 1}</button>` : `<button id="retryNight">Try the last night again</button>`}<button id="again1" class="back">Start again from night 1</button>`);
   // session 24: the next night carries Mask, shards, what he bought, what he tried and the Light's widening (runNext); start over clears the run
