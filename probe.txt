@@ -1,0 +1,11 @@
+entry 1: step0/probe_fall_beat.cjs sha c04832a
+PASS live fall act reached | {"live":true}
+PASS button: dim before the drum, fills in the roll, then lit | {"order":"dim>fill>lit>dim"}
+PASS lit button says "Fall now!" | [{"stage":"roll","cls":"lit","text":"Fall now!","fill":"100%","r":2.57}]
+PASS a press on the lit button lands on the crash (perfect or good) | {"grade":"perfect","cap":"...on purpose."}
+PASS button written only on change in the roll (at most 2 x steps + 6 writes) | {"writes":20}
+PASS pressed in the light before the drum: "Too early: wait for the drum." | {"grade":"wait","cap":"Too early: wait for the drum.","inPool":true}
+PASS pressed outside the light: "Not in the light." | {"grade":"dark","cap":"Not in the light.","inPool":false}
+PASS no page errors | []
+RESULT fall beat 8 of 8 pass
+exit 0, 48 s
