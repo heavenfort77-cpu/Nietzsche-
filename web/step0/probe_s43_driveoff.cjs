@@ -22,6 +22,8 @@ const report = (ok, name, info) => { all++; if (ok) pass++; console.log(`${ok ? 
   await pg.goto(`http://127.0.0.1:${srv.address().port}/${PAGE}`);
   await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 180000 });
   await pg.waitForSelector('#logo.hidden', { state: 'attached', timeout: 30000 });
+  // session 44: the fight (C1 drive-off) is the Mirror World with N1.mwEscape off; the escape is checked by probe_s44_escape.cjs (rule 18: changed on purpose)
+  await pg.evaluate(() => { window.__night.N1.mwEscape = false; window.__night.N1.lastNoExit = false; });
   const gameWait = (secs) => pg.waitForFunction((s) => { const M = window.__night.NS.mw; window.__w0 = window.__w0 ?? M.t; if (M.t - window.__w0 >= s) { window.__w0 = undefined; return true; } return false; }, secs, { timeout: 180000 });
   const into = await pg.evaluate(() => {
     const N = window.__night, NS = N.NS;
