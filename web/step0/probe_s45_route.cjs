@@ -6,15 +6,17 @@
 // Nights 2 and 3 (run hash with the rooms seen on earlier nights, sp=): exactly N1.mwSpaces[night - 1] spaces, no room twice, the arena last,
 // at least one middle room not seen on an earlier night, each middle room holds its own insecurity and two different types.
 // Night 3: every space of a real route is entered and its group comes up. Carry: the rooms of night 1's route reach night 2's run hash.
-// Ends with RESULT s45 route n of m pass.
+// MUT=nofill serves the page with N1.mwFillNights false: the night 2 and 3 length and unseen-room steps must FAIL. Ends with RESULT s45 route n of m pass.
 const path = require('path'), http = require('http'), fs = require('fs');
 const pw = require(path.join(__dirname, '..', 'node_modules', 'playwright-core'));
-const ROOT = __dirname, PAGE = process.env.PAGE || 'night1.html';
+const ROOT = __dirname, PAGE = process.env.PAGE || 'night1.html', MUT = process.env.MUT || '';
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg', '.wasm': 'application/wasm' };
 const srv = http.createServer((q, r) => {
   const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; }
   r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
+  // MUT=nofill: night1.html served with N1.mwFillNights false (the route as before F50): the length and unseen-room steps must FAIL
+  if (MUT === 'nofill' && path.basename(f) === 'night1.html') { const t = fs.readFileSync(f, 'utf8'); if (t.split('  mwFillNights: true,').length !== 2) throw new Error('switch not found once'); r.end(t.replace('  mwFillNights: true,', '  mwFillNights: false,')); return; }
   r.end(fs.readFileSync(f));
 });
 let pass = 0, all = 0;
