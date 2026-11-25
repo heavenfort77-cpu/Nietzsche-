@@ -1281,6 +1281,8 @@ const N1 = Object.freeze({
   fallWalk: 1.6, fallArea: [4.2, 2.6],
   // the pool settles and pulses this long before it can start a roll (place tell), s; the band leader's stick rises over the roll's last part (time tell, at least 0.4 s), s
   fallSettle: 0.8, fallStick: 0.5,
+  // F47 (session 41, kid6): he counts as in the light when his shoes are on the drawn disc: the pool radius plus his shoes' reach past his root on the floor, m (probe_light_edge.cjs measured 0.398)
+  fallFootR: 0.4,
   // night 3: the whiteface calls "Now!" this long too early for a perfect landing, s; the call stays up this long, s
   fallFakeLead: 0.25, fallFakeShow: 0.45,
   // no press this long after the crash: the crash hit a clown still standing, s; the result stays this long before the next pool, s; he lies this long before he gets up, s
@@ -3458,7 +3460,7 @@ function fallOn() { return N1.fallLive && NS.act === 'fall'; }
 function fallNight() { const n = N1.fallNights; return n[Math.min(Math.max(1, NS.night), n.length) - 1]; }
 function fallPlaying() { return !!(NS.A && NS.A.F && NS.A.phase === 'fall' && !NS.paused); }
 function fallInArea(x, z, m) { const rx = N1.fallArea[0] - m, rz = N1.fallArea[1] - m, dx = x - N1.actSpotAt[0], dz = z - N1.actSpotAt[1]; return (dx * dx) / (rx * rx) + (dz * dz) / (rz * rz) <= 1; }
-function fallInPool(A) { const F = A.F, dx = A.x - F.px, dz = A.z - F.pz; return dx * dx + dz * dz <= F.N.pool * F.N.pool; }
+function fallInPool(A) { const F = A.F, dx = A.x - F.px, dz = A.z - F.pz, r = F.N.pool + N1.fallFootR; return dx * dx + dz * dz <= r * r; }
 function fallRollNow(F) { return F.audio ? NS.audio.currentTime - F.rollAt : F.rollT; }
 // after the walk-on: the act's state, the first pool, the hint
 function fallStart(A) {
