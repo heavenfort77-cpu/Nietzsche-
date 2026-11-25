@@ -1,7 +1,7 @@
 # Reading level per scene from a kid-reader cold-play log (session 40, owner 25 Nov 2026).
 # Usage: python3 tools/coldplay/readgrade.py /tmp/coldplay/<name>/log.jsonl
 # For every line the player was shown (the real text, before the ??? mask), in the order first seen: the scene, the
-# Flesch-Kincaid grade (US school year; short lines read low), and the words outside the Dale-Chall 4th-grade list.
+# Flesch-Kincaid grade (US school year, vowel-group syllables; short lines read low), and the words outside the Dale-Chall 4th-grade list.
 # Then per scene: steps spent there and the player's own words. Uses the textstat package (pip), the same list as server.cjs KID=1.
 import json, os, re, sys
 import textstat
@@ -34,6 +34,21 @@ def hard(t):
     return [w for w in re.findall(r"[A-Za-z][A-Za-z']*", t) if not easy(w)]
 
 
+# Flesch-Kincaid grade with a vowel-group syllable count (textstat's own grade needs an NLTK download the session box refuses)
+def syl(w):
+    w = w.lower().strip("'")
+    n = len(re.findall(r'[aeiouy]+', w))
+    if w.endswith('e') and not w.endswith(('le', 'ee')) and n > 1:
+        n -= 1
+    return max(1, n)
+
+
+def fk(t):
+    ws = re.findall(r"[A-Za-z][A-Za-z']*", t)
+    ss = max(1, len(re.findall(r'[.!?]+', t)))
+    return 0.39 * len(ws) / ss + 11.8 * sum(syl(w) for w in ws) / len(ws) - 15.59
+
+
 rows, seen, scenes = [], set(), {}
 for line in open(sys.argv[1]):
     d = json.loads(line)
@@ -50,7 +65,7 @@ for line in open(sys.argv[1]):
                 continue
             seen.add((sc, t))
             n = len(re.findall(r"[A-Za-z][A-Za-z']*", t))
-            g = textstat.flesch_kincaid_grade(t) if n >= 4 else None
+            g = fk(t) if n >= 4 else None
             rows.append((d['step'], sc, kind, t, g, hard(t)))
 
 print('| step | scene | kind | line | grade | words a 4th grader may not know |')

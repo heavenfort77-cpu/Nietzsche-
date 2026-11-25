@@ -244,14 +244,16 @@ async function act(c) {
   page = await ctx.newPage();
   cdp = await ctx.newCDPSession(page);
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto(`http://127.0.0.1:${srv.address().port}/night1.html?tester`);
-  await page.waitForFunction(() => !!window.__night, null, { timeout: 180000 });
+  // the mask goes in as an init script, so it is in every load: the next night is a page reload (run 1 of session 40 lost it there)
   if (KID) {
     const list = execFileSync('python3', ['-c', 'import textstat,os;print(os.path.join(os.path.dirname(textstat.__file__),"resources","en","easy_words.txt"))']).toString().trim();
     const words = fs.readFileSync(list, 'utf8').split(/\s+/).map((w) => w.trim().toLowerCase()).filter(Boolean);
-    await page.evaluate(`(${KID_PAGE.toString()})(${JSON.stringify(words)})`);
+    await page.addInitScript(`(${KID_PAGE.toString()})(${JSON.stringify(words)})`);
     console.log(`kid reader: ${words.length} easy words`);
   }
+  // START='n=2&m=0&s=0' opens that night with that run (the game's own run hash, as "Go on to night 2" writes it)
+  await page.goto(`http://127.0.0.1:${srv.address().port}/night1.html?tester${process.env.START ? '#' + process.env.START : ''}`);
+  await page.waitForFunction(() => !!window.__night, null, { timeout: 180000 });
   await sleep(2000);
   const api = http.createServer((q, r) => {
     let d = ''; q.on('data', (x) => (d += x));
