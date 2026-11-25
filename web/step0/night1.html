@@ -897,8 +897,9 @@ const N1 = Object.freeze({
   // the thought's words (owner's meaning; lead's wording, edit freely)
   belongText: 'I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself.',
   // owner 25 Nov 18:49: his thought on night 2 (owner's words; only "i" made "I", a comma for the full stop, "the" before clown, "blur" made "blurs").
-  // Index 0 = night 1; null = the line above
-  belongNights: [null, 'Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is "me".', null],
+  // Index 0 = night 1; null = the line above. Owner 25 Nov 20:04: "first night thought, second night thought and third night thought are all diff":
+  // night 3's line is the lead's wording (the last night, before the Performer, his own double; the owner edits it)
+  belongNights: [null, 'Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is "me".', 'Tonight I fell before the drum. The clown moves on its own now, and I only watch it from inside.'],
   // how long the thought stays on screen, s
   belongSecs: 7,
   // session 42 (F48, stranger step 21): his thought waits until the gold button's caption has gone, so the two lines never share the screen's bottom; false = as before
@@ -1318,6 +1319,18 @@ const N1 = Object.freeze({
   // ----- the live fall act (owner 24 Nov 2026, session 36: "Works: put it in night 1"; web/step0/fall_act.html ported into the ring) -----
   // switch: the deliberate fall plays live in the ring (walk into the light, fall on the crash) in place of the mask-ring cue page; false = the cue page as before
   fallLive: true,
+  // owner 25 Nov 20:04 ("all act use the same timing game as fall"; replaces one timing game per act, 23 Nov 09:23): switch, every act on the board is played
+  // as the live fall (walk into the light, Fall on the crash, three falls, the same windows per night); each act keeps its name, its props in the ring and
+  // the insecurities it brings; at the press he takes the fall's trip in every act for now (rule 1: each act's own move after the owner says it plays right);
+  // no "Try it" rehearsal (the corridor trips are the rehearsal, as for the fall). false = only the fall is live, the other acts on the cue page as before
+  actsAsFall: true,
+  // the note's line for each act under that timing game, how this act ends on the floor (lead's wording, edit freely; missing = fallText.note)
+  actFallNote: {
+    sweep: 'Sweep your way into the light. The drum starts. Tap Fall when the gold button lights up: he slips on his broom on the crash. Three falls, then a bow.',
+    scale: 'Walk into the light where the scale stands. The drum starts. Tap Fall when the gold button lights up: the verdict knocks him flat on the crash. Three falls, then a bow.',
+    drill: 'March into the light. The drum starts. Tap Fall when the gold button lights up: he trips on his own about-turn on the crash. Three falls, then a bow.',
+    trade: 'Walk into the light. The drum starts. Tap Fall when the gold button lights up: the neighbour\'s swipe puts him down on the crash. Three falls, then a bow.',
+  },
   // per night (index 0 = night 1; later nights use the last): pool radius m, drumroll s, perfect and good windows (plus or minus s), pool drift during the roll m/s, the whiteface's early "Now!"
   fallNights: [
     { pool: 1.2, roll: 1.6, perfect: 0.12, good: 0.25, drift: 0, fake: false },
@@ -2854,9 +2867,9 @@ function pickAct(id) {
   const tried = N1.tryAct && NS.tryLine ? `<small class="tried">${NS.tryLine}</small>` : '';
   const meters = N1.tryAct ? `<small>${N1.laughsLine}</small><small>${N1.maskLine}</small>` : '';
   // session 36: the live fall act has no cue page to try (the corridor trips are its rehearsal) and its own note
-  const live = a.id === 'fall' && N1.fallLive;
+  const live = fallLiveFor(a.id);
   const tryBtn = N1.tryAct && !live ? `<button id="tryAct" class="back">${N1.tryLabel}</button>` : '';
-  const body = `<p>${live ? N1.fallText.note : a.line}</p><small>${a.own}</small>${meters}`;
+  const body = `<p>${live ? (N1.actFallNote[a.id] || N1.fallText.note) : a.line}</p><small>${a.own}</small>${meters}`;
   const text = N1.noteShort ? `<p>${live ? N1.fallText.goal : a.goal}</p>${tried}<details class="more"><summary>${N1.noteMore}</summary>${body}</details>` : body + tried;
   const d = show('note', `<div class="parchment"><h2>${a.title}</h2>${text}<div class="row"><button id="perform">Do it</button>${tryBtn}<button id="noteBack" class="back">Back</button></div></div>`);
   d.querySelector('#perform').addEventListener('click', () => performAct(id));
@@ -3534,7 +3547,9 @@ function actCueClose() { if (NS.cue) { NS.cue.src = 'about:blank'; NS.cue.remove
 // ----- the live fall act (owner 24 Nov 2026, session 36: the fall prototype works; fall_act.html's loop in the ring, GDD Stage "The deliberate fall as the act") -----
 // He walks into the light; standing in it starts a drumroll; the band leader's stick rises before the crash; he must press so the trip lands on the crash.
 // Graded on place (in the light) and time (landing error); three falls, then the hold and the bow; two misses end it. Judged on the audio clock when sound runs.
-function fallOn() { return N1.fallLive && NS.act === 'fall'; }
+function fallOn() { return fallLiveFor(NS.act); }
+// the act plays as the live fall: the fall itself, or any act while N1.actsAsFall is on (owner 25 Nov 20:04)
+function fallLiveFor(id) { return N1.fallLive && (id === 'fall' || N1.actsAsFall); }
 function fallNight() { const n = N1.fallNights; return n[Math.min(Math.max(1, NS.night), n.length) - 1]; }
 function fallPlaying() { return !!(NS.A && NS.A.F && NS.A.phase === 'fall' && !NS.paused); }
 function fallInArea(x, z, m) { const rx = N1.fallArea[0] - m, rz = N1.fallArea[1] - m, dx = x - N1.actSpotAt[0], dz = z - N1.actSpotAt[1]; return (dx * dx) / (rx * rx) + (dz * dz) / (rz * rz) <= 1; }
