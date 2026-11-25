@@ -60,7 +60,7 @@ const build = (c) => {
       const mids = await pg.evaluate(() => { const N = window.__night, NS = N.NS; NS.act = 'fall'; NS.actInfo = { scene: 'results', perfects: 1, goods: 2, misses: 0, actLaughs: 40, mask: 1 }; NS.hurt = { falls: 1, total: 0, rows: [], best: '', bestN: 0 }; NS.routeOrder = null; N.enterMW(); return NS.mw.route.map((l) => l.style).filter((s) => s !== 'corridor' && s !== 'ring'); });
       const has = await pg.evaluate(() => typeof window.__night.runNext === 'function');
       let hash = '';
-      if (has) { await Promise.all([pg.waitForNavigation({ timeout: 120000 }).catch(() => {}), pg.evaluate(() => window.__night.runNext())]); hash = await pg.evaluate(() => location.hash); }
+      if (has) { await Promise.all([pg.waitForNavigation({ timeout: 120000 }).catch(() => {}), pg.evaluate(() => { setTimeout(() => window.__night.runNext(), 0); })]); await pg.waitForLoadState('load'); hash = await pg.evaluate(() => location.hash); }
       const sp = (new URLSearchParams(hash.slice(1)).get('sp') || '').split('.').filter(Boolean);
       report(has && mids.length > 0 && mids.every((s) => sp.indexOf(s) >= 0), "carry: night 1's rooms are in night 2's run hash (sp=)", { mids, hash, runNext: has });
     } catch (e) { report(false, "carry: night 1's rooms are in night 2's run hash (sp=)", String(e).slice(0, 200)); }
