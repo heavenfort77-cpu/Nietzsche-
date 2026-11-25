@@ -11,6 +11,8 @@
   #frame { position: relative; }
   #gl { display: block; }
   .hud { position: absolute; left: 10px; top: 8px; font-weight: 600; letter-spacing: .04em; text-shadow: 0 1px 2px #000; pointer-events: none; }
+  /* F49: the shot name is hidden while a card is up (desk shop: "Mirror" lay over the card's title) */
+  #shotName.under { visibility: hidden; }
   #hint { position: fixed; left: 0; right: 0; bottom: 10px; text-align: center; opacity: .75; font-size: 12px; pointer-events: none; }
   /* F26: beside the Mirror pads (they take the bottom right), the hint keeps clear of them */
   #hint.padded { right: 100px; padding-left: 12px; text-align: left; }
@@ -108,7 +110,7 @@
   .card .parchment details.more { display: flex; flex-direction: column; gap: 6px; }
   .card .parchment .row { display: flex; gap: 10px; flex-wrap: wrap; }
   .card .parchment button.back { background: #3d332d; color: #f1e5c8; }
-  #cracks { position: absolute; left: 0; top: 0; pointer-events: none; }
+  #cracks { position: absolute; left: 0; top: 0; pointer-events: none; visibility: hidden; }
   #fog { position: fixed; inset: 0; background: radial-gradient(circle at 50% 60%, #c9d5d7, #9db5bb 45%, #44666e); opacity: 0; pointer-events: none; transition: opacity 1.4s linear; z-index: 15; display: flex; align-items: center; justify-content: center; color: #11272b; font: 600 26px Georgia, serif; }
   #gnaw { position: fixed; inset: 0; pointer-events: none; opacity: 0; z-index: 14; background: radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(4, 10, 14, 0.88)); transition: opacity 0.2s linear; }
   #gnaw.warn { opacity: 0.55; }
@@ -130,7 +132,7 @@
   #actSkipBtn { position: fixed; right: 16px; bottom: 24px; min-width: 88px; min-height: 48px; border-radius: 24px; border: 1px solid #cfaa4e; background: #1e1714cc; color: #e9d9b0; font: 600 15px system-ui, sans-serif; z-index: 7; }
   /* session 36 (owner 24 Nov: the fall prototype works): the live fall act's goal line, result caption, the whiteface's early call and the gold Fall button */
   /* session 38: the goal line (cold players) under the shot name; the gold button's result line above the prompt */
-  #goal { position: absolute; left: 0; right: 0; top: 30px; text-align: center; color: #f0d27a; font: 600 15px/1.3 Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; padding: 0 12px; }
+  #goal { position: absolute; left: 0; right: 0; top: calc(var(--gy, 30) * 1px); text-align: center; color: #f0d27a; font: 600 15px/1.3 Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; padding: 0 12px; }
   #verbCap { position: absolute; left: 0; right: 0; bottom: 12%; text-align: center; color: #fff3cf; font: 600 15px/1.3 system-ui, sans-serif; text-shadow: 0 1px 3px #000, 0 0 8px #000; pointer-events: none; padding: 0 12px; }
   #fallGoal { position: absolute; left: 0; right: 0; top: 8px; text-align: center; color: #f0d27a; font: 600 16px/1.3 Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; padding: 0 12px; }
   #fallCap { position: absolute; left: 6%; right: 6%; top: 24%; text-align: center; color: #fff3dc; font: italic 400 18px/1.4 Georgia, serif; text-shadow: 0 1px 3px #000, 0 0 12px #000; pointer-events: none; }
@@ -845,6 +847,8 @@ const N1 = Object.freeze({
   ],
   // session 38 (cold players, design/STRANGER-night1-s37-coldplay.md items 1, 2, 4, 6): switch, one goal line at the top of the picture naming the next thing to do
   goalLines: true,
+  // F49: gap between the goal line and the board note it would meet, or the picture's top edge when it goes above the picture, px
+  goalGap: 6,
   // the goal line per place (lead's wording; the owner edits). paint, painting, bravado: dressing room; corridor, wings, entrance: walk out by shot; back: walk back; room: after it
   goalText: {
     painting: 'He paints the smile on.', bravado: 'He is the clown now. The act board is next.', board: 'Choose tonight\'s act on the board.',
@@ -2660,6 +2664,7 @@ function musicHold(on) {
 // ----- flow -----
 function show(id, html) {
   hideCard();
+  el.shotName.classList.add('under');
   const d = document.createElement('div');
   d.className = 'card' + (id === 'dazai' || id === 'small' || id === 'ending' || ((id === 'crowd' || id === 'actLine') && N1.actShow) ? ' see' : '') + (id === 'shop' && N1.performerLearns ? ' see shopAt' : '');
   d.id = 'card_' + id;
@@ -2670,7 +2675,7 @@ function show(id, html) {
   return d;
 }
 function setScene(sc) { NS.scene = sc; musicFor(sc); }
-function hideCard() { if (NS.card) { NS.card.remove(); NS.card = null; } }
+function hideCard() { if (NS.card) { NS.card.remove(); NS.card = null; } el.shotName.classList.remove('under'); }
 function setPrompt(t) { if (el.prompt.textContent !== t) el.prompt.textContent = t; }
 // session 38 (cold players): the goal line, by N1.goalText key ('' = none), written only when the key changes
 function setGoal(key) {
@@ -2678,6 +2683,25 @@ function setGoal(key) {
   NS.goalKey = key;
   const t = N1.goalLines && key ? N1.goalText[key] || '' : '';
   el.goal.textContent = t; el.goal.classList.toggle('hidden', !t);
+  goalClear();
+}
+// F49 (owner 25 Nov 13:59, nights 2-3 board on a phone): the goal line never lies over the board's notes. When the board is up and the line meets a
+// note, it goes above the picture if there is room there (phone portrait), else just under the lowest note it met. Called on show and resize, not per frame
+function goalClear() {
+  const g = el.goal;
+  if (g.style.getPropertyValue('--gy')) g.style.removeProperty('--gy');
+  if (g.classList.contains('hidden') || el.boardActs.classList.contains('hidden')) return;
+  const gr = g.getBoundingClientRect(), fr = g.offsetParent ? g.offsetParent.getBoundingClientRect() : null;
+  if (!fr) return;
+  let lo = -1;
+  for (let i = 0; i < el.boardActBtns.length; i++) {
+    const b = el.boardActBtns[i];
+    if (!b.getClientRects().length) continue;
+    const r = b.getBoundingClientRect();
+    if (r.top < gr.bottom && r.bottom > gr.top && r.left < gr.right && r.right > gr.left) lo = Math.max(lo, r.bottom);
+  }
+  if (lo < 0) return;
+  g.style.setProperty('--gy', Math.round(fr.top >= gr.height + N1.goalGap * 2 ? -(gr.height + N1.goalGap) : lo - fr.top + N1.goalGap));
 }
 // the walk's goal: by shot on the way out, one line on the way back
 function walkGoal() { setGoal(S.back ? (N1.goalText['back' + S.shot] ? 'back' + S.shot : 'back') : S.shot); }
@@ -2790,6 +2814,7 @@ function placeBoardActs() {
   // night 1: the baked cards (a.x); from night 2 tonight's notes in slots over a flat panel that hides the baked cards
   const slots = N1.night > 1, n = NS.acts.length, slot = N1.boardSpan / Math.max(1, n), w = slot - N1.boardGap;
   NS.acts.forEach((a, i) => box(el.boardActBtns[i], slots ? -N1.boardSpan / 2 + slot * (i + 0.5) : a.x, N1.boardCardZ, slots ? w : N1.noteW, slots ? N1.boardNoteH : N1.noteH));
+  goalClear();
 }
 // a note opens as a parchment (22 Nov b item 1): title, the routine in one line, whose it is; Perform it or Back (the loop waits behind it)
 function pickAct(id) {
@@ -3949,18 +3974,34 @@ function sizeCracks() {
   }
   NS.mpoly = null;
   if (S.mirror === 'entry' && NS.press) {
+    // F49: pressStart aims the camera with lookAt just before this call; its matrices update only at the next render, so update them here
+    pressCam.updateMatrixWorld();
     // the glass in the press shot, projected through its camera (canvas px); cracks are clipped to this quad
     NS.mpoly = pressSet.glassCorners.map((q) => { const v = pressSet.v.copy(q).project(pressCam); return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * h]; });
     x0 = Math.min(...NS.mpoly.map((q) => q[0])); x1 = Math.max(...NS.mpoly.map((q) => q[0])); y0 = Math.min(...NS.mpoly.map((q) => q[1])); y1 = Math.max(...NS.mpoly.map((q) => q[1]));
   }
   NS.mrect[0] = x0; NS.mrect[1] = h - y1; NS.mrect[2] = x1 - x0; NS.mrect[3] = y1 - y0;
-  const dpr = renderer.getPixelRatio();
-  el.cracks.width = Math.round(w * dpr); el.cracks.height = Math.round(h * dpr);
+  const dpr = renderer.getPixelRatio(), cw = Math.round(w * dpr), ch = Math.round(h * dpr);
+  if (el.cracks.width !== cw || el.cracks.height !== ch) { el.cracks.width = cw; el.cracks.height = ch; glassTex.dispose(); }
   el.cracks.style.width = w + 'px'; el.cracks.style.height = h + 'px';
+  renderer.getDrawingBufferSize(glassOvMat.uniforms.uRes.value);
+  placeGlassOv();
   drawCracks();
   if (S.mirror === 'shop') shopFit();
 }
 window.addEventListener('resize', () => { if (S.mirror) sizeCracks(); });
+// F49: the room's glass quad, glassD in front of the room camera minus 3 cm (the vanity: its glass centre's view depth), big enough to cover the view
+function placeGlassOv() {
+  roomCam.updateMatrixWorld();
+  let d = N1.mirrorGlassD;
+  if (S.mirror === 'paint') { const g = N1.vanityGlass; d = -tmp.set(g[0], g[2], -g[1]).applyMatrix4(roomCam.matrixWorldInverse).z; }
+  d -= 0.03;
+  const hh = 2.4 * d * Math.tan(deg(roomCam.fov) / 2);
+  glassOv.position.set(0, 0, -d).applyMatrix4(roomCam.matrixWorld);
+  roomCam.getWorldQuaternion(glassOv.quaternion);
+  glassOv.scale.set(hh * roomCam.aspect, hh, 1);
+  glassOv.updateMatrix();
+}
 // session 32: cause: three.js counts each render() as a new frame, so the reflection pass updated the clown's skeleton again and re-uploaded his bone
 // texture after the room pass had drawn with it (run 122 ladder: 1440p 10.7 -> 7.9 ms, 1080p 8.0 -> 6.7 without it). His bones do not move between the
 // two passes, so his skeletons skip that second update (NS.reflSkels, built once); the reflection's own skeleton still updates once, in this pass.
@@ -3997,6 +4038,7 @@ function addCrack() {
   tone(2400, 1800, 0.06, 'triangle', 0.05);
 }
 function drawCracks() {
+  glassTex.needsUpdate = true;
   const g = el.cracks.getContext('2d'), dpr = renderer.getPixelRatio();
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, S.w, S.h);
@@ -4073,6 +4115,21 @@ function updateMirror(dt) {
 // ----- the press at the big mirror (owner 22 Nov 20:27, "it is a mirror"): a cut to a close shot at the glass -----
 // Seen from the room camera behind him, his own body hides a true mirror image, so the press is filmed from his right at the glass.
 // The image is his true mirror (same side place, as far behind the glass as he is in front); his palm and its palm meet on the glass.
+// F49 (session 44, owner 25 Nov 13:46: the glass tint lay over the clown): the glass tint and cracks are drawn on #cracks (hidden, a drawing surface
+// only) and shown through this quad at the glass, depth-tested, so he stays in front of the glass. Screen-space lookup: the quad only has to cover the
+// glass; what shows is clipped to the glass by the canvas itself (and by the reflection pass's scissor in the room)
+const glassTex = new THREE.CanvasTexture(document.getElementById('cracks'));
+glassTex.generateMipmaps = false; glassTex.minFilter = THREE.LinearFilter;
+const glassOvMat = new THREE.ShaderMaterial({
+  uniforms: { uMap: { value: glassTex }, uRes: { value: new THREE.Vector2(1, 1) } },
+  vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform sampler2D uMap; uniform vec2 uRes; void main() { gl_FragColor = texture2D(uMap, gl_FragCoord.xy / uRes); }',
+  transparent: true, depthWrite: false
+});
+// the room's quad: drawn in the reflection pass only (layer 1), just in front of the glass, facing the room camera; placed in sizeCracks
+const glassOv = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), glassOvMat);
+glassOv.layers.set(1); glassOv.renderOrder = 10; glassOv.matrixAutoUpdate = false;
+roomScene.add(glassOv);
 const pressScene = new THREE.Scene(), pressCam = new THREE.PerspectiveCamera(40, CONFIG.aspect, 0.05, 30);
 pressCam.layers.enable(1);
 const pressSet = { glassCorners: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], touch: new THREE.Vector3(), off: new THREE.Vector3(), v: new THREE.Vector3() };
@@ -4092,6 +4149,10 @@ function buildPress() {
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 2.75), new THREE.MeshBasicMaterial({ color: rawColor('#6E8D94'), transparent: true, opacity: 0.16, depthWrite: false }));
   glass.position.set(0, 1.6, D - 0.001); glass.rotation.y = Math.PI; glass.renderOrder = 2; glass.matrixAutoUpdate = false; glass.updateMatrix();
   pressScene.add(glass);
+  // F49: the cracks over this glass, depth-tested (his palm and arm in front stay in front)
+  const ov = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 2.75), glassOvMat);
+  ov.position.set(0, 1.6, D - 0.002); ov.rotation.y = Math.PI; ov.renderOrder = 3; ov.matrixAutoUpdate = false; ov.updateMatrix();
+  pressScene.add(ov);
   pressScene.background = rawColor('#0d0a0b');
   [[-0.725, 2.975], [0.725, 2.975], [0.725, 0.225], [-0.725, 0.225]].forEach((q, i) => pressSet.glassCorners[i].set(q[0], q[1], D));
 }
