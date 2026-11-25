@@ -1,0 +1,115 @@
+entry 2: ONLY=land step0/smoke_night1.cjs sha 9f41a56
+land OK   loads | scene logo
+    lowest point per pose prat -0.010, prat/moodOut -0.010, prat/moodBack -0.010, trip -0.022, trip/moodOut -0.022, trip/moodBack -0.022, dive -0.012, dive/moodOut -0.012, dive/moodBack -0.012, kneel -0.020, kneel/moodOut -0.020, kneel/moodBack -0.020
+land OK   falls: same pose every time, nothing under the floor (F27, 22c-3) | scene title
+    bindings: missing 0 | clashes 0 | key literals outside the table 0
+land OK   controls: one bindings table, every action bound, no clash in a scene (chart) | scene title
+land OK   logo then title | scene title
+land OK   start: at the mirror | scene paint
+    vanity: reflection in the glass true | heads apart 11% of the height | clear of his head 2 px
+land OK   opening at the dressing table, his reflection facing him (22b-6) | scene paint
+land OK   first input finishes the paint | scene paint
+    bravado {"chest":0,"sit":0,"sitEnd":0,"face":"smile","peak":1,"t":2.0835999999999997,"skipped":false}
+land OK   false bravado after the Dazai line, the vanity copies him exactly, no tap skip (22c-2) | scene boardwall
+land OK   act board on the room wall, no board card (F) | scene walk
+land OK   go out: corridor | scene walk
+    corridor crew pixels {"stagehand":2166,"rigger":0,"props_girl":150,"strongman":721,"child":115} | hidden rigger
+    wings crew pixels {"stagehand":0,"rigger":3655,"props_girl":3592,"strongman":3457,"child":0} | hidden stagehand,child
+    entrance crew pixels {"stagehand":0,"rigger":0,"props_girl":0,"strongman":461,"child":1392} | hidden stagehand,rigger,props_girl,strongman
+land OK   walk: crew on no pixel of a shot are not drawn, every crew member seen is drawn (owner 24 Nov) | scene walk
+    LOD levels: far 3 near 5 | crew pass triangles {"corridor":140856,"wings":151644,"entrance":50764}
+land OK   walk: crew past the LOD distance draw the far body, nearer crew the near body (owner 24 Nov) | scene walk
+land OK   take the pie | scene walk
+    music: before waltz | paused 0 playing | after waltz
+    pause: rows 2 of 2 | held W let go true | moved while paused 0 m
+land OK   Esc pauses with the controls list, Esc resumes (chart) | scene walk
+land OK   cable: blocks before the pratfall (D) | scene walk
+    pratfall: shot wings | screen travel 62 px of 389 | landed y 12.00 | pitch 0.98
+land OK   cable: Space pratfall over it, seen side-on in the wings (D) | scene walk
+land OK   honk the horn | scene walk
+land OK   corridor: one physical joke per verb (item 5) | scene walk
+land OK   trip button does not say "on purpose" (H2) | scene walk
+land OK   trip for the child | scene walk
+    thought "I do it to feel I belong. But "... | walk held while shown true (belong 2)
+land OK   his thought after the child: in the picture, and the walk does not end until it is read (owner 24 Nov) | scene walk
+    walk falls off the camera line (deg) 63 45
+land OK   trip for the child is seen across the camera (22c-3) | scene walk
+    walk out 1.20 m/s, 16.0 m in 13.4 s (computed); most bubbles at once 1
+land OK   walk out: brisk, one bubble at a time (C) | scene walk
+land OK   ring edge: the act starts with no board card (F) | scene act
+land OK   act: walk-on into the spot (scene reached) | scene act
+    clown 62.0 px
+land OK   act: clown 60-64 px at the spot | scene act
+    draw calls 18
+land OK   act: draw calls under 150 | scene act
+    music under the cue: waltz gain 0.165 want 0.165
+land OK   act: loop stopped behind the cue page | scene act
+    act line: Hold HIT when the ring meets the mask. Let go when the light shrinks onto the pan.
+land OK   act screen: one line, no developer notes (item 4) | scene act
+land OK   a fall in the act gets the big laugh, not the cough (item 1) | scene act
+    lean: back 0.68 m, side 0.000 m
+land OK   cue: he leans backwards, not sideways (item 8) | scene act
+land OK   act: one routine segment per cue chain | scene act
+    falls 1 pratfall poses 1
+land OK   act: falls are clown poses, not a plank (22b-4) | scene act
+    act falls off the camera line (deg) 90
+land OK   act: falls seen across the camera (22c-3) | scene act
+    crowd peaks 0.67 1.00 0.42
+land OK   act: the crowd rocks hardest at the miss, then a Perfect, then a Good | scene act
+    act fx {"segs":3,"roll":3,"crash":2,"flash":1,"burst":3,"shake":2}
+land OK   act: intensity: drum roll per gag, crash and shake on falls, flash and popcorn on peaks (22b-5) | scene act
+land OK   act: the beat after (sad face, house silent) | scene act
+land OK   act: caption and the bow with the dented hat | scene act
+land OK   act: only the Skip button skips, after the first full play (owner 22 Nov 20:27) | scene act
+    The pie in his face got a bigger laugh than a clean beat. laughs 105
+land OK   crowd pays most for what hurts him (fix 2) | scene act
+    hurt pay: fall at once 0 | 7 Perfect then 2 falls 55 | clean 0
+land OK   falls pay by the climb before them (H1) | scene act
+land OK   walk back: slump set by the act's Laughs, dented hat on | scene back
+    walk back shots wings | computed walk 16.4 s at tempo 0.78
+land OK   walk back: wings, then the room, no corridor shot (E) | scene back
+    freed resources 91 | after: geometries 131 textures 39 programs 32
+land OK   walk back: walk and act sets freed (geometry, material, texture dispose) (owner 24 Nov) | scene back
+land OK   turn to the mirror wall, sit button | scene back
+    mirror: at the mark depth/side error 0 0 | press shot true | palms apart 0.060 m (at most 0.06) | both faces in frame true | faces turned to the camera 46 19 deg | image seen through the glass true
+land OK   mirror entry: a pale form of him, hands meet on the glass, reflection late, cracks (22b-7) | scene back
+land OK   fog into the Mirror World | scene mw
+land OK   Mirror World: the mirror corridor, then one cut to the ring (G) | scene mw
+    bag drew blank,whisper | broke out whisper after 0.45 s
+land OK   corridor: twice as wide, a construct breaks a mirror (bag of marbles) (22b-2) | scene mw
+    ring draw calls 22 | foes whisper,light,shame
+land OK   Mirror World: the cut at the door, constructs in the ring (G) | scene mw
+land OK   Mirror World: unworldly backdrop scaled by Mask (G) | scene mw
+land OK   the Whisper is fed by each fall (H1) | scene mw
+   laughs 100.5 pies 2
+land OK   gags: slap, pie, pratfall | scene mw
+    HUD after a slap: Laughs 99 (-2) · Pies 2 · Glass 4 | pads SLAP -2, PIE -3, DROP -1
+land OK   gags show what they cost: buttons, the Laughs count, one tip (owner 23 Nov) | scene mw
+    run 1 : inside the spot 1.35 s of 8.0 s, spot r 1.75 | fallen 0 s, Shame clung 0 s, hurt 0 x, nearest other figure 9 m | speed 1.68 of 1.72 m/s
+land OK   Light: running from it at 100% stick escapes it (real play) | scene mw
+    run 0.6 : inside the spot 0.80 s of 8.0 s, spot r 1.75 | fallen 0 s, Shame clung 0 s, hurt 0 x, nearest other figure 9 m | speed 1.67 of 1.72 m/s
+land OK   Light: running from it at 60% stick escapes it (real play) | scene mw
+    Light: he 1.72 m/s vs 1.2 | tell 0.40 s | spot 1.25 -> 1.4
+land OK   Light: he outruns it, each escape grows it after a 0.4 s flare (B) | scene mw
+    gnaw: warning after 0.28 s still, then drained 2.59 Laughs (want about 2.50)
+land OK   standing still: they gnaw (edge at once, drain after the warning, any action clears it) (P4) | scene mw
+land OK   Light: holding still in its beam no longer puts it out (owner 22 Nov 23:41) | scene mw
+    Light put out after 3 gags; dark lamp in the scene and turning; next night beam 1.25 -> 1.438
+land OK   Light: three gags on its lamp put it out for the night; the dark lamp stays and follows him (P5, A4) | scene mw
+land OK   hints say act, not stand still (owner 22 Nov 23:41) | scene mw
+land OK   lost in the Mirror (land screen: loss branch), out | scene out
+   out: "In vain was all our labour."Nietzsche, Thus Spake Zarathust
+land OK   Nietzsche line leaving the mirror, then shards kept | scene small
+land OK   small win, loss: he stands up by himself | scene shop
+    reflection box 10660 px2, covered 0.0%
+    reflection box 10532 px2, covered 0.0%
+land OK   shop at the mirror: the reflection performs each buy back at him (fix 5) | scene shop
+    continue-only cards 4 of at most 4
+land OK   end card: every purchase listed with no "The shame of living:" heading, nothing renders behind it | scene end
+    end: geometries 135 textures 39 programs 34 | freed list 91 | used again 0
+land OK   freed sets stay freed: no geometry, texture or program uploaded again by the end (owner 24 Nov) | scene end
+    music trail cold waltz weight | playing weight | gains {"cold":0,"waltz":0,"weight":0.33}
+land OK   music: backstage, ring and after each get their track, one sounds at a time (owner 22 Nov) | scene end
+land no page errors
+RESULT night1 smoke 68 of 68 pass
+exit 0, 226 s
