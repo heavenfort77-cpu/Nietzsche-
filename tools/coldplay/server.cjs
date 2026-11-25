@@ -103,7 +103,10 @@ async function hidden() {
     const N = window.__night, H = window.__hold;
     if (!N) return { loaded: false };
     const M = N.NS.mw;
-    const cp = N.chars.clown && N.chars.clown.root.position; return { pos: cp ? [+cp.x.toFixed(2), +cp.z.toFixed(2)] : null, touch: N.input ? N.input.touchId : null, scene: N.NS.scene, mode: N.S.mode, night: N.N1.night, laughs: N.S.laughs, mask: N.NS.mask, mwLaughs: M ? Math.round(M.laughs) : null, foes: N.foes.filter((f) => f.alive).map((f) => f.kind), gt: +H.gt.toFixed(1), frames: H.frames, result: N.NS.result || '', act: N.NS.act || '' };
+    const cp = N.chars.clown && N.chars.clown.root.position, A = N.NS.A, F = A && A.F;
+    // session 40: the live fall act's pool and stage (kid5 stood 4 commands "in the light" with no roll; the pool was not logged)
+    const fall = F && A.phase === 'fall' ? { stage: F.stage, pool: [+F.px.toFixed(2), +F.pz.toFixed(2), F.N.pool], at: [+A.x.toFixed(2), +A.z.toFixed(2)] } : undefined;
+    return { fall, pos: cp ? [+cp.x.toFixed(2), +cp.z.toFixed(2)] : null, touch: N.input ? N.input.touchId : null, scene: N.NS.scene, mode: N.S.mode, night: N.N1.night, laughs: N.S.laughs, mask: N.NS.mask, mwLaughs: M ? Math.round(M.laughs) : null, foes: N.foes.filter((f) => f.alive).map((f) => f.kind), gt: +H.gt.toFixed(1), frames: H.frames, result: N.NS.result || '', act: N.NS.act || '' };
   }).catch((e) => ({ err: String(e) }));
 }
 // session 40 (owner 25 Nov: "the bot to have an elementary student understanding of language"): with KID=1 every word outside the
@@ -183,8 +186,12 @@ async function act(c) {
     case 'note': return { step, noted: true };
     case 'wait': await run(Math.min(10, Math.max(0.2, +c.s || 1)) * 1000); return look();
     case 'click': case 'tap': {
-      await thaw();
+      // session 40: in the live fall act the roll runs on the audio clock (wall time once thawed), so a tap after the thaw landed later than the
+      // picture the player answered (kid4: lit button seen, "Too late" twice); there the tap goes in while still frozen, at the moment seen
+      const inFall = await page.evaluate(() => { const A = window.__night && window.__night.NS.A; return !!(A && A.phase === 'fall'); });
+      if (!inFall) await thaw();
       if (phone) { await touch('touchStart', +c.x, +c.y); await sleep(60); await touch('touchEnd', +c.x, +c.y); } else await page.mouse.click(+c.x, +c.y);
+      if (inFall) await thaw();
       await runGame(settleS); return look();
     }
     case 'button': {
