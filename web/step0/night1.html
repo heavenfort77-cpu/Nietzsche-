@@ -785,13 +785,13 @@ function runHash() {
   try { return sessionStorage.getItem(RUN_KEY) || ''; } catch (e) { return ''; }
 }
 function runLoad() {
-  const r = { n: 1, m: 0, s: 0, b: [], t: [], lo: 0 };
+  const r = { n: 1, m: 0, s: 0, b: [], t: [], lo: 0, sp: [] };
   try {
     const q = new URLSearchParams(runHash());
     const int = (k, lo, hi) => { const v = parseInt(q.get(k), 10); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : r[k]; };
     r.n = int('n', 1, 7); r.m = int('m', 0, 99); r.s = int('s', 0, 999); r.lo = int('lo', 0, 7);
     const ids = (k) => (q.get(k) || '').split('.').filter((x) => /^[a-z]+$/.test(x));
-    r.b = ids('b'); r.t = ids('t');
+    r.b = ids('b'); r.t = ids('t'); r.sp = ids('sp');
   } catch (e) { /* no readable hash: night 1 */ }
   return r;
 }
@@ -1050,6 +1050,10 @@ const N1 = Object.freeze({
   mwStyles: { corridor: true, photo: true, void: true, parade: true, tilt: true },
   // spaces on the route per night (index 0 = night 1), the entry corridor and the arena included
   mwSpaces: [3, 4, 5],
+  // F50 (owner 25 Nov 19:07: "night [2] and night 3 the mirror world is supposed to be longer or use different platforms"): from night 2 the route is
+  // filled to mwSpaces with rooms tonight's act did not earn, each led by its own insecurity; rooms not seen on an earlier night (run hash sp) come first,
+  // earned or not. false = only the rooms tonight's act earned, as before (night 2 and 3 could be as short as night 1)
+  mwFillNights: true,
   // figures per space; the arena holds the Light plus this many less one (those that followed him come on top)
   mwGroup: 2,
   // when the night earned too few types, the partners come from this list, in order
@@ -2244,7 +2248,9 @@ function quoteFor(k) { const a = N1[k + 'Nights']; return (a && a[N1.night - 1])
 function actTitle(id) { const a = N1.acts.find((x) => x.id === id); return a ? a.title : id; }
 // the next night is a fresh page with the run in the address hash (RUN); start over clears it
 function runNext() {
-  const h = `n=${N1.night + 1}&m=${NS.mask}&s=${NS.shards}&b=${NS.bought.join('.')}&t=${NS.tried.join('.')}&lo=${NS.lightOuts}`;
+  // F50: the Mirror World rooms of this night and the nights before go on (sp), so the next night's route can choose rooms not seen yet
+  const sp = RUN.sp.concat((NS.routeStyles || []).filter((s) => RUN.sp.indexOf(s) < 0));
+  const h = `n=${N1.night + 1}&m=${NS.mask}&s=${NS.shards}&b=${NS.bought.join('.')}&t=${NS.tried.join('.')}&lo=${NS.lightOuts}&sp=${sp.join('.')}`;
   try { sessionStorage.setItem(RUN_KEY, h); } catch (e) { /* no storage: the hash alone carries the run */ }
   try { location.hash = h; } catch (e) { /* hash refused: the stored run carries it */ }
   location.reload();
@@ -5037,11 +5043,24 @@ function mwBuildRoute() {
   const max = N1.mwSpaces[Math.min(night, N1.mwSpaces.length) - 1], cor = N1.mwRoute && N1.mwStyles.corridor;
   const hostOf = (st) => { for (const k of earned) if (N1.mwStyleOf[k] === st) return k; return ''; };
   let mids = [];
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const x = a[i]; a[i] = a[j]; a[j] = x; } return a; };
   for (const k of earned) { const st = N1.mwStyleOf[k]; if (st && st !== 'corridor' && N1.mwStyles[st] && mids.indexOf(st) < 0) mids.push(st); }
+  // F50: from night 2, every switched-on room joins: earned and not seen yet, then not earned and not seen yet, then earned seen, then the rest (each group in a mixed order)
+  const fill = N1.mwFillNights && night >= 2, seen = RUN.sp || [];
+  if (fill) {
+    const all = Object.keys(N1.mwStyles).filter((st) => N1.mwStyles[st] && st !== 'corridor' && st !== 'ring' && Object.keys(N1.mwStyleOf).some((k) => N1.mwStyleOf[k] === st));
+    const isNew = (st) => seen.indexOf(st) < 0, earn = (st) => mids.indexOf(st) >= 0;
+    mids = [].concat(shuffle(all.filter((st) => earn(st) && isNew(st))), shuffle(all.filter((st) => !earn(st) && isNew(st))),
+      shuffle(all.filter((st) => earn(st) && !isNew(st))), shuffle(all.filter((st) => !earn(st) && !isNew(st))));
+  }
   if (NS.routeOrder) mids = NS.routeOrder.filter((st) => mids.indexOf(st) >= 0);
-  else for (let i = mids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const x = mids[i]; mids[i] = mids[j]; mids[j] = x; }
+  else if (!fill) shuffle(mids);
   mids = mids.slice(0, Math.max(0, max - 1 - (cor ? 1 : 0)));
-  const ahead = mids.map(hostOf);
+  // the rooms on tonight's route, kept for the next night's run hash (runNext)
+  NS.routeStyles = mids.slice();
+  // a room tonight's act did not earn is led by its own insecurity (F50)
+  const ownOf = (st) => { for (const k in N1.mwStyleOf) if (N1.mwStyleOf[k] === st) return k; return ''; };
+  const ahead = mids.map((st) => hostOf(st) || ownOf(st));
   // the group: its host first, then earned types not yet met that host no space ahead, then any earned not yet met, then earned ones again (least met first), then the partner list; never the Light, never a type twice
   const pick = (host, n) => {
     const g = host ? [host] : [];
@@ -5055,7 +5074,7 @@ function mwBuildRoute() {
     return g;
   };
   if (cor) route.push({ style: 'corridor', group: pick(hostOf('corridor'), N1.mwGroup) });
-  for (const st of mids) { ahead.shift(); route.push({ style: st, group: pick(hostOf(st), N1.mwGroup) }); }
+  for (const st of mids) { ahead.shift(); route.push({ style: st, group: pick(hostOf(st) || ownOf(st), N1.mwGroup) }); }
   route.push({ style: 'ring', group: ['light'].concat(pick('', N1.mwGroup - 1)) });
   return route;
 }
@@ -5960,7 +5979,7 @@ function endCard() {
 }
 
 // test hook for night-1 checks (read-mostly; session 25: killFoe for smoke_nights.cjs, which puts each space's figures down directly; stepFrame for gpu_night1.mjs)
-window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, fallPress, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU, endObj, perfList, endChoose, killFoe, stepFrame, scenes: { walk: scene, plate: plateScene, room: roomScene, vig: vigScene, mw: mwScene, act: actScene, press: pressScene, end: endScene } };
+window.__night = { pressCam, pressReach, NS, S, N1, crew, foes, hurtLaughs, fallClimbs, shopCard, chars, room, input, mwCam, refl, mirrorSetup, get M() { return NS.mw; }, gpStart, gpEval, gpStop, gpProbe, crowdCard, enterMW, mwUnworld, mwU, mwBuildRoute, pickAct, actAfter, actRoutine, fallPress, actPxAt, slumpFor, actObj, actU, endMW, setRoomView, turnRoom, lightStartR, endCard, boardActs, quoteFor, RUN, runNext, mwEnterLeg, mwLeaveLeg, hitFoe, boxRoom, paradeU, endObj, perfList, endChoose, killFoe, stepFrame, scenes: { walk: scene, plate: plateScene, room: roomScene, vig: vigScene, mw: mwScene, act: actScene, press: pressScene, end: endScene } };
 // test hook for smoke_walk.cjs (read-only use outside the checks)
 window.__walkTest = { CONFIG, renderer, scene, camera, chars, performers, input, renderFrame, cutTo, free, roomScene, roomCam, room, begin, turnRoom, get plateMat() { return plateMat; } };
 boot().catch((e) => { S.error = String(e && e.message || e); el.state.textContent = 'Failed to load: ' + S.error; if (n1) el.loadState.textContent = 'Failed to load: ' + S.error; console.error(e); });
