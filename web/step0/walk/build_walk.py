@@ -65,9 +65,9 @@ PERFORMERS = [
 
 # shot cameras: Blender location, the point it looks at, name prefixes of objects hidden from this camera only
 SHOTS = dict(
-    corridor=dict(title='Corridor', cam=(0.0, -0.9, 2.7), look=(0.0, 5.0, 0.7), hide=['cor_wall_s', 'entb_']),
+    corridor=dict(title='Hall', cam=(0.0, -0.9, 2.7), look=(0.0, 5.0, 0.7), hide=['cor_wall_s', 'entb_']),
     wings=dict(title='Wings', cam=(6.4, 8.2, 3.3), look=(0.2, 11.4, 0.7), hide=['entb_']),
-    entrance=dict(title='Ring entrance', cam=(-1.3, 10.6, 2.9), look=(-1.3, 20.0, 0.8), hide=['wing_', 'rack_']),
+    entrance=dict(title='Ring door', cam=(-1.3, 10.6, 2.9), look=(-1.3, 20.0, 0.8), hide=['wing_', 'rack_']),
 )
 
 

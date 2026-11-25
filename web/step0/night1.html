@@ -182,7 +182,7 @@
 <div id="roomBar" class="hidden"><button id="roomL" aria-label="Turn left">&#9664;</button><button id="again" class="hidden">Walk back again</button><button id="sit" class="hidden">Face the mirror</button><button id="roomR" aria-label="Turn right">&#9654;</button></div>
 <div id="panel" class="hidden">
   <div id="panelText">Walk out: cube room to the ring (corridor, wings, ring entrance). Walk back: after the act, ring to the cube room.</div>
-  <div id="state">Loading the clown, two performers, three shots and the cube room...</div>
+  <div id="state">Getting the clown ready...</div>
   <div><button id="go" class="hidden">Walk out</button> <button id="back" class="hidden">Walk back (good act)</button> <button id="backFlop" class="hidden">Walk back (flop)</button></div>
 </div>
 <div id="fade"></div>
@@ -199,7 +199,7 @@
 <div id="flash"></div>
 <div id="fog">The Mirror</div>
 <div id="curtain"><div class="half hl"></div><div class="half hr"></div><div class="val"></div>
-  <div class="plaque"><h1>The Clown and the Mirror</h1><div id="nightLabel">Night 1 &middot; prototype</div><button class="btn" id="start" disabled>Loading...</button><small id="loadState"></small></div></div>
+  <div class="plaque"><h1>The Clown and the Mirror</h1><div id="nightLabel">Night 1</div><button class="btn" id="start" disabled>Loading...</button><small id="loadState"></small></div></div>
 <div id="logo" class="card"><svg viewBox="0 0 200 200" aria-label="V">
   <defs><linearGradient id="gw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBD190"/><stop offset="1" stop-color="#DA9F69"/></linearGradient>
   <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9D5D7"/><stop offset=".55" stop-color="#9DB5BB"/><stop offset="1" stop-color="#234249"/></linearGradient></defs>
@@ -842,7 +842,7 @@ const N1 = Object.freeze({
   goalLines: true,
   // the goal line per place (lead's wording; the owner edits). paint, painting, bravado: dressing room; corridor, wings, entrance: walk out by shot; back: walk back; room: after it
   goalText: {
-    painting: 'He paints the smile on.', bravado: 'He gets into the role. The act board is next.', board: 'Choose tonight\'s act on the board.',
+    painting: 'He paints the smile on.', bravado: 'He is the clown now. The act board is next.', board: 'Choose tonight\'s act on the board.',
     corridor: 'Walk up the hall to the ring. Go round the people.', wings: 'The ring is past the red curtains, at the back.',
     entrance: 'Walk into the light.', back: 'Walk back to the dressing room.',
     // session 38: the walk back by shot (the first-timer walked to the wings' lit vanity, taking it for the dressing room)
@@ -853,7 +853,7 @@ const N1 = Object.freeze({
   // cold players item 5: switch, a line saying what each gold button did, shown verbCapSecs (game time)
   verbCaps: true, verbCapSecs: 4,
   // that line per verb (lead's wording; the owner edits)
-  verbCap: { take: 'Pie in hand: one free pie throw in the Mirror.', honk: 'HONK! The strong man laughs out loud.', fall: 'Over the rope he goes, and up again.', trip: 'He trips on purpose. The child saw.' },
+  verbCap: { take: 'Pie in hand: one free pie throw in the Mirror.', honk: 'HONK! The strong man laughs out loud.', fall: 'Over the rope he goes, and up again.', trip: 'He trips, and he meant to. The child saw.' },
   // session 38, owner 24 Nov 23:49 "marker only to be seen by tester. to be removed when ship": switch, a ring and an arrow on the clown,
   // shown only when the address has ?tester (cold-play runs); set false (or remove) before ship
   testMark: true,
@@ -995,7 +995,7 @@ const N1 = Object.freeze({
   // answer: after each gag he lands it answers within r m in front of it. hit = Laughs. Lead's defaults for the open GDD row "the Performer's attack for each buyable act"
   perfAttacks: {
     fall: { name: 'the deliberate fall', kind: 'line', tell: 0.7, len: 4.4, width: 1.0, move: 4.0, moveSecs: 0.35, hit: 10, hz: [300, 150] },
-    sweep: { name: 'the spotlight sweep', kind: 'spot', tell: 0.7, r: 1.4, hit: 8, hz: [1400, 2600] },
+    sweep: { name: 'the light sweep', kind: 'spot', tell: 0.7, r: 1.4, hit: 8, hz: [1400, 2600] },
     scale: { name: 'the talking scale', kind: 'spot', tell: 0.8, r: 1.7, hit: 10, hz: [300, 900] },
     drill: { name: 'the soldier drill', kind: 'line', tell: 0.7, len: 3.4, width: 0.8, move: 0, moveSecs: 0.15, hit: 9, hz: [520, 380] },
     dash: { name: 'the dash', kind: 'line', tell: 0.6, len: 5.2, width: 0.9, move: 5.0, moveSecs: 0.25, hit: 9, hz: [800, 1600] },
@@ -1093,7 +1093,7 @@ const N1 = Object.freeze({
   // act: an act from N1.acts, sold once it was tried on the board (NS.tried) or from night `from`; note on the night it was tried, later after.
   // others (abilities) are always sold. Prices for scale, drill and trade are the lead's starting values (session 24), to tune in play
   shop: [
-    { id: 'sweep', title: 'Spotlight sweep', note: 'Free tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
+    { id: 'sweep', title: 'Light sweep', note: 'Free tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
     { id: 'scale', title: 'The talking scale', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
     { id: 'drill', title: 'Soldier drill', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 7, move: 'lunge', act: true },
     { id: 'trade', title: 'Tit-for-tat', note: 'Never tried on the board. Buy it and it is yours.', later: 'Never tried on the board. Buy it and it is yours.', price: 8, move: 'slap', act: true, from: 2 },
@@ -1181,7 +1181,7 @@ const N1 = Object.freeze({
   // goal: the one line the note shows (session 38, cold players item 3: the note was a wall of text); the rest is behind More
   acts: [
     { id: 'fall', title: 'The fall', short: 'The fall', goal: 'Miss the bar on purpose and land on your backside.', line: 'Miss the bar on purpose, land on your backside, bow.', own: 'Yours. It always pays a little.', x: -0.95, game: 'ring' },
-    { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', goal: 'Sweep the spotlight off the floor.', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Free tonight.', x: 0.95, game: 'hold' },
+    { id: 'sweep', title: 'Light sweep', short: 'The sweep', goal: 'Sweep the light off the floor.', line: 'Sweep the light off the floor until it is gone.', own: 'Free tonight.', x: 0.95, game: 'hold' },
     // session 24 (build plan 24.1): the night 2-3 acts; their routine after the cue is the fall's until the art pass (box and shape)
     { id: 'scale', title: 'The talking scale', short: 'The scale', goal: 'Step on the scale and take its verdict.', line: 'Step on the scale. It reads your weight out to the house, worse each time.', game: 'bar' },
     { id: 'drill', title: 'Soldier drill', short: 'The drill', goal: 'Copy the whiteface, beat for beat.', line: 'The whiteface barks the drill. Copy him, beat for beat.', game: 'call' },
@@ -1625,7 +1625,7 @@ function setRoomView(name) {
   shared.uKeyDir.value.fromArray(CONFIG.keyDir).normalize().transformDirection(roomCam.matrixWorldInverse);
   shared.uFillDir.value.fromArray(CONFIG.fillDir).normalize().transformDirection(roomCam.matrixWorldInverse);
   shared.uRimDir.value.fromArray(CONFIG.rimDir).normalize().transformDirection(roomCam.matrixWorldInverse);
-  el.shotName.textContent = 'Cube room: ' + room.data.views[name].title;
+  el.shotName.textContent = room.data.views[name].title;
   if (n1) el.sit.classList.toggle('hidden', name !== 'mirror' || !!S.mirror);
   showPrep(CONFIG.prepOn && name === CONFIG.prepWall);
 }
@@ -2671,7 +2671,7 @@ function logoOut() {
 setTimeout(logoOut, 2800);
 el.logo.addEventListener('click', logoOut);
 // session 24: tonight on the curtain and the tab
-document.getElementById('nightLabel').textContent = `Night ${N1.night}${N1.night === N1.nights ? ' (the last)' : ''} \u00b7 prototype`;
+document.getElementById('nightLabel').textContent = `Night ${N1.night}${N1.night === N1.nights ? ' (the last)' : ''}`;
 document.title = `The Clown and the Mirror: night ${N1.night} (prototype)`;
 function n1Ready() {
   el.start.disabled = false; el.start.textContent = 'Start'; el.loadState.textContent = '';
@@ -2849,7 +2849,7 @@ function n1Board() {
   crewQuiet();
   const d = show('board', `<h2>Tonight's board</h2><p>Choose an act.</p><div class="opts">
     <button class="opt" data-act="fall"><b>The fall</b>Yours. The classic pratfall; it always pays a little.</button>
-    <button class="opt" data-act="sweep"><b>Spotlight sweep</b>Lent for tonight, free. Sweep up the spotlight.</button></div>
+    <button class="opt" data-act="sweep"><b>Light sweep</b>Yours for tonight, free. Sweep up the light.</button></div>
     <p><small>Then press in time with the drum, when the ring closes onto the mask on his face.</small></p>`);
   d.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => startAct(b.dataset.act)));
 }
