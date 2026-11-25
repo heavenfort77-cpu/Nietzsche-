@@ -6,10 +6,14 @@ const path = require('path'), http = require('http'), fs = require('fs');
 const pw = require(path.join(__dirname, '..', 'node_modules', 'playwright-core'));
 const ROOT = __dirname, PAGE = process.env.PAGE || 'night1.html';
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg', '.wasm': 'application/wasm' };
+// session 44: the Mirror World is an escape by default (N1.mwEscape, N1.lastNoExit; panel design/PANEL-mirror-escape-25nov.md, checked by probe_s44_escape.cjs).
+// This probe tests C1's drive-off, the fight, still in the game behind those switches: night1.html is served with both off
+// (rule 18: the game changed on purpose; checks session 45 adds escape steps to the real-play smoke)
+const fight = (t) => { for (const k of ['mwEscape', 'lastNoExit']) { if (t.split(`  ${k}: true,`).length !== 2) throw new Error('switch not found once: ' + k); t = t.replace(`  ${k}: true,`, `  ${k}: false,`); } return t; };
 const srv = http.createServer((q, r) => {
   const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; }
-  r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); r.end(fs.readFileSync(f));
+  r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); r.end(path.basename(f) === 'night1.html' ? fight(fs.readFileSync(f, 'utf8')) : fs.readFileSync(f));
 });
 let pass = 0, all = 0;
 const report = (ok, name, info) => { all++; if (ok) pass++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name} | ${JSON.stringify(info)}`); };

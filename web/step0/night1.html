@@ -896,6 +896,9 @@ const N1 = Object.freeze({
   belongThought: true,
   // the thought's words (owner's meaning; lead's wording, edit freely)
   belongText: 'I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself.',
+  // owner 25 Nov 18:49: his thought on night 2 (owner's words; only "i" made "I", a comma for the full stop, "the" before clown, "blur" made "blurs").
+  // Index 0 = night 1; null = the line above
+  belongNights: [null, 'Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is "me".', null],
   // how long the thought stays on screen, s
   belongSecs: 7,
   // session 42 (F48, stranger step 21): his thought waits until the gold button's caption has gone, so the two lines never share the screen's bottom; false = as before
@@ -1107,6 +1110,25 @@ const N1 = Object.freeze({
   mwOffSecs: 1.2, mwOffSpeed: 2.2,
   // glass per space he lasts (lead's number: night 1 has 3 spaces, 12 glass; a figure used to drop 3-4) and its tip ({n} = the glass)
   mwSpacePay: 4, mwSpacePayTip: 'He got through. +{n} glass.',
+  // owner 25 Nov 13:52-13:55 ("would it be better for him to play escape?", "do b then do a actual build"), panel design/PANEL-mirror-escape-25nov.md:
+  // E1 (13 of 13), X3 (13), X4 (11), X5 (13). Switch: the Mirror World is an escape. Each space's way out is open from the start; the figures cannot be
+  // beaten or driven off; a gag knocks one over and holds it escHold s (it gets up and comes again); one of each space's group stands between him and
+  // the way out; the arena's way out is a pale door across the ring. false = the fight (mwDriveOff and the doors that open when the group is down)
+  mwEscape: true,
+  // a gag's hold, s (the panel sketch's 2 s), how far it knocks the figure back, m, how far it tips over, degrees, and how long it takes to get up, s
+  escHold: 2.0, escPush: 1.2, escTipDeg: 70, escRise: 0.4,
+  // the line on entering the Mirror World (X5, lead's wording), the tip in each space, and the arena door: place (ring x, z), size (w, h), reach, m
+  escName: 'Get out.', escTip: 'Get out: the pale door.', escRingDoor: [0, -6.9], escDoorSize: [1.4, 2.6], escDoorReach: 0.9,
+  // X4: the guard stands this far from the way out, toward him, m
+  escGuard: 1.6,
+  // each figure's hint as it is slipped past (lead's wording; the owner edits it)
+  escHint: { light: 'Three gags on its lamp darken it.', stare: 'Pass it by its side.', shame: 'Drop to shake it off.', whisper: 'Step past it. Stay on your feet.', sergeant: 'Pass between the drum beats.', weigher: 'Spend Laughs and it slows.', performer: 'There is no door out of him.' },
+  // E2 (13 of 13), X1a (12 of 13), X2 (13 of 13). Switch: on the last night the arena's door leads back into the ring, the Performer in it. Each return
+  // he starts at the ring's front, the Performer escNear[return] m nearer to him, the door just behind it (escBehind m), the Mirror warping escWarp more.
+  // The ending starts when he stops and stands while it gnaws (escStand s still): the Performer walks up (escWalk m/s) and its touch (escTouch m) starts
+  // it; while he stands, Laughs at 0 do not end the night (the critic's condition); after escCap returns it walks up anyway
+  lastNoExit: true,
+  escNear: [6, 4.5, 3], escBehind: 1.0, escWarp: 0.15, escStand: 2.5, escCap: 3, escWalk: 0.9, escTouch: 0.8,
   // owner 23 Nov 00:32 "player must know laugh is limited else they will spam": the cost shows on each gag button and in the hint; the Laughs count shows the spend for spendShow s and turns red at lowLaughs or under
   spendShow: 0.7, lowLaughs: 20,
   // F35 (session 25): the shop panel at the mirror keeps this gap (px) from the glass, and a free part of the screen narrower or lower than shopMinPx is not used for it
@@ -3771,7 +3793,7 @@ function updateCrew(dt) {
     }
     if (NS.belong === 1 && m.cd.id === 'child' && m.saidT <= 0 && !(N1.thoughtAfterCap && NS.verbCapT > 0)) {
       NS.belong = 2; NS.belongT = N1.belongSecs;
-      el.thought.textContent = N1.belongText; el.thought.classList.remove('hidden');
+      el.thought.textContent = N1.belongNights[NS.night - 1] || N1.belongText; el.thought.classList.remove('hidden');
     }
   }
   if (NS.belong === 2) { NS.belongT -= dt; if (NS.belongT <= 0) belongEnd(); }
@@ -4415,7 +4437,7 @@ function buildMW() {
   pool.stripe.geometry.rotateX(-Math.PI / 2);
   pool.weighRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 32), new THREE.MeshBasicMaterial({ color: '#F4FAFB', transparent: true, opacity: 0.55, depthWrite: false }));
   pool.weighRing.geometry.rotateX(-Math.PI / 2);
-  buildParade(); buildTilt(); buildEnd();
+  buildParade(); buildTilt(); buildEnd(); buildEscDoor();
   mwCam.position.fromArray(N1.mwCamPos);
   buildUnworld();
 }
@@ -4646,6 +4668,7 @@ function mwPerformer(M, f, dt, dx, dz, d) {
   const P = f.cfg, c = chars.performer;
   c.mixer.update(dt); c.blob.position.set(f.x, 0.02, f.z);
   f.phT += dt;
+  if (f.walkUp) { escApproach(M, f, c, dt, dx, dz, d); return; }
   // the opening run: each act it holds, in a row, its name on the tip line; it cannot be hurt yet
   if (f.show) {
     f.yaw = Math.atan2(dx, dz);
@@ -5068,6 +5091,7 @@ function mwEnterLeg(M) {
     mwCam.position.fromArray(N1.mwCamPos);
   }
   if (leg.group) mwGroupIn(M, leg.group); else mwRingFoes();
+  if (N1.mwEscape) escEnter(M);
 }
 // each space's grade: the photograph room is sepia on the clown and the figures, with the print's border on screen; the rest keep the Mirror's cold grade
 function mwGrade(style) {
@@ -5224,7 +5248,7 @@ function mwCut() {
     mwTipShow(M);
   });
 }
-function mwDrain(n) { const M = NS.mw; if (M.over) return; M.laughs -= n; if (M.laughs <= 0) { M.laughs = 0; endMW('lose'); } }
+function mwDrain(n) { const M = NS.mw; if (M.over) return; M.laughs -= n; if (M.laughs <= 0) { M.laughs = 0; if (escStands(M)) escWalkUp(M); else endMW('lose'); } }
 function mwHurt(n) {
   const M = NS.mw;
   if (M.fall || M.over) return;
@@ -5292,6 +5316,7 @@ function hitFoe(f, dmg, fromX, fromZ) {
   if (f.kind === 'performer') { if (f.show) return; if (f.answers && f.ansT < 0) { f.ansT = 0; mwScene.add(pool.ring); tone(N1.perfAttacks.trade.hz[0], N1.perfAttacks.trade.hz[1], N1.perfAttacks.trade.tell, 'sawtooth', 0.05); } }
   // session 24: on the drum beat the Sergeant parries; between beats the gag lands
   if (f.kind === 'sergeant' && Math.min(f.beatT, f.cfg.beat - f.beatT) < f.cfg.onBeat) { tip(TIPS.sergeantParry); f.pop = 0.1; tone(1500, 1400, 0.05, 'square', 0.05); return; }
+  if (N1.mwEscape) { escKnock(f, fromX, fromZ); return; }
   f.hp -= dmg; f.pop = 0.18; f.hold = 'hit'; f.holdT = N1.foeHitClip;
   if (f.hp <= 0) killFoe(f);
 }
@@ -5346,6 +5371,97 @@ const TIPS = {
   sergeantParry: 'On the beat it parries. Hit between the drums.',
   weigher: 'The Weigher grows heavier the more Laughs you hold. Spend them and it gets lighter.',
 };
+// ----- escape (panel design/PANEL-mirror-escape-25nov.md: E1, E2, X1a, X2, X3, X4, X5) -----
+// the arena's pale door across the ring, built once; shown only when the Mirror World is an escape and he is in the ring
+function buildEscDoor() {
+  const sz = N1.escDoorSize;
+  NS.escDoor = new THREE.Mesh(new THREE.BoxGeometry(sz[0], sz[1], 0.08), new THREE.MeshBasicMaterial({ color: rawColor(N1.tiltCol.doorOpen) }));
+  NS.escDoor.matrixAutoUpdate = false; NS.escDoor.visible = false;
+  escDoorAt(N1.escRingDoor[0], N1.escRingDoor[1]);
+  mwScene.add(NS.escDoor);
+}
+function escDoorAt(x, z) { NS.escDoorX = x; NS.escDoorZ = z; NS.escDoor.position.set(x, N1.escDoorSize[1] / 2, z); NS.escDoor.updateMatrix(); }
+// into a space: its way out is open at once, and one figure of its group (not the Light) stands between him and it (X4)
+function escEnter(M) {
+  NS.escDoor.visible = M.space === 'ring';
+  if (M.space === 'corridor') return;
+  let dx = 0, dz = 0;
+  const P = boxRoom(M.space);
+  if (P) { M.open = true; roomDoor(M.space).material.color.set(N1[M.space + 'Col'].doorOpen); dx = P.at[0] + P.doorX; dz = P.at[1] - P.half[1]; }
+  else if (M.space === 'void') { M.open = true; NS.voidDoorFill.visible = true; const V = N1.voidRoom; dx = V.at[0] + V.door[0]; dz = V.at[1] + V.door[1]; }
+  else { M.returns = 0; M.escUp = false; escDoorAt(N1.escRingDoor[0], N1.escRingDoor[1]); dx = NS.escDoorX; dz = NS.escDoorZ; }
+  // the escape line goes before the space's own tip (queued by mwEnterLeg)
+  if (M.tips.indexOf(N1.escTip) < 0 && M.tip !== N1.escTip) M.tips.unshift(N1.escTip);
+  let g = null;
+  for (const k of M.group || []) { if (k === 'light') continue; g = foes.find((f) => f.kind === k && f.alive); if (g) break; }
+  if (!g) return;
+  const ax = M.x - dx, az = M.z - dz, l = Math.hypot(ax, az) || 1;
+  g.x = dx + ax / l * N1.escGuard; g.z = dz + az / l * N1.escGuard;
+}
+// a gag lands: the figure is knocked back and over, held escHold s, then gets up; its attack in progress is dropped (X3)
+function escKnock(f, fromX, fromZ) {
+  const ax = f.x - fromX, az = f.z - fromZ, l = Math.hypot(ax, az) || 1;
+  f.escT = N1.escHold; f.escP = 0; f.escDX = ax / l; f.escDZ = az / l;
+  f.yaw = Math.atan2(-ax, -az); f.root.rotation.order = 'YXZ';
+  f.tell = 0; f.reach = 0; f.cling = false; f.gazeT = 0; f.judgeT = 0; f.strikeOn = false; f.lift = 0;
+  if (f.kind === 'performer') { f.ph = 0; f.phT = 0; f.ansT = -1; mwScene.remove(pool.stripe, pool.weighRing, pool.ring); }
+  if (f.kind === 'stare') mwScene.remove(pool.lens, pool.wedge);
+  if (f.kind === 'sergeant') mwScene.remove(pool.stripe);
+  if (f.kind === 'weigher') mwScene.remove(pool.weighRing);
+  f.pop = 0.18; f.hold = 'hit'; f.holdT = N1.foeHitClip;
+  tone(700, 160, 0.25, 'triangle', 0.08); tone(2200, 1400, 0.08, 'square', 0.04);
+}
+// held: pushed back in the first 0.2 s, over on its back, up again in the last escRise s
+function escHeld(M, f, dt) {
+  f.escT -= dt;
+  if (f.escP < N1.escPush) { const st = Math.min(N1.escPush - f.escP, N1.escPush / 0.2 * dt); f.escP += st; f.x += f.escDX * st; f.z += f.escDZ * st; escClamp(M, f); }
+  const down = Math.min(1, (N1.escHold - f.escT) / 0.15), up = Math.min(1, Math.max(0, f.escT) / N1.escRise);
+  f.root.rotation.x = -deg(N1.escTipDeg) * down * up;
+  if (f.escT <= 0) { f.escT = 0; f.root.rotation.x = 0; }
+}
+function escClamp(M, f) {
+  const P = boxRoom(M.space);
+  if (P) { f.x = THREE.MathUtils.clamp(f.x, P.at[0] - P.half[0] + 0.3, P.at[0] + P.half[0] - 0.3); f.z = THREE.MathUtils.clamp(f.z, P.at[1] - P.half[1] + 0.3, P.at[1] + P.half[1]); return; }
+  const cx = M.space === 'void' ? N1.voidRoom.at[0] : 0, cz = M.space === 'void' ? N1.voidRoom.at[1] : 0, R = M.space === 'void' ? N1.voidRoom.r : N1.mwRadius;
+  const ox = f.x - cx, oz = f.z - cz, rr = Math.hypot(ox, oz);
+  if (rr > R) { f.x = cx + ox * R / rr; f.z = cz + oz * R / rr; }
+}
+// the ring: through its door he is out (a win); on the last night (E2) the door leads back into the ring; he stops, or the cap: the Performer walks up
+function escRing(M) {
+  if (M.over || M.cutting) return;
+  if (M.perfMet && !M.escUp && (M.returns >= N1.escCap || escStands(M) && M.still >= N1.escStand)) escWalkUp(M);
+  if (M.escUp || Math.hypot(M.x - NS.escDoorX, M.z - NS.escDoorZ) > N1.escDoorReach) return;
+  if (N1.lastNoExit && lastNightFight()) escReturn(M); else endMW('win');
+}
+// on the last night with the Performer in the ring, he is standing still (X1a: the gnaw still bites while he stands)
+function escStands(M) { return N1.mwEscape && N1.lastNoExit && !!M.perfMet && M.isStill && !M.fall; }
+function escReturn(M) {
+  M.cutting = true;
+  fadeThen(N1.mwCutMs, () => {
+    M.cutting = false; M.returns++;
+    if (!M.perfMet) perfEnter(M);
+    const f = foes.find((q) => q.kind === 'performer');
+    M.x = 0; M.z = 4.2; M.yaw = Math.PI; M.still = 0; M.fall = null;
+    // X2: each return the trap is closer: the Performer nearer, the door just behind it, the Mirror warping more
+    const near = N1.escNear[Math.min(M.returns, N1.escNear.length) - 1];
+    if (f) { f.x = 0; f.z = M.z - near; f.escT = 0; f.root.rotation.x = 0; escDoorAt(0, Math.max(N1.escRingDoor[1], f.z - N1.escBehind)); }
+    mwU.uWarp.value += N1.escWarp; mwU.uAmt.value = Math.min(1, mwU.uAmt.value + N1.escWarp);
+    tone(300, 120, 0.5, 'sine', 0.08);
+  });
+}
+// the Performer stops its acts and walks up to him; its touch starts the ending
+function escWalkUp(M) {
+  const f = foes.find((q) => q.kind === 'performer' && q.alive);
+  if (!f || M.escUp) return;
+  M.escUp = true; f.walkUp = true; f.ph = 0; f.ansT = -1; f.show = false; f.escT = 0; f.root.rotation.x = 0;
+  mwScene.remove(pool.stripe, pool.weighRing, pool.ring);
+  const c = chars.performer; c.walk.reset().play(); c.idle.crossFadeTo(c.walk, 0.3, false); f.moving = true;
+}
+function escApproach(M, f, c, dt, dx, dz, d) {
+  f.yaw = Math.atan2(dx, dz);
+  if (d > N1.escTouch) { const st = Math.min(d - N1.escTouch, N1.escWalk * dt); f.x += dx / d * st; f.z += dz / d * st; return; }
+  if (!M.over) endingStart(M);
+}
 function updateMW(dt) {
   const M = NS.mw;
   // the photograph's flash freezes the frame: no game time passes, the white sheet fades when it ends
@@ -5356,9 +5472,10 @@ function updateMW(dt) {
   mwPie(M, dt);
   let alive = 0;
   // those still to enter count as left: no win and no shard sweep before the last one is down
-  if (M.space === 'ring') { alive = mwFoes(M, dt); mwEntry(M, dt, alive); mwShards(M, dt, alive + M.queue.length, true); }
+  if (M.space === 'ring' && N1.mwEscape) { alive = mwFoes(M, dt); mwEntry(M, dt, alive); escRing(M); }
+  else if (M.space === 'ring') { alive = mwFoes(M, dt); mwEntry(M, dt, alive); mwShards(M, dt, alive + M.queue.length, true); }
   else if (M.space === 'corridor') { mwCorridor(M, dt); if (foes.length) { alive = mwFoes(M, dt); mwShards(M, dt, 1, false); } }
-  else { alive = mwFoes(M, dt); mwShards(M, dt, alive, false); mwRoomOpen(M, alive); if (M.space === 'void') voidLineDraw(M); }
+  else { alive = mwFoes(M, dt); mwShards(M, dt, alive, false); if (!N1.mwEscape) mwRoomOpen(M, alive); if (M.space === 'void') voidLineDraw(M); }
   mwGnaw(M, dt, alive);
   mwCamera(M, dt);
   mwHud(M, dt);
@@ -5579,7 +5696,8 @@ function mwFoes(M, dt) {
     // nearest-figure hint: the Light is as near as its lamp or its spot, whichever is nearer
     f.near = f.kind === 'light' ? Math.min(d, Math.hypot(M.x - f.spotX, M.z - f.spotZ)) : d;
     if (f.near < bd) { bd = f.near; best = f; }
-    if (f.kind === 'light') mwLight(M, f, dt);
+    if (f.escT > 0) escHeld(M, f, dt);
+    else if (f.kind === 'light') mwLight(M, f, dt);
     else if (f.kind === 'whisper') mwWhisper(M, f, dt, dx, dz, d);
     else if (f.kind === 'stare') { if (M.space === 'photo') mwStareFlash(M, f, dt, dx, dz, d); else mwStare(M, f, dt, dx, dz, d); }
     else if (f.kind === 'shame') mwShame(M, f, dt, dx, dz, d);
@@ -5651,7 +5769,8 @@ function mwHud(M, dt) {
 }
 // the tip element, one line in the previous version's style (owner 23 Nov 08:12 "use the style in previous version"): a passing tip takes the line for its tipSecs, then the fixed line (the fight's name at entry, then the hint of the insecurity he faces) comes back; DOM written on change only
 function mwTipShow(M) {
-  const fixed = N1.mwNameText && M.t < N1.mwNameSecs ? N1.mwNameText : N1.mwHints && M.face ? N1.mwHint[M.face.kind] : '';
+  const name = N1.mwEscape ? N1.escName : N1.mwNameText, hints = N1.mwEscape ? N1.escHint : N1.mwHint;
+  const fixed = name && M.t < N1.mwNameSecs ? name : N1.mwHints && M.face ? hints[M.face.kind] : '';
   if (fixed === M.fixed && M.tip === M.tipDom) return;
   M.fixed = fixed; M.tipDom = M.tip;
   el.mwTip.textContent = M.tip || fixed;
@@ -5828,7 +5947,7 @@ function endCard() {
     Corridor: jumped the cable ${v.jump ? 'yes' : 'no'}, took the pie ${v.take ? 'yes' : 'no'}, honked the horn ${v.honk ? 'yes' : 'no'}, tripped for the child ${v.trip ? 'yes' : 'no'}<br>
     Act: ${actTitle(NS.act)}${NS.act === NS.tryId ? ' (tryout)' : ''}; Perfect ${i.perfects}, Good ${i.goods}, Miss ${i.misses}; Laughs +${NS.laughs}${NS.hurt && NS.hurt.total ? ` (${NS.hurt.rows.join(', ')})` : ''}<br>
     Crowd: ${NS.crowd}<br>
-    Mirror: ${NS.result === 'win' ? 'came out' : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}; ${N1.mwDriveOff ? 'driven off' : 'beaten'} ${(NS.beaten || []).join(', ') || 'none'}${NS.putOut ? '; the Light put out' : ''}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
+    Mirror: ${NS.result === 'win' ? (N1.mwEscape ? 'got out' : 'came out') : 'lost, woke at the mirror'} in ${Math.round(NS.mwTime || 0)} s; met ${(NS.met || []).join(', ')}${N1.mwEscape ? '; they followed him out' : `; ${N1.mwDriveOff ? 'driven off' : 'beaten'} ${(NS.beaten || []).join(', ') || 'none'}`}${NS.putOut ? '; the Light put out' : ''}; Laughs left ${NS.mwLaughs}${NS.smallDone ? '; ' + NS.smallDone : ''}<br>
     Shop: ${NS.bought.join(', ') || 'nothing bought'}; shards left ${NS.shards}; Mask ${NS.mask}</div>${N1.endBrief ? '</details>' : ''}
     ${NS.night < N1.nights ? `<button id="nextNight">Go on to night ${NS.night + 1}</button>` : `<button id="retryNight">Try the last night again</button>`}<button id="again1" class="back">Start again from night 1</button>`);
   // session 24: the next night carries Mask, shards, what he bought, what he tried and the Light's widening (runNext); start over clears the run
