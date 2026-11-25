@@ -24,3 +24,21 @@ Scores: clarity 3, fun 2, want next night 2 (session 38 phone: 3/2/2). Page erro
 7. **Shop** (steps 48-50): "Stand up" greyed, purchases not understood.
 
 Player's own summary: the game says what to do but not what the controls do, and the target object is hard to see.
+
+## Run 2: the same newbie brief on a215a08 (batch 2, F46: the phone stick now starts in the live fall act)
+
+| Player | Model | Device | Commands | Furthest | Ended by |
+| --- | --- | --- | --- | --- | --- |
+| First-timer (newbie) | Haiku | phone 390x844, touch only | 50 (incl. quit) | night 2, the act board | the 50-command limit |
+
+Scores: clarity 2, fun 2, want next night 2. Page errors 0. Step 43 "Go on to night 2" loads a new page; the tool's `page.evaluate` lost its context there (a tool error, not a game error; step 44 showed the night 2 logo).
+
+Where it got lost (positions from the log):
+1. **The fall act: he never tried to walk.** He pressed Fall where he stood, at (0.6, 0) and (0, 0), 1.6 m from pool 1 (1.6, 0.2) r 1.2: two "fell in the dark", act cut, Laughs +0 (step 19-23). With F46 a drag would now walk him (probe), but nothing on screen made him try: "Fall in the light, on the crash" did not read as "walk to the light first". He said: "I did not get a clear idea what counted as a hit."
+2. **Mirror World with 0 Laughs** (steps 36-39): the act paid nothing, so he entered with 0 Laughs; the first pale figure ended it within one drag ((0, 29.46)), and he did not know if he was hit. DODGE / SLAP / PIE never explained.
+3. **Shop with 0 shards** (step 42): everything greyed, no way to earn shown; he ended the night.
+4. **Wings, walk out** (steps 6-14): the pratfall button and "Down over the cable, and up again" again unclear (same as run 1).
+5. **Walk back** (steps 24-30): reached the room in 6 drags (via (1.09, -8.41) to the corridor), again "not clear this was the exit". The crates corner was not met.
+6. **Room** (steps 31-34): three right turns to reach the mirror wall (same as run 1).
+
+Runs 1 and 2 agree: the first point a newbie is lost is the fall act (where the light is and that he must walk into it); everything after it is played with 0 Laughs and stays unclear.
