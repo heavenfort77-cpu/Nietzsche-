@@ -92,6 +92,7 @@ const MUTS = {
   gnaw: ['night1.html', 'gnaw: { on: true,', 'gnaw: { on: false,'],
   lampgag: ['night1.html', "if (f.kind === 'light') { hitLamp(f); return; }", "if (f.kind === 'light') return;"],
   lightdark: ['night1.html', 'if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt);', 'if (f.sink > 0) mwSink(f, dt);'],
+  pauserows: ['night1.html', '(NS.touch ? `<tr><td colspan="2">${N1.pauseTouch}</td></tr>` :', "(NS.touch ? '' :"],
   hints: ['night1.html', "Each trick costs Laughs. Stand still and they bite.'", "SLAP, PIE, FALL. Lift your thumbs to stand still.'"],
   cost: ['night1.html', 'M.spent = n; M.spentT = N1.spendShow;', 'M.spent = n;'],
   musicsoft: ['night1.html', 'N1.musicVol * musicSoft() * M.duck', 'N1.musicVol * M.duck'],
@@ -285,7 +286,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       const m0 = await pg.evaluate(musicState);
       await pg.keyboard.down('KeyW'); await sleep(200); await pg.keyboard.press('Escape'); await sleep(150);
       const mp = await pg.evaluate(musicState);
-      const a = await pg.evaluate(() => { const N = window.__night, C = window.__walkTest.CONFIG; return { paused: N.NS.paused, raf: N.S.raf, ky: window.__walkTest.input.ky, y: N.S.y, rows: document.querySelectorAll('#pauseList tr').length, want: C.bindScenes.walk.length, text: document.getElementById('pauseList').textContent, card: !document.getElementById('pauseCard').classList.contains('hidden') }; });
+      const a = await pg.evaluate(() => { const N = window.__night, C = window.__walkTest.CONFIG; return { paused: N.NS.paused, raf: N.S.raf, ky: window.__walkTest.input.ky, y: N.S.y, rows: document.querySelectorAll('#pauseList tr').length, want: (N.N1.goalLines && N.NS.goalKey ? 1 : 0) + (N.NS.touch ? 1 : C.bindScenes.walk.length), goal: N.N1.goalLines && N.NS.goalKey ? N.N1.goalText[N.NS.goalKey] : '', touch: N.NS.touch, touchText: N.N1.pauseTouch, text: document.getElementById('pauseList').textContent, card: !document.getElementById('pauseCard').classList.contains('hidden') }; });
       await sleep(600);
       const y2 = await pg.evaluate(() => window.__night.S.y);
       await pg.keyboard.up('KeyW'); await pg.keyboard.press('Escape'); await sleep(300);
@@ -294,7 +295,8 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
       console.log('    music: before', m0 && m0.playing.join(','), '| paused', mp && mp.playing.length, 'playing | after', m1 && m1.playing.join(','));
       if (!m0 || m0.playing.join() !== m0.want || mp.playing.length || m1.playing.join() !== m1.want) throw new Error('music at pause ' + JSON.stringify({ m0, mp, m1 }));
       console.log('    pause: rows', a.rows, 'of', a.want, '| held W let go', a.ky === 0, '| moved while paused', +(y2 - a.y).toFixed(3), 'm');
-      if (!a.paused || a.raf || a.ky !== 0 || !a.card || a.rows !== a.want || !/E \/ Space \/ Enter/.test(a.text) || Math.abs(y2 - a.y) > 1e-6 || b.paused || b.card) throw new Error('pause ' + JSON.stringify({ a, y2, b }));
+      // session 43: changed on purpose in session 38 (cold players): the goal line is the card's first row, and a phone sees one plain line, no key names
+      if (!a.paused || a.raf || a.ky !== 0 || !a.card || a.rows !== a.want || (a.goal && a.text.indexOf(a.goal) !== 0) || (a.touch ? a.text.indexOf(a.touchText) < 0 || /Esc|Space|Enter/.test(a.text) : !/E \/ Space \/ Enter/.test(a.text)) || Math.abs(y2 - a.y) > 1e-6 || b.paused || b.card) throw new Error('pause ' + JSON.stringify({ a, y2, b }));
     });
     // panel D (owner 22 Nov 15:58: in the corridor shot "the player sees nothing"): the cable lies across the wings, filmed side-on
     await step('cable: blocks before the pratfall (D)', async () => {
@@ -658,7 +660,8 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     });
     await step('hints say act, not stand still (owner 22 Nov 23:41)', async () => {
       const r = await pg.evaluate(() => ({ hint: document.getElementById('hint').textContent, src: Array.from(document.scripts).map((s) => s.textContent).join('\n') }));
-      if (!/they gnaw/.test(r.hint) || !/Laughs/.test(r.hint)) throw new Error('control hint: ' + r.hint);
+      // session 43: the wording "they gnaw" became "they bite" on purpose (session 40, easy words for a kid reader)
+      if (!/Stand still and they bite/.test(r.hint) || !/Laughs/.test(r.hint)) throw new Error('control hint: ' + r.hint);
       const old = ['Lift your thumbs to stand still', 'Let go of everything: stand still', 'Hold still in'].filter((x) => r.src.indexOf(x) >= 0);
       if (old.length) throw new Error('old stillness hints left in the page: ' + old.join(' | '));
     });

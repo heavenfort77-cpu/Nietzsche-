@@ -29,7 +29,7 @@ const MUTS = {
   perfshow: ['night1.html', "  if (f.kind === 'performer') { if (f.show) return;", "  if (f.kind === 'performer') {", 'Performer'],
   perftell: ['night1.html', "    dash: { name: 'the dash', kind: 'line', tell: 0.6,", "    dash: { name: 'the dash', kind: 'line', tell: 0.2,", 'Performer'],
   endclap: ['night1.html', '      endObj.crowd.count = E.clapN; clap();', '      clap();', 'ending: quit'],
-  endquit: ['night1.html', "  if (E.t < b + 1.6) { setPrompt(N1.endQuitLine); return; }", "  if (E.t < b + 1.6) return;", 'ending: quit'],
+  endquit: ['night1.html', '    setPrompt(N1.endQuitLine);', "    setPrompt('');", 'ending: quit'],
   endagain: ['night1.html', '  if (!E || E.step !== \'again\' || !N1.endFallOnWill || E.falls >= N1.endFalls) return;', '  if (!E || E.step !== \'again\' || !N1.endFallOnWill || E.falls >= 1) return;', 'ending: one last act'],
 };
 const MUT = process.env.MUTATE && process.env.MUTATE !== 'all' ? MUTS[process.env.MUTATE] : null;
@@ -323,13 +323,14 @@ async function suite(b, mut, only) {
     const pg = await perfFight('n=3&m=2&s=0&b=&t=&lo=0');
     const c = await toChoice(pg);
     await pg.screenshot({ path: `${OUT}/ending_choice.png` });
-    if (!c.q || c.crowd.n !== c.crowd.want || c.crowd.paint !== 0) throw new Error(JSON.stringify(c));
+    // session 43: changed on purpose in session 37 (owner "yes" to C1 of PANEL-theme-nihilism-24nov, N1.endPaintStays): the paint stays on in the warm light, only "I quit" takes it off
+    if (!c.q || c.crowd.n !== c.crowd.want || !(c.crowd.paint > 0)) throw new Error(JSON.stringify(c));
     await press(pg, '#endQuit');
     await pg.waitForFunction(() => document.getElementById('prompt') && /I quit/.test(document.getElementById('prompt').textContent), null, { timeout: 60000 });
     await pg.waitForSelector('#again1', { timeout: 180000 });
-    const e = await pg.evaluate(() => { const N = window.__night, E = N.NS.end; return { step: E.step, d: Math.hypot(E.x - N.N1.endExit[0], E.z - N.N1.endExit[1]), buttons: [...document.querySelectorAll('.card:not(.hidden) button')].map((b) => b.id) }; });
+    const e = await pg.evaluate(() => { const N = window.__night, E = N.NS.end; return { step: E.step, paint: N.chars.clown.face.material.uniforms.uPaintAmt.value, d: Math.hypot(E.x - N.N1.endExit[0], E.z - N.N1.endExit[1]), buttons: [...document.querySelectorAll('.card:not(.hidden) button')].map((b) => b.id) }; });
     console.log('    quit: end', e.step, '| from the exit', e.d.toFixed(2), 'm | buttons', e.buttons.join(','));
-    if (e.step !== 'done' || !(e.d < 0.25) || e.buttons.join(',') !== 'again1') throw new Error(JSON.stringify(e));
+    if (e.step !== 'done' || e.paint !== 0 || !(e.d < 0.25) || e.buttons.join(',') !== 'again1') throw new Error(JSON.stringify(e));
     await pg.close();
   });
   // session 43 (owner 25 Nov 13:01, theme panel C10): changed on purpose: he falls only when the player acts (here Space, once he is up again); its line goes at the first fall

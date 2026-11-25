@@ -1,4 +1,4 @@
-# The Clown and the Mirror: current design (jam build, 18 Nov 2026; owner decisions to 23 Nov 2026)
+# The Clown and the Mirror: current design (jam build, 18 Nov 2026; owner decisions to 25 Nov 2026)
 
 Copy of the "Current design" part of the live design doc: https://claude.ai/artifact/Dg9iLQj6ZrECRh79T4vsow
 The live doc also keeps the earlier design (before 16 Nov 2026) for history; where they differ, this part wins. All features and graphics quality are required: nothing here is cut for scope.
@@ -19,6 +19,12 @@ The live doc also keeps the earlier design (before 16 Nov 2026) for history; whe
 - **The ending is a choice.** After the last insecurity is beaten he is bathed in the warm light; the audience appears one by one, clapping, heard and then cut to silence "like Evangelion"; two worded buttons appear: (1) he bows, says "I quit" and walks out of the ring, leaving his insecurity; (2) he performs one last act, shown with no judgement: he goes on with the endless fight.
 - **Laughs are limited and the player must know it**, or he will spam gags: each gag button shows its cost, the count shows every spend and turns red when low. Built in night 1.
 - Lead's starting values where the owner gave none (he can change them): tells at least 0.6 s, each with its own sound; Performer HP never below the base when nothing was bought and capped at 1.4 times the base.
+
+**Owner decisions, 25 Nov 2026, session 43 (theme panel `design/PANEL-theme-core-message-25nov.md`; the owner chose C2, C10, C1, C11). Built in night 1, each behind a CONFIG switch:**
+- **C2: a Perfect fall goes silent for one beat.** On a Perfect the crowd's roar, the popcorn and the crowd's bob hold for one beat and the music drops; the child's "...on purpose." is the only thing on screen; then the roar and the Perfect words. A Good roars at once. (`fallSeenBeat`, `fallHushSecs` 0.8.)
+- **C10: the last act falls on his will.** "Perform one last act" has no drum, no gold button and no timer: the player falls him (tap or click on the picture, or E / Space / Enter) and the crash follows his landing; three falls, then black. One line until the first fall, "Fall when you choose." (lead's wording). (`endFallOnWill`.)
+- **C1: insecurities are driven off, never killed.** A figure put down turns its back and walks out of the space; it does not sink and drops no glass, and it is there again the next night. Glass pays for lasting: each space he gets out of pays 4 glass, coming out of the night pays 4 more (lead's number; a loss keeps half). This replaces "Insecurity is only beaten by acting" in the wording only: acting still drives them off, standing still still gnaws. (`mwDriveOff`, `mwSpacePay`.)
+- **C11: the end card drops "The shame of living:".** The list of what he bought and "He got up." stay. (`endKnowsOn` false.)
 
 ## Concept and theme
 
