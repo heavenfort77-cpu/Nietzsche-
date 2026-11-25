@@ -194,12 +194,8 @@ def build_wings():
     for i in range(10):
         box(f'wing_fold{i}', (-0.2 + i * 0.68, 13.88, 1.6), (0.16, 0.1, 3.2), curtainDk)
     box('wing_ceiling', (2.0, 11.0, 3.45), (9.4, 6.0, 0.1), mat('wall', P['wall']))
-    # costume rack near the camera (the clown walks behind it), with hanging costumes
-    box('rack_a', (3.3, 9.5, 0.9), (1.6, 0.08, 0.06), mat('silver', P['silver'], 0.3, 0.8))
-    for i, c in enumerate(['curtain', 'gold', 'paint', 'rug']):
-        box(f'rack_a_coat{i}', (2.7 + i * 0.4, 9.5, 1.15), (0.3, 0.32, 0.95), mat(c, P[c], 0.9))
-    box('rack_a_leg_l', (2.5, 9.5, 0.9), (0.05, 0.05, 1.8), mat('silver', P['silver'], 0.3, 0.8))
-    box('rack_a_leg_r', (4.1, 9.5, 0.9), (0.05, 0.05, 1.8), mat('silver', P['silver'], 0.3, 0.8))
+    # session 44 (owner 25 Nov 13:49, F49): the costume rack near the camera (rack_a, four coats) is gone: from the wings camera its coats hid
+    # him on the floor behind it, where he takes the pie (tools/check_walk_visible.py); the second rack below stays
     # second rack by the north curtain (hidden from the entrance camera)
     box('rack_b', (4.6, 13.2, 1.0), (0.5, 1.4, 1.4), mat('ochre', P['ochre'], 0.9))
     box('rack_b_rail', (4.6, 13.2, 1.8), (0.05, 1.6, 0.05), mat('silver', P['silver'], 0.3, 0.8))
