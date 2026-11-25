@@ -1,0 +1,27 @@
+entry 6: step0/probe_shop.cjs sha d99a0ab
+  desk 1280x720 night 1: 3 buttons, reflection covered 0% seated
+  desk 1280x720 night 2: 5 buttons, reflection covered 0% seated
+  desk 1280x720 night 3: 6 buttons, reflection covered 0% seated
+  hd 1920x1080 night 1: 3 buttons, reflection covered 0% seated
+  hd 1920x1080 night 2: 5 buttons, reflection covered 0% seated
+  hd 1920x1080 night 3: 6 buttons, reflection covered 0% seated
+  laptop 1366x768 night 1: 3 buttons, reflection covered 0% seated
+  laptop 1366x768 night 2: 5 buttons, reflection covered 0% seated
+  laptop 1366x768 night 3: 6 buttons, reflection covered 0% seated
+  small 1024x600 night 1: 3 buttons, reflection covered 0% seated
+  small 1024x600 night 2: 5 buttons, reflection covered 0% seated
+  small 1024x600 night 3: 6 buttons, reflection covered 0% seated
+  phone 390x844 night 1: 3 buttons, reflection covered 0% seated
+  phone 390x844 night 2: 5 buttons, reflection covered 0% seated
+  phone 390x844 night 3: 6 buttons, reflection covered 0% seated
+  land 844x390 night 1: 3 buttons, reflection covered 0% seated
+  land 844x390 night 2: 5 buttons, reflection covered 0% seated
+  land 844x390 night 3: 6 buttons, reflection covered 0% seated
+  tablet 768x1024 night 1: 3 buttons, reflection covered 0% seated
+  tablet 768x1024 night 2: 5 buttons, reflection covered 0% seated
+  tablet 768x1024 night 3: 6 buttons, reflection covered 0% seated
+  wide 2560x1080 night 1: 3 buttons, reflection covered 0% seated
+  wide 2560x1080 night 2: 5 buttons, reflection covered 0% seated
+  wide 2560x1080 night 3: 6 buttons, reflection covered 0% seated
+RESULT shop probe 264 of 264 pass
+exit 0, 258 s
