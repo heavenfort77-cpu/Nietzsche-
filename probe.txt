@@ -1,0 +1,5 @@
+entry 6: MUTATE=endagain ONLY_CHECK=ending step0/smoke_nights.cjs sha c04832a
+FAIL ending: one last act: three falls on the player's presses, no words left, then the restart button: page.waitForFunction: Timeout 180000ms exceeded.
+PASS nights mutation endagain: caught (ending: one last act)
+RESULT nights mutations 1 of 1 caught
+exit 0, 230 s
