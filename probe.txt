@@ -1,0 +1,44 @@
+entry 1: MUT=nofill step0/probe_s45_route.cjs sha 9f41a56
+PASS night 1, fall clean: at most 3 spaces, middle rooms only from what the act earned | {"lens":[2],"bad":[]}
+PASS night 1, fall with a Perfect: at most 3 spaces, middle rooms only from what the act earned | {"lens":[3],"bad":[]}
+PASS night 1, fall with a Perfect and a miss: at most 3 spaces, middle rooms only from what the act earned | {"lens":[3],"bad":[]}
+PASS night 1, the scale: at most 3 spaces, middle rooms only from what the act earned | {"lens":[3],"bad":[]}
+PASS carry: night 1's rooms are in night 2's run hash (sp=) | {"mids":["photo"],"hash":"#n=2&m=0&s=0&b=&t=sweep&lo=0&sp=photo RUN.sp=[\"photo\"]","runNext":true}
+PASS night 1: no page errors | []
+FAIL night 2, fall clean: every route has 4 spaces (N1.mwSpaces) | {"lens":[2],"sample":["corridor","ring"]}
+PASS night 2, fall clean: no room twice in a route, the arena last | []
+FAIL night 2, fall clean: every route has a room not seen on an earlier night (seen photo) | {"unseen":["void","parade","tilt"],"stale":[["corridor","ring"],["corridor","ring"]]}
+PASS night 2, fall clean: each space two different types, each middle room led by its own insecurity | []
+FAIL night 2, fall with a Perfect: every route has 4 spaces (N1.mwSpaces) | {"lens":[3],"sample":["corridor","photo","ring"]}
+PASS night 2, fall with a Perfect: no room twice in a route, the arena last | []
+FAIL night 2, fall with a Perfect: every route has a room not seen on an earlier night (seen photo) | {"unseen":["void","parade","tilt"],"stale":[["corridor","photo","ring"],["corridor","photo","ring"]]}
+PASS night 2, fall with a Perfect: each space two different types, each middle room led by its own insecurity | []
+PASS night 2, fall with a Perfect and a miss: every route has 4 spaces (N1.mwSpaces) | {"lens":[4],"sample":["corridor","photo","void","ring"]}
+PASS night 2, fall with a Perfect and a miss: no room twice in a route, the arena last | []
+PASS night 2, fall with a Perfect and a miss: every route has a room not seen on an earlier night (seen photo) | {"unseen":["void","parade","tilt"],"stale":[]}
+PASS night 2, fall with a Perfect and a miss: each space two different types, each middle room led by its own insecurity | []
+PASS night 2, the scale: every route has 4 spaces (N1.mwSpaces) | {"lens":[4],"sample":["corridor","tilt","photo","ring"]}
+PASS night 2, the scale: no room twice in a route, the arena last | []
+PASS night 2, the scale: every route has a room not seen on an earlier night (seen photo) | {"unseen":["void","parade","tilt"],"stale":[]}
+PASS night 2, the scale: each space two different types, each middle room led by its own insecurity | []
+PASS night 2: no page errors | []
+FAIL night 3, fall clean: every route has 5 spaces (N1.mwSpaces) | {"lens":[2],"sample":["corridor","ring"]}
+PASS night 3, fall clean: no room twice in a route, the arena last | []
+FAIL night 3, fall clean: every route has a room not seen on an earlier night (seen photo, void, parade) | {"unseen":["tilt"],"stale":[["corridor","ring"],["corridor","ring"]]}
+PASS night 3, fall clean: each space two different types, each middle room led by its own insecurity | []
+FAIL night 3, fall with a Perfect: every route has 5 spaces (N1.mwSpaces) | {"lens":[3],"sample":["corridor","photo","ring"]}
+PASS night 3, fall with a Perfect: no room twice in a route, the arena last | []
+FAIL night 3, fall with a Perfect: every route has a room not seen on an earlier night (seen photo, void, parade) | {"unseen":["tilt"],"stale":[["corridor","photo","ring"],["corridor","photo","ring"]]}
+PASS night 3, fall with a Perfect: each space two different types, each middle room led by its own insecurity | []
+FAIL night 3, fall with a Perfect and a miss: every route has 5 spaces (N1.mwSpaces) | {"lens":[4],"sample":["corridor","void","photo","ring"]}
+PASS night 3, fall with a Perfect and a miss: no room twice in a route, the arena last | []
+FAIL night 3, fall with a Perfect and a miss: every route has a room not seen on an earlier night (seen photo, void, parade) | {"unseen":["tilt"],"stale":[["corridor","void","photo","ring"],["corridor","void","photo","ring"]]}
+PASS night 3, fall with a Perfect and a miss: each space two different types, each middle room led by its own insecurity | []
+FAIL night 3, the scale: every route has 5 spaces (N1.mwSpaces) | {"lens":[4],"sample":["corridor","photo","tilt","ring"]}
+PASS night 3, the scale: no room twice in a route, the arena last | []
+PASS night 3, the scale: every route has a room not seen on an earlier night (seen photo, void, parade) | {"unseen":["tilt"],"stale":[]}
+PASS night 3, the scale: each space two different types, each middle room led by its own insecurity | []
+PASS night 3, space 2 of 2 (ring): entered and its group is up | {"want":["light","whisper"],"got":{"space":"ring","up":["light","whisper"]}}
+PASS night 3: no page errors | []
+RESULT s45 route 30 of 41 pass
+exit 1, 27 s
