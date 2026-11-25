@@ -316,10 +316,11 @@ async function run() {
       await page.evaluate(() => { const S = window.__walk; window.__walkTest.begin(false); S.x = 0; S.y = 4; });
       const dip = await page.evaluate(stickDip);
       report(dip.restarts <= 1, `stick wobbling at the dead zone for ${dip.frames} frames: walk restarts ${dip.restarts} (max 1)`);
-      const behind = await page.evaluate(occlusion, { shot: 'wings', x: 2.6, y: 10.2 });
+      // session 44 (F49): the near rack is gone from the wings (it hid him on the walk); the depth test is shown behind the stool by the north curtain
+      const behind = await page.evaluate(occlusion, { shot: 'wings', x: 0.5, y: 13.5 });
       const open = await page.evaluate(occlusion, { shot: 'wings', x: -0.5, y: 11.6 });
       report(behind.hidden > 0.2 && open.hidden < 0.05 && open.all > 500,
-        `depth: behind the rack ${(behind.hidden * 100).toFixed(1)}% hidden, in the open ${(open.hidden * 100).toFixed(1)}% hidden (${open.all} px)`);
+        `depth: behind the stool ${(behind.hidden * 100).toFixed(1)}% hidden, in the open ${(open.hidden * 100).toFixed(1)}% hidden (${open.all} px)`);
     }
     await page.close();
   }
