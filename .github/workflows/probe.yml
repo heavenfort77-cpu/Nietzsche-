@@ -40,6 +40,9 @@ jobs:
         with: { ref: '${{ inputs.ref }}', fetch-depth: 1 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
+      # session 44: Python 3.13 for entries that run Blender (bpy 5.3.0 wheels), e.g. step0/walk/render_ci.cjs
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
       - name: Probe
         env: { ENTRY: '${{ matrix.p.e }}', IDX: '${{ matrix.p.i }}' }
         run: |
