@@ -109,7 +109,9 @@ precision highp float; out vec4 o; void main() { o = vec4(1.0, 0.0, 0.0, 1.0); }
     for (const [bx, by] of boards) for (let i = 1; i < 8; i++) for (let j = 1; j < 18; j++) {
       const w = [bx - 0.2 + 0.4 * i / 8, 1.8 * j / 18, -by], v = view(w); if (v[2] <= 0) continue;
       const u = v[0] / (v[2] * T * ASP) * 0.5 + 0.5, s = 0.5 - v[1] / (v[2] * T) * 0.5; if (u <= 0 || u >= 1 || s <= 0 || s >= 1) continue;
-      if (truthZ(u, s) <= v[2] + 0.15) continue;
+      let zmin = 1e9; for (let dy = -1.5; dy <= 1.5; dy += 1.5) for (let dx = -1.5; dx <= 1.5; dx += 1.5) zmin = Math.min(zmin, truthZ(u + dx / truth.w, s + dy / truth.h));
+      // points within 1.5 plate pixels of a nearer surface are left out (edge rounding)
+      if (zmin <= v[2] + 0.15) continue;
       want++; const k = ((BH - 1 - Math.floor(s * BH)) * BW + Math.floor(u * BW)) * 4;
       if (px[k] < 128) { lost++; lostH[Math.min(5, Math.floor(w[1] / 0.3))]++; } }
     rows.push([`${name} (${prec})`, `${lost} of ${want} board points hidden wrongly` + (lost ? ` · by height 0-1.8 m: ${lostH.join(' ')}` : '')]);
