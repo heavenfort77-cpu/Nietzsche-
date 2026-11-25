@@ -194,12 +194,19 @@ def build_wings():
     for i in range(10):
         box(f'wing_fold{i}', (-0.2 + i * 0.68, 13.88, 1.6), (0.16, 0.1, 3.2), curtainDk)
     box('wing_ceiling', (2.0, 11.0, 3.45), (9.4, 6.0, 0.1), mat('wall', P['wall']))
-    # session 44 (owner 25 Nov 13:49, F49): the costume rack near the camera (rack_a, four coats) is gone: from the wings camera its coats hid
-    # him on the floor behind it, where he takes the pie (tools/check_walk_visible.py); the second rack below stays
+    # costume rack near the camera (the clown walks behind it), with hanging costumes
+    # owner 25 Nov 19:05 ("Put the rack back"): restored as before session 44; the white piece he meant in F49 was the juggling clubs (removed below)
+    box('rack_a', (3.3, 9.5, 0.9), (1.6, 0.08, 0.06), mat('silver', P['silver'], 0.3, 0.8))
+    for i, c in enumerate(['curtain', 'gold', 'paint', 'rug']):
+        box(f'rack_a_coat{i}', (2.7 + i * 0.4, 9.5, 1.15), (0.3, 0.32, 0.95), mat(c, P[c], 0.9))
+    box('rack_a_leg_l', (2.5, 9.5, 0.9), (0.05, 0.05, 1.8), mat('silver', P['silver'], 0.3, 0.8))
+    box('rack_a_leg_r', (4.1, 9.5, 0.9), (0.05, 0.05, 1.8), mat('silver', P['silver'], 0.3, 0.8))
     # second rack by the north curtain (hidden from the entrance camera)
     box('rack_b', (4.6, 13.2, 1.0), (0.5, 1.4, 1.4), mat('ochre', P['ochre'], 0.9))
     box('rack_b_rail', (4.6, 13.2, 1.8), (0.05, 1.6, 0.05), mat('silver', P['silver'], 0.3, 0.8))
-    # props: mirror table, trunk, ladder, juggling clubs, stool
+    # props: mirror table, trunk, ladder, stool
+    # owner 25 Nov 19:05 (screenshot: "i mean this white piece not the rest"): the three white juggling clubs on the floor at the hall doorway
+    # (x -0.9..-0.5, y 9.0) are gone; with the props girl at (1.5, 9.3) they left about 1 m at the corridor mouth
     box('wing_table', (-2.2, 12.6, 0.4), (0.7, 1.4, 0.8), woodDk)
     box('wing_mirror', (-2.55, 12.6, 1.35), (0.06, 1.0, 1.0), mat('mirror', '#6E8D94', 0.15, 0.7))
     box('wing_trunk', (5.6, 9.0, 0.35), (1.2, 0.7, 0.7), wood)
@@ -208,8 +215,6 @@ def build_wings():
         box(f'ladder_rung{i}', (6.4, 10.6, 0.3 + i * 0.5), (0.1, 0.6, 0.05), wood)
     box('ladder_l', (6.4, 10.3, 1.5), (0.08, 0.06, 3.0), wood)
     box('ladder_r', (6.4, 10.9, 1.5), (0.08, 0.06, 3.0), wood)
-    for i in range(3):
-        cyl(f'club{i}', (-0.9 + i * 0.2, 9.0, 0.25), 0.05, 0.5, mat('paint', P['paint'], 0.5))
     cyl('stool', (1.0, 13.0, 0.3), 0.25, 0.6, woodDk)
     # warm bulbs over the mirror table
     for i in range(3):
