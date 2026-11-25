@@ -1,0 +1,15 @@
+entry 1: ONLY=phone step0/probe_s44_faults.cjs sha 3b63526
+PASS phone board wall: no text over other text | []
+FAIL phone mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":418,"webgl":24,"page":408,"rect":[156,95,234,149]}
+PASS phone mirror paint: no text over other text | []
+FAIL phone mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":1497,"webgl":63,"page":1497,"rect":[151,67,241,219]}
+PASS phone mirror entry: no text over other text | []
+FAIL phone mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":878,"webgl":50,"page":878,"rect":[151,67,241,219]}
+PASS phone mirror after: no text over other text | []
+FAIL phone mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":900,"webgl":44,"page":900,"rect":[151,67,241,219]}
+PASS phone mirror shop: no text over other text | []
+FAIL phone mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":0,"webgl":0,"page":0,"rect":[416,-241,763,415]}
+PASS phone mirror press: no text over other text | []
+PASS phone no page errors | []
+RESULT s44 faults 7 of 12 pass
+exit 1, 38 s
