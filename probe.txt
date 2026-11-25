@@ -1,0 +1,17 @@
+entry 2: ONLY=land step0/probe_s44_faults.cjs sha 37a6838
+PASS land night 3 board wall: no text over other text | {"overlaps":[],"where":{"goal":[76,31,769,50],"goalShown":true,"notes":[["The fall",[265,40,422,167]],["The drill",[425,40,578,167]]]}}
+PASS land night 2 board wall: no text over other text | {"overlaps":[],"where":{"goal":[76,31,769,50],"goalShown":true,"notes":[["The fall",[265,40,422,167]],["The scale",[425,40,578,167]]]}}
+PASS land night 1 board wall: no text over other text | {"overlaps":[],"where":{"goal":[76,31,769,50],"goalShown":true,"notes":[["The fall",[272,42,367,164]],["The sweep",[480,42,570,164]]]}}
+FAIL land mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":1230,"webgl":0,"page":1230,"rect":[277,170,415,265]}
+PASS land mirror paint: no text over other text | []
+FAIL land mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":4353,"webgl":1,"page":4353,"rect":[269,119,427,389]}
+PASS land mirror entry: no text over other text | []
+FAIL land mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":2508,"webgl":0,"page":2507,"rect":[269,119,427,389]}
+PASS land mirror after: no text over other text | []
+FAIL land mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":2580,"webgl":1,"page":2579,"rect":[269,119,427,389]}
+PASS land mirror shop: no text over other text | []
+FAIL land mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":0,"webgl":0,"page":0,"rect":[739,-427,1356,738]}
+PASS land mirror press: no text over other text | []
+PASS land no page errors | []
+RESULT s44 faults 9 of 14 pass
+exit 1, 105 s
