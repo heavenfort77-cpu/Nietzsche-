@@ -1,7 +1,7 @@
 # Handoff (live state)
 
-Session start: 3ea2391 (2026-11-24)
-Session: 39
+Session start: 08d231f (2026-11-25)
+Session: 40
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`; where they differ, `OWNER-REQUIREMENTS.md` section 6 (checks only every 5th session) and section 7 (zoom in / zoom out framings and the 2.5D methods: cube room, fixed-camera rooms, Mirror World turning camera) win (owner, 22 Nov: START-HERE.md cannot be edited from his side). This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
@@ -17,6 +17,8 @@ Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, n
 New session after 3 batch commits, after any context summary, or when the owner says "handoff", whichever comes first. `tools/handoff.sh` prints NEW SESSION NOW at the limit; `tools/handoff.sh close` must print PASS before handing over.
 
 ## Now
+
+- Session 40, batch 1 (test tool, no game change). OWNER 25 Nov 08:28, session 40 first message: the paste line (with the push authorisation) and "i want the bot to have an elementary student understanding of language, i want to know at which stage instructions is unclear that player will be lost and which part is unplayable". Lead's reading (rule 17): this run is the session's goal; the fall-act choice (a)/(b)/(c) waits for its record. `tools/coldplay/server.cjs` with `KID=1`: every word outside the Dale-Chall list (2,941 words most 4th graders know, read at run time from the textstat pip package, not copied into the repo) is drawn as ??? in the page text, button labels and aria-labels while a picture is taken or the text is read, and put back before the game runs; the `button` command matches the masked labels; the log keeps the real text (`orig`). `tools/coldplay/readgrade.py <log>`: per line shown, the scene, Flesch-Kincaid grade (lines of 4+ words) and the words outside the list; per scene, steps spent and the player's words. Brief "Kid reader" in `tools/coldplay/BRIEFS.md` (9 years old, 4th grade, phone, touch, Haiku, 60 commands). Lead's load: title screen shows `Night 1 · ???` ("prototype") in the text list and the picture. Run kid1 (phone, `?tester` marker on as in session 39's runs) started.
 
 - Session 39, batch 3 (test record, no game change). Newbie rerun on a215a08 (F46 build): Haiku, phone, 50 commands, 2/2/2, page errors 0, reached night 2's act board (step 43's tool error is the night-2 page load, not a game error). Record: run 2 in `design/STRANGER-night1-s39-coldplay.md`. First loss again the fall act: he never dragged in the ring, pressed at (0.6, 0) and (0, 0), 1.6 m from pool 1, "fell in the dark" twice, Laughs +0; then the Mirror World with 0 Laughs ended at the first figure, and the shop at 0 shards. Both runs: the newbie is first lost at the fall act (does not know to walk into the light); after that he plays with 0 Laughs.
 

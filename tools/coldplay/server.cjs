@@ -106,14 +106,53 @@ async function hidden() {
     const cp = N.chars.clown && N.chars.clown.root.position; return { pos: cp ? [+cp.x.toFixed(2), +cp.z.toFixed(2)] : null, touch: N.input ? N.input.touchId : null, scene: N.NS.scene, mode: N.S.mode, night: N.N1.night, laughs: N.S.laughs, mask: N.NS.mask, mwLaughs: M ? Math.round(M.laughs) : null, foes: N.foes.filter((f) => f.alive).map((f) => f.kind), gt: +H.gt.toFixed(1), frames: H.frames, result: N.NS.result || '', act: N.NS.act || '' };
   }).catch((e) => ({ err: String(e) }));
 }
-async function snap(file) { await page.screenshot({ path: file, type: 'jpeg', quality: 70 }); }
+// session 40 (owner 25 Nov: "the bot to have an elementary student understanding of language"): with KID=1 every word outside the
+// Dale-Chall list (about 3,000 words known by 4th graders, from the textstat package, not copied into the repo) is drawn as ???
+// in the page text and button labels while a picture is taken and the text is read; the real text is put back before the game runs.
+const KID = process.env.KID === '1';
+let lastOrig = null;
+async function kidMask(on) { if (KID) await page.evaluate((v) => (v ? window.__kidMask() : window.__kidUnmask()), on); }
+async function snap(file) { await kidMask(true); await page.screenshot({ path: file, type: 'jpeg', quality: 70 }); await kidMask(false); }
 async function look(extra) {
   await freeze();
   const n = String(step).padStart(3, '0'), shot = path.join(SHOTS, n + '.jpg');
+  lastOrig = KID ? await seen() : null;
   await snap(shot);
+  await kidMask(true);
   const s = await seen();
+  await kidMask(false);
   return Object.assign({ step, shot }, extra || {}, s);
 }
+// in the page: easy words as a Set; a word passes if it, or its stem (-s, -es, -ies, -ed, -ing, -er, -est, -ly, 's, n't), is on the list
+const KID_PAGE = (words) => {
+  const E = new Set(words);
+  const has = (w) => E.has(w) || E.has(w + 'e');
+  const stem = (w) => {
+    if (has(w)) return true;
+    const c = { "won't": 'will', "can't": 'can', "i'm": 'i' }[w]; if (c) return true;
+    const ap = w.match(/^(.+?)('s|'re|'ll|'ve|'d|n't|s')$/); if (ap) return has(ap[1]);
+    for (const [suf, add] of [['ies', 'y'], ['ied', 'y'], ['ier', 'y'], ['iest', 'y'], ['ily', 'y'], ['es', ''], ['s', ''], ['ed', ''], ['ing', ''], ['er', ''], ['est', ''], ['ly', '']]) {
+      if (!w.endsWith(suf) || w.length - suf.length < 2) continue;
+      const b = w.slice(0, -suf.length) + add;
+      if (has(b)) return true;
+      if (/([b-df-hj-np-tv-z])\1$/.test(b) && has(b.slice(0, -1))) return true;
+    }
+    return false;
+  };
+  const fix = (t) => t.replace(/[A-Za-z][A-Za-z']*/g, (w) => (stem(w.toLowerCase().replace(/'+$/, '')) ? w : '???'));
+  window.__kidSaved = [];
+  window.__kidMask = () => {
+    const saved = (window.__kidSaved = []);
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (!n.parentElement || /^(SCRIPT|STYLE)$/.test(n.parentElement.tagName)) continue;
+      const t = n.textContent, m = fix(t);
+      if (m !== t) { saved.push([n, 'text', t]); n.textContent = m; }
+    }
+    for (const b of document.querySelectorAll('[aria-label]')) { const t = b.getAttribute('aria-label'), m = fix(t); if (m !== t) { saved.push([b, 'aria', t]); b.setAttribute('aria-label', m); } }
+  };
+  window.__kidUnmask = () => { for (const [n, k, t] of window.__kidSaved) { if (k === 'text') n.textContent = t; else n.setAttribute('aria-label', t); } window.__kidSaved = []; };
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // run the game for secs of GAME time (software GL draws 1-15 fps, and the loop clamps each step to 0.05 s, so wall time would be slow motion).
 // Stops early when the game stops its own loop (a card), or after WALL_CAP ms of wall time.
@@ -149,7 +188,7 @@ async function act(c) {
       await runGame(settleS); return look();
     }
     case 'button': {
-      const s = await seen(), want = String(c.label || '').toLowerCase();
+      await freeze(); await kidMask(true); const s = await seen(), want = String(c.label || '').toLowerCase(); await kidMask(false);
       const b = s.buttons.find((x) => x.label.toLowerCase() === want) || s.buttons.find((x) => x.label.toLowerCase().includes(want));
       if (!b) return look({ error: 'no button with that label on screen' });
       return act({ a: 'click', x: b.x, y: b.y, settle: c.settle });
@@ -207,6 +246,12 @@ async function act(c) {
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(`http://127.0.0.1:${srv.address().port}/night1.html?tester`);
   await page.waitForFunction(() => !!window.__night, null, { timeout: 180000 });
+  if (KID) {
+    const list = execFileSync('python3', ['-c', 'import textstat,os;print(os.path.join(os.path.dirname(textstat.__file__),"resources","en","easy_words.txt"))']).toString().trim();
+    const words = fs.readFileSync(list, 'utf8').split(/\s+/).map((w) => w.trim().toLowerCase()).filter(Boolean);
+    await page.evaluate(`(${KID_PAGE.toString()})(${JSON.stringify(words)})`);
+    console.log(`kid reader: ${words.length} easy words`);
+  }
   await sleep(2000);
   const api = http.createServer((q, r) => {
     let d = ''; q.on('data', (x) => (d += x));
@@ -214,10 +259,11 @@ async function act(c) {
       let c = {}; try { c = JSON.parse(d || '{}'); } catch (e) { c = { a: 'bad' }; }
       const t0 = Date.now();
       let res;
+      lastOrig = null;
       try { res = await act(c); } catch (e) { res = { error: String(e).slice(0, 200) }; }
       const h = await hidden();
       h.fps = runMs > lastRunMs ? +(((h.frames - lastFrames) * 1000) / (runMs - lastRunMs)).toFixed(1) : null;
-      LOG.write(JSON.stringify({ step, t: new Date(t0).toISOString(), cmd: c, says: c.says || '', error: res.error || '', text: res.text, buttons: res.buttons ? res.buttons.map((x) => x.label) : undefined, hidden: h, pageErrors: errors.splice(0) }) + '\n');
+      LOG.write(JSON.stringify({ step, t: new Date(t0).toISOString(), cmd: c, says: c.says || '', error: res.error || '', text: res.text, buttons: res.buttons ? res.buttons.map((x) => x.label) : undefined, orig: lastOrig ? { text: lastOrig.text, buttons: lastOrig.buttons.map((x) => x.label) } : undefined, hidden: h, pageErrors: errors.splice(0) }) + '\n');
       lastFrames = h.frames || 0; lastRunMs = runMs;
       step++;
       r.writeHead(200, { 'Content-Type': 'application/json' }); r.end(JSON.stringify(res));
