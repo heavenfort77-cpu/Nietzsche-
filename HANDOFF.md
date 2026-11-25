@@ -1,7 +1,7 @@
 # Handoff (live state)
 
-Session start: 644cb57 (2026-11-25)
-Session: 41
+Session start: d8e5541 (2026-11-25)
+Session: 42
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`; where they differ, `OWNER-REQUIREMENTS.md` section 6 (checks only every 5th session) and section 7 (zoom in / zoom out framings and the 2.5D methods: cube room, fixed-camera rooms, Mirror World turning camera) win (owner, 22 Nov: START-HERE.md cannot be edited from his side). This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
@@ -17,6 +17,8 @@ Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, n
 New session after 3 batch commits, after any context summary, or when the owner says "handoff", whichever comes first. `tools/handoff.sh` prints NEW SESSION NOW at the limit; `tools/handoff.sh close` must print PASS before handing over.
 
 ## Now
+
+- Session 42, batch 1 (test record and panel, no game change). OWNER 25 Nov 10:22, session 42 first message: the paste line (with the push authorisation) and "run panel theme and core message more important". Lead's reading (rule 17): a theme and core-message panel on d8e5541, theme weighted above clarity and fun; the session-41 fall-act questions wait for his phone play. Stranger first (panel rule 1): fresh Fable cold player, desktop, 60 commands, `design/STRANGER-night1-s42-coldplay.md` (Kind: cold-read): clarity 3, fun 3, want-next 4, hands felt life against him 4 (24 Nov cold read on 36ceaf9: 2/2/3, "nothing ... made me feel hunted"); act 0 falls landed, +15 after the cut, lost in the void, shop 0, page errors 0. Panel `design/PANEL-theme-core-message-25nov.md` (Project doc `claude/Panel-review-25-Nov-theme-core-message.md`): 13 agents, one per seat (Opus 4, Sonnet 4, Haiku 2, Fable 3), blind round, debate and first vote, red team (Mobile producer), second vote; `tools/check_panel.sh` PASS. All 13 read one message (he buys belonging by falling for people, they pay for his hurt, the pay is spent surviving himself, he gets up), median 3 of 5 for one clear message. After the red team: C2 (on a Perfect the roar cuts one beat, the child's "...on purpose." the only thing seen/heard) 12 of 13; C10 (last act falls on his will, no drum or gold button) 9; C1 (Mirror figures driven off, never killed) 7 (was 12); C11 (cut "The shame of living:") 7 (was 11); C12 (figures in the crowd) 3. Not red-teamed: C4 first Perfect near-certain 9, C5 Mask narrows the window 8, C6 cut act pays 0 7, C3 6, C8 6, C9 6, C7 4. Diagnoses held: D5 text states the verdict 11, D6 no felt high before the cost 11, D4 hostility felt as unclear controls 10, D1 Mirror says fears are beaten for loot 9.
 
 - Session 41, batch 3 (game change by the fault rule, F47). Kid6's step 24 (shoes on the disc, root 1.24 m from pool 2, r 1.2, no roll) proven: new `web/step0/probe_light_edge.cjs` before `FAIL shoes on the disc edge (root outside the radius): the roll starts | {"stage":"wait","d":1.4388}` with shoe reach 0.398 m and drawn disc = pool radius 1.2; `web/step0/night1.html` (backup /tmp/night1_before_s41b3.html): `fallInPool` uses pool + `N1.fallFootR` 0.4; after `RESULT light edge 6 of 6 pass`, `probe_fall_beat.cjs` `RESULT fall beat 8 of 8 pass`. Sweep in FAULTS.md F47: the Mirror World Light's `inSpot` has the same root rule (player-side error, F36 check timing) and is logged, not changed. Not in CI (checks session 45).
 
@@ -270,6 +272,8 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
+Session 42 at 1 batch (stranger record and theme panel). Owner first: decide from `design/PANEL-theme-core-message-25nov.md` (lead's order by count: C2 yes/no; C10 yes/no; C1 and C11, each split 7 of 13; any of C4, C5, C6). On a yes to C2 (no owner rule reversed): one batch in `night1.html` behind a CONFIG switch (`fallSeenBeat`, lead's name): on a Perfect the roar and popcorn are held one beat and the child's "...on purpose." shows at the ring door; probe that a Perfect fires it and a Good does not. Still waiting from session 41: the owner's phone play of the fall act (lit window, roll waits until he stands, trip pay on a flop, Mirror World with few Laughs). No-owner items: the three stranger findings in Open items by the fault rule (probe first); the tool logs the Fall button's beat state; easy words left. Checks session 45 as below.
+
 Session 41 closed at 3 batches (easy words; kid6 record; F47 shoes count for the light). Session 42 first: the owner plays the fall act on his phone (`night1.html`) and says (1) whether a real tap hits the lit button (0.25 s on night 1) or the window should widen (`fallBeatLitShare`, or Good); (2) whether the roll should wait until he stands still in the light (kid6 record finding 2; lead's proposal, CONFIG switch); (3) the trip paying when the act flops; (4) the Mirror World with few Laughs. No-owner items: the tool logs the Fall button's beat state; easy words left (gag, perfect, whether, gnaw, Performer, Details, The scale); then a kid rerun. Checks session 45: `probe_light_edge.cjs` and `probe_fall_beat.cjs` into CI step0 with mutations (`fallFootR` 0 must FAIL the edge case), plus the session-40 list.
 
 Session 40 closed at 3 batches. Session 41 first: the owner plays the fall act on his phone (`night1.html`, the lit Fall button) and says whether a real tap can hit the lit time (0.25 s on night 1) or the window should widen (`fallBeatLitShare`, or Good itself). Then: kid5's fall 2 (stood in the light with no roll) with the new pool log (`START` not needed: night 1, "pick The fall" brief, kid5's in the record); the remaining ??? words (Ring entrance label, role, purpose, Spotlight); whether the trip should pay when the act flops (owner); what the Mirror World does with few Laughs (owner). Checks (next checks session 45 unless the owner asks): `probe_fall_beat.cjs` into CI step0 with mutations (`fallBeat` false, `fallWaitGrade` false, lit share 1.5 must FAIL), plus the session-40 list below (not done this session).
@@ -377,6 +381,7 @@ Owner, 22 Nov 10:13: "agree to all 3" (panel rounds 2, 3, 4) and hand over. All 
 
 ## Waiting on the owner
 
+- Session 42 theme panel (`design/PANEL-theme-core-message-25nov.md`): yes/no on C2 (12 of 13), C10 (9), C1 (7), C11 (7); optional C4 (9), C5 (8), C6 (7). Nothing built.
 - OWNER 24 Nov 11:12: "approve" (Shame v2 APPROVED as built, `art/cast2/v2/shame_v2.glb`, source `clown_v2/chars/shame.py`; lead's reading). All 9 night-1 figures are now approved.
 - OWNER 23 Nov 23:43: "approve" (the Light v2 APPROVED as built, `art/cast2/v2/light_v2.glb`, source `clown_v2/chars/light.py`).
 - OWNER 23 Nov 22:52: "approval" (child v2, a girl, APPROVED as built, `art/cast2/v2/child_v2.glb`, source `clown_v2/chars/child.py`).
@@ -426,6 +431,7 @@ Owner, 22 Nov 10:13: "agree to all 3" (panel rounds 2, 3, 4) and hand over. All 
 
 ## Open items (cause known)
 
+- Seen by the session-42 stranger, not probed yet (fault rule: probe with a FAIL line first): (1) the shop shows "Light sweep, free tonight" greyed with a six-shard price after a night whose act was the fall (log steps 57-58); (2) two text lines overlap at the ring door (step 21); (3) a "giant fist" in the bottom-right of the walk-back shot (steps 32-33).
 - Tester marker (`N1.testMark`, session 38) must be off or removed before ship (owner 24 Nov 23:49); release check to add in checks session 40.
 - F41 (run 101 gnaw FAIL) and F42 closed in session 30. Night1 real-GPU p95 over 16.7 ms in 2 of 15 cases (run 118: retina ring 17.9, 1440p shop 21.7), GPU-led, control page passes; causes not named yet (see Next step). Pose-sheet frame gate fails on rigger and performer (run 117), cause from the numbers in Next step, not probed.
 - Session 25: the `gpu` job (`web/gpu_measure.mjs`) times `web/game/index.html` and its control page, not `web/step0/night1.html`; the played game has no real-GPU frame time (run 97: index.html p95 62.3 / 28.8 / 53.1 ms at 1080p / retina / 1440p with AO on, 8 of 12 gates). Owner requirement 2 (60 fps desktop and phone) is not measured for the game itself.
