@@ -1,0 +1,17 @@
+entry 0: ONLY=desk step0/probe_s44_faults.cjs sha af5f6dd
+PASS desk night 3 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,30,1280,50],"goalShown":true,"notes":[["The fall",[349,73,640,307]],["The drill",[645,73,928,307]]]}}
+PASS desk night 2 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,30,1280,50],"goalShown":true,"notes":[["The fall",[349,73,640,307]],["The scale",[645,73,928,307]]]}}
+PASS desk night 1 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,30,1280,50],"goalShown":true,"notes":[["The fall",[363,77,539,303]],["The sweep",[746,77,913,303]]]}}
+FAIL desk mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":3969,"webgl":0,"page":3969,"rect":[512,315,765,490]}
+PASS desk mirror paint: no text over other text | []
+FAIL desk mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":14301,"webgl":0,"page":14301,"rect":[498,220,789,720]}
+PASS desk mirror entry: no text over other text | []
+FAIL desk mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":8332,"webgl":0,"page":8332,"rect":[498,220,789,720]}
+PASS desk mirror after: no text over other text | []
+FAIL desk mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":8340,"webgl":0,"page":8340,"rect":[498,220,789,720]}
+FAIL desk mirror shop: no text over other text | ["#shotName in #frame \"Mirror\" x H2 in #card_shop \"The mirror shop\" (50x15 px)"]
+FAIL desk mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":0,"webgl":0,"page":0,"rect":[1366,-790,2504,1366]}
+FAIL desk mirror press: no text over other text | ["#shotName in #frame \"Mirror\" x H2 in #card_shop \"The mirror shop\" (50x15 px)"]
+PASS desk no page errors | []
+RESULT s44 faults 7 of 14 pass
+exit 1, 94 s
