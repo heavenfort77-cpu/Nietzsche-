@@ -1,0 +1,17 @@
+entry 2: step0/probe_s46_diag.cjs sha cc52619
+chip: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+fragment highp: precision 23 bits, range 127; mediump: 10 bits, range 15
+depth buffer bits 24, samples 4, the game's shaders use highp
+page 866x400, device pixel ratio 2.700000047683716
+
+row Depth picture through the image decoder (itch build now) same as the file
+row Depth picture read as bytes (the fix) same as the file
+row itch build now (highp) 0 of 2144 board points hidden wrongly
+row the fix: bytes read directly (highp) 0 of 2144 board points hidden wrongly
+row fix, as mediump (mediump) 0 of 2144 board points hidden wrongly
+PASS verdict on software GL (both pass here) | "Itch build now: PASS (2144 points). The fix: PASS, all 2144 points drawn."
+PASS texture bytes, decoder and fix | ["Depth picture through the image decoder (itch build now) same as the file","Depth picture read as bytes (the fix) same as the file"]
+PASS both texture rows and three cases ran | 5
+PASS no page errors | []
+RESULT s46 diag 4 of 4 pass
+exit 0, 20 s
