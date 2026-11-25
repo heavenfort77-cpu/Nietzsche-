@@ -3884,7 +3884,7 @@ function buildReflection() {
   // parts are not blended a second time (was layer 1, drawn twice; the press shot's camera sees layers 0 and 1, so it draws him once)
   c.root.traverse((o) => o.layers.enable(2));
   NS.clownMats = []; c.root.traverse((o) => { if (!o.isMesh) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (NS.clownMats.indexOf(m) < 0) NS.clownMats.push(m); });
-  NS.clownCW = NS.clownMats.map((m) => m.colorWrite);
+  NS.clownCW = NS.clownMats.map((m) => m.colorWrite); NS.clownDW = NS.clownMats.map((m) => m.depthWrite);
   // the clown's skeletons (drawn in both passes): renderReflection skips their second update
   NS.reflSkels = []; c.root.traverse((o) => { if (o.isSkinnedMesh && !NS.reflSkels.includes(o.skeleton)) NS.reflSkels.push(o.skeleton); });
   NS.reflSkelUp = NS.reflSkels.map((k) => k.update);
@@ -4016,12 +4016,12 @@ function renderReflection() {
   renderer.setScissor(r[0], r[1], r[2], r[3]);
   renderer.clearDepth();
   for (let i = 0; i < k.length; i++) k[i].update = skelNoop;
-  // his depth only (layer 2, colour writes off), then the image and the glass (layer 1) behind it
+  // his depth only (layer 2, colour writes off, depth writes on for his see-through parts too), then the image and the glass (layer 1) behind it
   const cm = NS.clownMats;
   roomCam.layers.set(2);
-  for (let i = 0; i < cm.length; i++) cm[i].colorWrite = false;
+  for (let i = 0; i < cm.length; i++) { cm[i].colorWrite = false; cm[i].depthWrite = true; }
   renderer.render(roomScene, roomCam);
-  for (let i = 0; i < cm.length; i++) cm[i].colorWrite = NS.clownCW[i];
+  for (let i = 0; i < cm.length; i++) { cm[i].colorWrite = NS.clownCW[i]; cm[i].depthWrite = NS.clownDW[i]; }
   roomCam.layers.set(1);
   renderer.render(roomScene, roomCam);
   for (let i = 0; i < k.length; i++) k[i].update = NS.reflSkelUp[i];

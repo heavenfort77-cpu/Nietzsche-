@@ -319,7 +319,8 @@ async function run() {
       // session 44 (F49): the near rack is gone from the wings (it hid him on the walk); the depth test is shown behind the stool by the north curtain
       const behind = await page.evaluate(occlusion, { shot: 'wings', x: 0.5, y: 13.5 });
       const open = await page.evaluate(occlusion, { shot: 'wings', x: -0.5, y: 11.6 });
-      report(behind.hidden > 0.2 && open.hidden < 0.05 && open.all > 500,
+      // the stool hides his legs only: 24% of his height in the plate (tools/check_walk_visible.py data), 17.4% of his pixels in run 15; a broken depth plate gives 0%
+      report(behind.hidden > 0.12 && open.hidden < 0.05 && open.all > 500,
         `depth: behind the stool ${(behind.hidden * 100).toFixed(1)}% hidden, in the open ${(open.hidden * 100).toFixed(1)}% hidden (${open.all} px)`);
     }
     await page.close();
