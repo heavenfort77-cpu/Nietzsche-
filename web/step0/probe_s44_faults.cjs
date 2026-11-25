@@ -84,14 +84,16 @@ async function toBoard(pg) {
     const pg = await ctx.newPage(), errs = [];
     pg.on('pageerror', (e) => errs.push(String(e).slice(0, 160)));
     try {
-      await pg.goto(base);
+      // C at the board wall of nights 3, 2 and 1 (stored-run hashes as probe_shop.cjs; the owner's screenshot was a later night's board), on the game's own route
+      for (const [hash, night] of [['#n=3&m=6&s=60&b=&t=sweep.scale.drill&lo=1', 'night 3'], ['#n=2&m=3&s=40&b=&t=sweep.scale&lo=0', 'night 2'], ['', 'night 1']]) {
+      await pg.goto(base + hash); if (hash) await pg.reload();
       await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 180000 });
-      // C at the board wall, on the game's own route
       await toBoard(pg);
       const ov = await pg.evaluate(textOverlaps);
       const where = await pg.evaluate(() => { const r = (e) => { const q = e.getBoundingClientRect(); return [Math.round(q.left), Math.round(q.top), Math.round(q.right), Math.round(q.bottom)]; };
         const g = document.getElementById('goal'); return { goal: g.textContent ? r(g) : null, goalShown: !g.classList.contains('hidden'), notes: [...document.querySelectorAll('#boardActs .note')].filter((b) => b.getClientRects().length).map((b) => [b.innerText, r(b)]) }; });
-      report(ov.length === 0, `${sc.n} board wall: no text over other text`, { overlaps: ov.slice(0, 6), where });
+      report(ov.length === 0, `${sc.n} ${night} board wall: no text over other text`, { overlaps: ov.slice(0, 6), where });
+      }
       // A and C in each mirror scene (state jump through the test hook; the loop keeps running)
       for (const kind of ['paint', 'entry', 'after', 'shop', 'press']) {
         await pg.evaluate((k) => { const N = window.__night; document.getElementById('curtain').classList.add('hidden'); N.NS.learn = null; N.mirrorSetup(k === 'press' ? 'entry' : k); if (k === 'shop') N.shopCard(); }, kind);
