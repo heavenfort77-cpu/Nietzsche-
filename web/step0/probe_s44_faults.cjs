@@ -1,6 +1,6 @@
 // Session 44 probe (owner 25 Nov 13:46-13:59, phone screenshots; stranger s42 steps 12-14). Software GL; screens as smoke_night1.cjs.
 // A mirror scenes (paint at the vanity, entry, after, shop, and the press shot): nothing of the glass is drawn over the clown. Per scene:
-//   his pixels = what changes in the room pass when he is hidden; inside the glass box none of them may change when the mirror's own
+//   his pixels = what changes in the room pass when he is hidden (interior only: edge pixels blend with the glass behind him); inside the glass box none of them may change when the mirror's own
 //   layers are added (the reflection pass in WebGL, the glass tint and cracks on the #cracks canvas over the page).
 // C text: no two shown pieces of text overlap on screen (text boxes from Range rects, any element, different elements, not nested):
 //   at the act board wall and in each mirror scene above.
@@ -55,10 +55,12 @@ function glassOverClown() {
   const dpr = R.getPixelRatio(), m = NS.mrect, x0 = Math.floor(m[0] * dpr), y0 = Math.floor(m[1] * dpr), x1 = Math.ceil((m[0] + m[2]) * dpr), y1 = Math.ceil((m[1] + m[3]) * dpr);
   const cv = document.getElementById('cracks'), cs = getComputedStyle(cv), shown = cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0;
   const cx = cv.getContext('2d'), cimg = shown && cv.width && cv.height ? cx.getImageData(0, 0, cv.width, cv.height).data : null;
+  // his interior only: a pixel of his whose four neighbours are his too (an edge pixel mixes him with what is truly behind him: the glass)
+  const isHim = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return false; const i = (y * w + x) * 4; return base[i] !== noHim[i] || base[i + 1] !== noHim[i + 1] || base[i + 2] !== noHim[i + 2]; };
   let him = 0, webgl = 0, page = 0;
   for (let y = Math.max(0, y0); y < Math.min(h, y1); y++) for (let x = Math.max(0, x0); x < Math.min(w, x1); x++) {
     const i = (y * w + x) * 4;
-    if (base[i] === noHim[i] && base[i + 1] === noHim[i + 1] && base[i + 2] === noHim[i + 2]) continue;
+    if (!isHim(x, y) || !isHim(x - 1, y) || !isHim(x + 1, y) || !isHim(x, y - 1) || !isHim(x, y + 1)) continue;
     him++;
     if (Math.abs(full[i] - base[i]) + Math.abs(full[i + 1] - base[i + 1]) + Math.abs(full[i + 2] - base[i + 2]) > 6) webgl++;
     if (cimg) { const cxp = Math.round(x * cv.width / w), cyp = Math.round((h - 1 - y) * cv.height / h), k = (Math.min(cv.height - 1, cyp) * cv.width + Math.min(cv.width - 1, cxp)) * 4; if (cimg[k + 3] > 8) page++; }
