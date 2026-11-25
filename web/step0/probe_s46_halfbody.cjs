@@ -7,6 +7,7 @@
 // FAIL when the plate says a band shows and the figure changes no pixel there.
 // SCREEN=desk (1280x720, dpr 1) or land (866x400, dpr 2.7, the owner's phone in landscape), default both.
 // BUNDLE=1 tests the single-file build (tools/bundle_single.py, the itch file) instead of night1.html.
+// COLOR=<profile> starts Chrome with --force-color-profile=<profile> (e.g. display-p3-d65: a wide-gamut phone screen; srgb: the default).
 // Usage: node step0/probe_s46_halfbody.cjs (from web/; needs cube25d/setup.sh). Ends with RESULT s46 halfbody n of m pass.
 const path = require('path'), http = require('http'), fs = require('fs'), zlib = require('zlib'), cp = require('child_process');
 const pw = require(path.join(__dirname, '..', 'node_modules', 'playwright-core'));
@@ -66,6 +67,8 @@ const MEASURE = () => {
   const V = cam.position.constructor, figs = [{ name: 'clown', root: N.chars.clown.root, x: N.S.x, y: N.S.y, h: N.NS.clownH }]
     .concat(N.crew.map((m) => ({ name: m.cd.id, root: m.root, x: m.x, y: m.y, h: m.root.userData.h })));
   const out = [];
+  // the rope and its tape lie across the wings floor (3D props, not in the plate): hidden while measuring so band 0 reads the plate only
+  const props = [N.NS.cable, N.NS.tape].filter(Boolean); props.forEach((o) => { o.visible = false; });
   cam.updateMatrixWorld();
   for (const f of figs) {
     if (!f.root.visible) { out.push({ name: f.name, hidden: true }); continue; }
@@ -83,6 +86,7 @@ const MEASURE = () => {
     }
     out.push({ name: f.name, x: +f.x.toFixed(2), y: +f.y.toFixed(2), h: +f.h.toFixed(2), bands });
   }
+  props.forEach((o) => { o.visible = true; });
   W.renderFrame();
   return { buf: [bw, bh], shot: N.S.shot, figs: out };
 };
@@ -92,9 +96,9 @@ const SPOTS = [{ n: 'far end', x: 0.3, y: 7.6 }, { n: 'middle', x: -0.2, y: 6.0 
 const SCREENS = { desk: { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }, land: { viewport: { width: 866, height: 400 }, deviceScaleFactor: 2.7 } };
 (async () => {
   await new Promise((r) => srv.listen(0, r));
-  const b = await pw.chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+  const b = await pw.chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'].concat(process.env.COLOR ? ['--force-color-profile=' + process.env.COLOR] : []) });
   const list = process.env.SCREEN ? [process.env.SCREEN] : Object.keys(SCREENS);
-  console.log(`page ${PAGE}, plate ${dp.w}x${dp.h}`);
+  console.log(`page ${PAGE}, plate ${dp.w}x${dp.h}, colour profile ${process.env.COLOR || 'default'}`);
   for (const sc of list) {
     const pg = await b.newPage(SCREENS[sc]);
     const errs = []; pg.on('pageerror', (e) => errs.push(String(e)));
