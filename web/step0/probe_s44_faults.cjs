@@ -89,7 +89,9 @@ async function toBoard(pg) {
       // C at the board wall, on the game's own route
       await toBoard(pg);
       const ov = await pg.evaluate(textOverlaps);
-      report(ov.length === 0, `${sc.n} board wall: no text over other text`, ov.slice(0, 6));
+      const where = await pg.evaluate(() => { const r = (e) => { const q = e.getBoundingClientRect(); return [Math.round(q.left), Math.round(q.top), Math.round(q.right), Math.round(q.bottom)]; };
+        const g = document.getElementById('goal'); return { goal: g.textContent ? r(g) : null, goalShown: !g.classList.contains('hidden'), notes: [...document.querySelectorAll('#boardActs .note')].filter((b) => b.getClientRects().length).map((b) => [b.innerText, r(b)]) }; });
+      report(ov.length === 0, `${sc.n} board wall: no text over other text`, { overlaps: ov.slice(0, 6), where });
       // A and C in each mirror scene (state jump through the test hook; the loop keeps running)
       for (const kind of ['paint', 'entry', 'after', 'shop', 'press']) {
         await pg.evaluate((k) => { const N = window.__night; document.getElementById('curtain').classList.add('hidden'); N.NS.learn = null; N.mirrorSetup(k === 'press' ? 'entry' : k); if (k === 'shop') N.shopCard(); }, kind);
