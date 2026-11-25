@@ -1,0 +1,15 @@
+entry 2: ONLY=land step0/probe_s44_faults.cjs sha 3b63526
+PASS land board wall: no text over other text | []
+FAIL land mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":1297,"webgl":52,"page":1297,"rect":[277,170,415,265]}
+PASS land mirror paint: no text over other text | []
+FAIL land mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":4554,"webgl":113,"page":4554,"rect":[269,119,427,389]}
+PASS land mirror entry: no text over other text | []
+FAIL land mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":2721,"webgl":93,"page":2720,"rect":[269,119,427,389]}
+PASS land mirror after: no text over other text | []
+FAIL land mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":2644,"webgl":83,"page":2643,"rect":[269,119,427,389]}
+PASS land mirror shop: no text over other text | []
+FAIL land mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":0,"webgl":0,"page":0,"rect":[739,-428,1356,738]}
+PASS land mirror press: no text over other text | []
+PASS land no page errors | []
+RESULT s44 faults 7 of 12 pass
+exit 1, 38 s
