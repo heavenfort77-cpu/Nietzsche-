@@ -1,0 +1,21 @@
+entry 1: MUT=off step0/probe_s44_escape.cjs sha 2d08916
+PASS route has the photograph room | {"route":["corridor","photo","ring"],"leg":1}
+FAIL E1/X5: the way out is open on entry and the line says "Get out" | {"space":"photo","open":false,"door":[3.1,-49],"guard":"stare","guardD":1.88,"want":1.6,"doorShown":false,"tip":"A photograph. When the lens opens, get out of its sight."}
+PASS X4: a figure stands in front of the way out | {"space":"photo","open":false,"door":[3.1,-49],"guard":"stare","guardD":1.88,"want":1.6,"doorShown":false,"tip":"A photograph. When the lens opens, get out of its sight."}
+FAIL X3/E1: a gag does not beat it: it is held, alive, unhurt | {"k":"whisper","hp":4,"hpNow":-95,"alive":false,"held":0}
+FAIL X3: it is knocked over (tipped back) | {"tip":0,"alive":false}
+FAIL X3: it gets up and comes again | {"tip":0,"alive":false,"held":0,"inScene":false}
+FAIL E1: out of the room with its figures standing, the space pays | {"glass":0,"want":4}
+PASS night 1: no page errors | []
+PASS last night: in the arena | {"route":["corridor","photo","ring"],"leg":2}
+FAIL E2/X2: the door leads back into the ring, the Performer nearer each time, the door behind it | [{"over":"","returns":0,"perf":false,"d":null,"doorBehind":null},{"over":"","returns":0,"perf":false,"d":null,"doorBehind":null}]
+FAIL X1a: he stands, his Laughs run out, the Performer walks up and its touch starts the ending (not a loss) | {"over":"lose","result":"lose","up":false}
+PASS last night (stand): no page errors | []
+FAIL cap: after the third return the Performer walks up even while he moves | {"returns":0,"up":false,"over":"","still":0}
+PASS last night (cap): no page errors | []
+PASS night 2: his thought after the child is the night's own line | {"text":"Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is \"me\".","night":2,"want":"Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is \"me\"."}
+PASS night 2 thought: no page errors | []
+PASS night 1: his thought after the child is the night's own line | {"text":"I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself.","night":1,"want":"I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself."}
+PASS night 1 thought: no page errors | []
+RESULT s44 escape 10 of 18 pass
+exit 1, 455 s
