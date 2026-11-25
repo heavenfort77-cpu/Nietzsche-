@@ -1,0 +1,22 @@
+[
+ {
+  "name": "armature",
+  "ok": true,
+  "info": "7 deform bones"
+ },
+ {
+  "name": "weights: every vertex weighted, <= 4 influences",
+  "ok": true,
+  "info": "unweighted 0, max influences 2"
+ },
+ {
+  "name": "GLB: 5 clips, durations = photographs x interval",
+  "ok": true,
+  "info": "{'gaze': 0.4, 'hit': 0.6, 'idle': 2, 'judge': 0.4, 'out': 1} expected {'idle': 2.0, 'gaze': 0.4, 'judge': 0.4, 'hit': 0.6, 'out': 1.0}"
+ },
+ {
+  "name": "GLB size",
+  "ok": true,
+  "info": "1801 KB, skins 1, meshes 2"
+ }
+]
