@@ -1,7 +1,7 @@
 // Session 45 batch 3 probe (owner 25 Nov 20:04: "first night thought, second night thought and third night thought are all diff." and
 // "all act use the same timing game as fall."). Runs on CI (tools/probe_ci.sh), phone 390x844, software GL, test-side placement in the light.
 // Nights 1-3, each with that night's tryout act (night 1 the sweep, night 2 the scale, night 3 the drill): the act's note gives its own line for the
-// fall's timing game and no "Try it"; after Do it and the walk he is in the live fall act (walk into the light, Fall on the crash); a press on the lit
+// fall's timing game (in the note's text, behind its "More" fold as for the fall) and no "Try it"; after Do it and the walk he is in the live fall act (walk into the light, Fall on the crash); a press on the lit
 // gold button lands perfect or good; the act's three falls end it and its result is the fall's (three grades). Before the walk ends, his thought after the
 // child is that night's own line, and the three nights' lines all differ. MUT=off serves the page as before (acts on the cue page, night 3 the night-1 line).
 // Ends with RESULT s45 acts n of m pass.
@@ -63,7 +63,7 @@ const oneFall = () => new Promise((res) => {
     try {
       // the note: wait on the board, read it before Do it (toCorridor clicks the act, then Do it)
       await pg.waitForFunction(() => !!window.__night, null, { timeout: 180000 });
-      await pg.evaluate(() => { window.__noteLog = []; new MutationObserver(() => { const d = document.querySelector('.parchment'); if (d && document.getElementById('perform')) window.__noteLog.push({ h: (d.querySelector('h2') || {}).textContent, text: d.innerText, tryBtn: !!document.getElementById('tryAct') }); }).observe(document.body, { childList: true, subtree: true }); });
+      await pg.evaluate(() => { window.__noteLog = []; new MutationObserver(() => { const d = document.querySelector('.parchment'); if (d && document.getElementById('perform')) window.__noteLog.push({ h: (d.querySelector('h2') || {}).textContent, shown: d.innerText, text: d.textContent, tryBtn: !!document.getElementById('tryAct') }); }).observe(document.body, { childList: true, subtree: true }); });
       await toCorridor(pg, a.re);
       const note = await pg.evaluate(() => window.__noteLog[window.__noteLog.length - 1] || null);
       const want = await pg.evaluate((id) => window.__night.N1.actFallNote && window.__night.N1.actFallNote[id], a.id);
