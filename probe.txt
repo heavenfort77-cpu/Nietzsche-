@@ -1,0 +1,49 @@
+entry 7: step0/probe_s42_stranger.cjs sha d99a0ab
+PASS night 1 shop: sweep on sale is not called free | {"note":"On the board tonight. Buy it and it is yours."}
+PASS night 1 shop: sweep does not say he tried it (tonight's act was the fall) | {"note":"On the board tonight. Buy it and it is yours."}
+PASS night 1 shop: dash on sale is not called free | {"note":"A dash you buy is a dash the Performer gets."}
+PASS night 1 shop: dash does not say he tried it (tonight's act was the fall) | {"note":"A dash you buy is a dash the Performer gets."}
+PASS night 2 shop: sweep on sale is not called free | {"note":"It was on the board. Buy it and it is yours."}
+PASS night 2 shop: sweep does not say he tried it (tonight's act was the fall) | {"note":"It was on the board. Buy it and it is yours."}
+PASS night 2 shop: scale on sale is not called free | {"note":"On the board tonight. Buy it and it is yours."}
+PASS night 2 shop: scale does not say he tried it (tonight's act was the fall) | {"note":"On the board tonight. Buy it and it is yours."}
+PASS night 2 shop: trade on sale is not called free | {"note":"Never on the board yet. Buy it and it is yours."}
+PASS night 2 shop: trade does not say he tried it (tonight's act was the fall) | {"note":"Never on the board yet. Buy it and it is yours."}
+PASS night 2 shop: dash on sale is not called free | {"note":"A dash you buy is a dash the Performer gets."}
+PASS night 2 shop: dash does not say he tried it (tonight's act was the fall) | {"note":"A dash you buy is a dash the Performer gets."}
+PASS desk out corridor: props_girl (outside the shot's zone) is not shown cut by the frame edge | {"px":464,"cut":false,"box":[706,206,724,290],"hidden":false}
+PASS desk out corridor: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":2369,"cut":false,"box":[656,181,724,262],"hidden":false}
+PASS desk out corridor: child (outside the shot's zone) is not shown cut by the frame edge | {"px":370,"cut":false,"box":[555,195,567,244],"hidden":false}
+PASS desk out entrance: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":1464,"cut":true,"box":[1107,622,1159,712],"hidden":true}
+PASS desk: his thought shows after the child's trip | {"frames":266}
+PASS desk: no two shown text lines overlap from the trip to the thought's end | {"px2":0}
+PASS desk back corridor: props_girl (outside the shot's zone) is not shown cut by the frame edge | {"px":262,"cut":false,"box":[693,236,723,266],"hidden":false}
+PASS desk back corridor: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":2632,"cut":false,"box":[669,181,724,276],"hidden":false}
+PASS desk back corridor: child (outside the shot's zone) is not shown cut by the frame edge | {"px":378,"cut":false,"box":[555,195,566,243],"hidden":false}
+PASS desk back entrance: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":7055,"cut":true,"box":[1182,576,1248,719],"hidden":true}
+PASS phone out corridor: props_girl (outside the shot's zone) is not shown cut by the frame edge | {"px":57,"cut":false,"box":[215,63,220,88],"hidden":false}
+PASS phone out corridor: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":245,"cut":false,"box":[200,55,220,79],"hidden":false}
+PASS phone out corridor: child (outside the shot's zone) is not shown cut by the frame edge | {"px":43,"cut":false,"box":[169,59,172,74],"hidden":false}
+PASS phone out corridor: performer:whiteface (outside the shot's zone) is not shown cut by the frame edge | {"px":5,"cut":false,"box":[169,66,169,72],"hidden":false}
+PASS phone out entrance: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":158,"cut":true,"box":[337,189,368,217],"hidden":true}
+PASS phone: his thought shows after the child's trip | {"frames":382}
+PASS phone: no two shown text lines overlap from the trip to the thought's end | {"px2":0}
+PASS phone back corridor: props_girl (outside the shot's zone) is not shown cut by the frame edge | {"px":32,"cut":false,"box":[211,65,220,80],"hidden":false}
+PASS phone back corridor: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":265,"cut":false,"box":[204,55,220,83],"hidden":false}
+PASS phone back corridor: child (outside the shot's zone) is not shown cut by the frame edge | {"px":43,"cut":false,"box":[169,59,172,73],"hidden":false}
+PASS phone back corridor: performer:whiteface (outside the shot's zone) is not shown cut by the frame edge | {"px":4,"cut":false,"box":[169,67,169,72],"hidden":false}
+PASS phone back entrance: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":711,"cut":true,"box":[359,175,382,218],"hidden":true}
+PASS land out corridor: props_girl (outside the shot's zone) is not shown cut by the frame edge | {"px":137,"cut":false,"box":[382,111,392,156],"hidden":false}
+PASS land out corridor: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":718,"cut":false,"box":[355,98,392,141],"hidden":false}
+PASS land out corridor: child (outside the shot's zone) is not shown cut by the frame edge | {"px":115,"cut":false,"box":[300,105,307,131],"hidden":false}
+PASS land out entrance: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":450,"cut":true,"box":[599,337,668,388],"hidden":true}
+PASS land: his thought shows after the child's trip | {"frames":337}
+PASS land: no two shown text lines overlap from the trip to the thought's end | {"px2":0}
+PASS land back corridor: props_girl (outside the shot's zone) is not shown cut by the frame edge | {"px":83,"cut":false,"box":[375,127,391,143],"hidden":false}
+PASS land back corridor: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":796,"cut":false,"box":[362,98,392,149],"hidden":false}
+PASS land back corridor: child (outside the shot's zone) is not shown cut by the frame edge | {"px":112,"cut":false,"box":[300,106,306,131],"hidden":false}
+PASS land back corridor: performer:whiteface (outside the shot's zone) is not shown cut by the frame edge | {"px":1,"cut":false,"box":[301,127,301,127],"hidden":false}
+PASS land back entrance: strongman (outside the shot's zone) is not shown cut by the frame edge | {"px":2210,"cut":true,"box":[638,312,680,388],"hidden":true}
+PASS no page errors | []
+RESULT s42 stranger 46 of 46 pass
+exit 0, 130 s
