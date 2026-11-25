@@ -1,0 +1,45 @@
+entry 7: step0/probe_s44_faults.cjs sha 5b9cea6
+PASS desk night 3 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,30,1280,50],"goalShown":true,"notes":[["The fall",[349,73,640,307]],["The drill",[645,73,928,307]]]}}
+PASS desk night 2 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,30,1280,50],"goalShown":true,"notes":[["The fall",[349,73,640,307]],["The scale",[645,73,928,307]]]}}
+PASS desk night 1 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,30,1280,50],"goalShown":true,"notes":[["The fall",[363,77,539,303]],["The sweep",[746,77,913,303]]]}}
+PASS desk mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":4195,"webgl":0,"page":0,"rect":[512,315,765,490]}
+PASS desk mirror paint: no text over other text | []
+PASS desk mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":14924,"webgl":0,"page":0,"rect":[498,220,789,720]}
+PASS desk mirror entry: no text over other text | []
+PASS desk mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":8761,"webgl":0,"page":0,"rect":[498,220,789,720]}
+PASS desk mirror after: no text over other text | []
+PASS desk mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":8772,"webgl":0,"page":0,"rect":[498,220,789,720]}
+PASS desk mirror shop: no text over other text | []
+PASS desk mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":30387,"webgl":0,"page":0,"rect":[283,-399,767,1461]}
+PASS desk mirror press: no text over other text | []
+PASS desk no page errors | []
+PASS phone night 3 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,288,390,307],"goalShown":true,"notes":[["The fall",[106,335,195,406]],["The drill",[197,335,283,406]]]}}
+PASS phone night 2 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,288,390,307],"goalShown":true,"notes":[["The fall",[106,335,195,406]],["The scale",[197,335,283,406]]]}}
+PASS phone night 1 board wall: no text over other text | {"overlaps":[],"where":{"goal":[0,288,390,307],"goalShown":true,"notes":[["The fall",[110,336,164,405]],["The sweep",[228,336,279,405]]]}}
+PASS phone mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":378,"webgl":0,"page":0,"rect":[156,95,234,149]}
+PASS phone mirror paint: no text over other text | []
+PASS phone mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":1378,"webgl":0,"page":0,"rect":[151,67,241,219]}
+PASS phone mirror entry: no text over other text | []
+PASS phone mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":813,"webgl":0,"page":0,"rect":[151,67,241,219]}
+PASS phone mirror after: no text over other text | []
+PASS phone mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":816,"webgl":0,"page":0,"rect":[151,67,241,219]}
+PASS phone mirror shop: no text over other text | []
+PASS phone mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":2280,"webgl":0,"page":0,"rect":[86,-121,234,445]}
+PASS phone mirror press: no text over other text | []
+PASS phone no page errors | []
+PASS land night 3 board wall: no text over other text | {"overlaps":[],"where":{"goal":[76,173,769,192],"goalShown":true,"notes":[["The fall",[265,40,422,167]],["The drill",[425,40,578,167]]]}}
+PASS land night 2 board wall: no text over other text | {"overlaps":[],"where":{"goal":[76,173,769,192],"goalShown":true,"notes":[["The fall",[265,40,422,167]],["The scale",[425,40,578,167]]]}}
+PASS land night 1 board wall: no text over other text | {"overlaps":[],"where":{"goal":[76,171,769,190],"goalShown":true,"notes":[["The fall",[272,42,367,164]],["The sweep",[480,42,570,164]]]}}
+PASS land mirror paint: nothing of the glass drawn over him | {"kind":"paint","press":false,"him":1228,"webgl":0,"page":0,"rect":[277,170,415,265]}
+PASS land mirror paint: no text over other text | []
+FAIL land mirror entry: nothing of the glass drawn over him | {"kind":"entry","press":false,"him":4352,"webgl":1,"page":0,"rect":[269,119,427,389]}
+PASS land mirror entry: no text over other text | []
+PASS land mirror after: nothing of the glass drawn over him | {"kind":"after","press":false,"him":2524,"webgl":0,"page":0,"rect":[269,119,427,389]}
+PASS land mirror after: no text over other text | []
+PASS land mirror shop: nothing of the glass drawn over him | {"kind":"shop","press":false,"him":2613,"webgl":0,"page":0,"rect":[269,119,427,389]}
+PASS land mirror shop: no text over other text | []
+PASS land mirror press: nothing of the glass drawn over him | {"kind":"entry","press":true,"him":8878,"webgl":0,"page":0,"rect":[153,-216,415,790]}
+PASS land mirror press: no text over other text | []
+PASS land no page errors | []
+RESULT s44 faults 41 of 42 pass
+exit 1, 212 s
