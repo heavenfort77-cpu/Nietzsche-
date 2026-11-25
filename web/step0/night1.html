@@ -135,6 +135,9 @@
   #fallGoal { position: absolute; left: 0; right: 0; top: 8px; text-align: center; color: #f0d27a; font: 600 16px/1.3 Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; padding: 0 12px; }
   #fallCap { position: absolute; left: 6%; right: 6%; top: 24%; text-align: center; color: #fff3dc; font: italic 400 18px/1.4 Georgia, serif; text-shadow: 0 1px 3px #000, 0 0 12px #000; pointer-events: none; }
   #fallCall { position: absolute; left: calc(var(--x) * 1px); top: calc(var(--y) * 1px); transform: translate(-50%, -100%); color: #fff3dc; font: 600 20px Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; }
+  #fallBtn.beat { background: linear-gradient(90deg, #f6dc86 var(--fill, 0%), #8f7a44 var(--fill, 0%)); }
+  #fallBtn.beat.dim { opacity: 0.5; }
+  #fallBtn.beat.lit { background: #fff1b8; box-shadow: 0 0 22px 8px #ffe08a; }
   #fallBtn { position: fixed; right: 16px; bottom: 96px; min-width: 120px; min-height: 64px; border-radius: 32px; border: 0; background: #cfaa4e; color: #1e1714; font: 600 17px system-ui, sans-serif; padding: 0 18px; z-index: 6; }
   #fsBtn { position: fixed; right: 8px; top: 8px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 22px; border: 0; background: #1e1714b3; color: #e9d9b0; font: 600 13px system-ui, sans-serif; z-index: 12; }
   #pauseCard { z-index: 30; }
@@ -666,7 +669,7 @@ const CONFIG = Object.freeze({
     slap: { keys: ['KeyJ'], mouse: [0], label: 'Slap' },
     pie: { keys: ['KeyK'], mouse: [2], label: 'Throw a pie' },
     // owner 23 Nov 06:22 item 5 ("the first fall should be name as dodge but keep the animation"): the one name the player reads for the Mirror pratfall (pause card, pad, key hint); 'Pratfall' switches it back; the action id, animation and sound are unchanged
-    fall: { keys: ['Space'], mouse: [], label: 'Dodge' },
+    fall: { keys: ['Space'], mouse: [], label: 'Drop' },
     // session 36: the live fall act's press (the same keys as the corridor's gold button: the trips there are its rehearsal)
     drop: { keys: ['KeyE', 'Space', 'Enter'], mouse: [], label: 'Fall (in the light, on the crash)' },
     // session 24 batch 3: the ending's two worded buttons
@@ -829,7 +832,7 @@ const N1 = Object.freeze({
   // lines: a night's own line (GDD: warm on nights 1-2, polite after; session 24 lead's wording for night 3)
   crew: [
     { id: 'stagehand', title: 'Stagehand', at: [0.62, 4.9], yaw: -90, line: 'Evening. Full house tonight.', lines: { 3: 'Good evening.' } },
-    { id: 'rigger', title: 'Rigger', at: [2.5, 10.9], yaw: -90, line: 'Cable going down. Fall over it, they love that.', lines: { 3: 'Cable is down. You know what to do.' }, verb: 'fall', verbText: 'Pratfall over the cable', across: true, done: 'Neat.' },
+    { id: 'rigger', title: 'Rigger', at: [2.5, 10.9], yaw: -90, line: 'Rope going down. Fall over it, they love that.', lines: { 3: 'Rope is down. You know what to do.' }, verb: 'fall', verbText: 'Fall over the rope', across: true, done: 'Neat.' },
     // props girl yaw -13 (was -120, back to the wings camera): side-on to the wings camera, facing the clown's way in with the pie held out (owner 23 Nov 21:01 "turn her side way")
     { id: 'props_girl', title: 'Props', at: [1.5, 9.3], yaw: -13, line: "Your pie. Don't eat it this time.", lines: { 3: 'Your pie.' }, verb: 'take', verbText: 'Take the pie', done: 'Break a leg.' },
     { id: 'strongman', title: 'Strongman', at: [1.3, 12.7], yaw: -150, line: 'For luck! Give it a honk.', lines: { 3: 'Honk. For luck.' }, verb: 'honk', verbText: 'Honk the horn', done: 'HA! Now go get them.' },
@@ -840,17 +843,17 @@ const N1 = Object.freeze({
   // the goal line per place (lead's wording; the owner edits). paint, painting, bravado: dressing room; corridor, wings, entrance: walk out by shot; back: walk back; room: after it
   goalText: {
     painting: 'He paints the smile on.', bravado: 'He gets into the role. The act board is next.', board: 'Choose tonight\'s act on the board.',
-    corridor: 'Walk up the corridor to the ring. Go round the crew.', wings: 'The ring is through the gap by the red curtains, at the back.',
+    corridor: 'Walk up the hall to the ring. Go round the people.', wings: 'The ring is past the red curtains, at the back.',
     entrance: 'Walk into the light.', back: 'Walk back to the dressing room.',
     // session 38: the walk back by shot (the first-timer walked to the wings' lit vanity, taking it for the dressing room)
-    backentrance: 'Walk back toward the camera, into the wings.', backwings: 'The corridor back is at the bottom left.', backcorridor: 'Walk down the corridor to the dressing room.', room: 'Turn to the mirror wall and sit.',
+    backentrance: 'Walk back down the screen, into the wings.', backwings: 'The hall back is at the bottom left.', backcorridor: 'Walk down the hall to the dressing room.', room: 'Turn to the mirror wall and sit.',
   },
   // the paint prompt names what the paint is (cold players: "finish the paint" meant nothing)
   paintPrompt: { touch: 'His face is half painted. Tap to paint the smile on.', keys: 'His face is half painted. Press any key to paint the smile on.' },
   // cold players item 5: switch, a line saying what each gold button did, shown verbCapSecs (game time)
   verbCaps: true, verbCapSecs: 4,
   // that line per verb (lead's wording; the owner edits)
-  verbCap: { take: 'Pie in hand: one free pie throw in the Mirror.', honk: 'HONK! The strongman roars with laughter.', fall: 'Down over the cable, and up again.', trip: 'He trips on purpose. The child saw.' },
+  verbCap: { take: 'Pie in hand: one free pie throw in the Mirror.', honk: 'HONK! The strong man laughs out loud.', fall: 'Over the rope he goes, and up again.', trip: 'He trips on purpose. The child saw.' },
   // session 38, owner 24 Nov 23:49 "marker only to be seen by tester. to be removed when ship": switch, a ring and an arrow on the clown,
   // shown only when the address has ?tester (cold-play runs); set false (or remove) before ship
   testMark: true,
@@ -1077,7 +1080,7 @@ const N1 = Object.freeze({
   // owner 23 Nov 06:22 item 4 ("all insecurities have hints"): switch, the insecurity he faces shows its hint as one fixed line from its entry until it is down; false = the first sighting tip for tipSecs, as before
   mwHints: true,
   // the hint of each insecurity (the owner edits the wording; "dodge" is the Mirror pratfall, see CONFIG.binds.fall.label)
-  mwHint: { light: 'Three gags on its lamp.', stare: 'Hit it from the side.', shame: 'Dodge to shake it off.', whisper: 'Step past it. Stay on your feet.', sergeant: 'Hit it between the drum beats.', weigher: 'Spend Laughs and it gets lighter.', performer: 'Dodge its tell, then strike.' },
+  mwHint: { light: 'Three gags on its lamp.', stare: 'Hit it from the side.', shame: 'Drop to shake it off.', whisper: 'Step past it. Stay on your feet.', sergeant: 'Hit it between the drum beats.', weigher: 'Spend Laughs and it gets lighter.', performer: 'Drop when it shows its move, then hit it.' },
   // owner 23 Nov 06:22 item 3 ("should let player know he is fighting insecurities"; a count of figures: no): the line shown on entering the Mirror World ('' = none)
   mwNameText: 'These are his insecurities. Face each one.',
   // how long that line stays, s (the action is not paused)
@@ -1090,7 +1093,7 @@ const N1 = Object.freeze({
   // act: an act from N1.acts, sold once it was tried on the board (NS.tried) or from night `from`; note on the night it was tried, later after.
   // others (abilities) are always sold. Prices for scale, drill and trade are the lead's starting values (session 24), to tune in play
   shop: [
-    { id: 'sweep', title: 'Spotlight sweep', note: 'Lent tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
+    { id: 'sweep', title: 'Spotlight sweep', note: 'Free tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
     { id: 'scale', title: 'The talking scale', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
     { id: 'drill', title: 'Soldier drill', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 7, move: 'lunge', act: true },
     { id: 'trade', title: 'Tit-for-tat', note: 'Never tried on the board. Buy it and it is yours.', later: 'Never tried on the board. Buy it and it is yours.', price: 8, move: 'slap', act: true, from: 2 },
@@ -1177,8 +1180,8 @@ const N1 = Object.freeze({
   // game: the act's timing game in cue_model.html (owner 23 Nov 09:23: one per act; fall the mask ring, sweep press-hold-release)
   // goal: the one line the note shows (session 38, cold players item 3: the note was a wall of text); the rest is behind More
   acts: [
-    { id: 'fall', title: 'The deliberate fall', short: 'The fall', goal: 'Miss the bar on purpose and land on your backside.', line: 'Miss the bar on purpose, land on your backside, bow.', own: 'Yours. It always pays a little.', x: -0.95, game: 'ring' },
-    { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', goal: 'Sweep the spotlight off the floor.', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Lent tonight, free.', x: 0.95, game: 'hold' },
+    { id: 'fall', title: 'The fall', short: 'The fall', goal: 'Miss the bar on purpose and land on your backside.', line: 'Miss the bar on purpose, land on your backside, bow.', own: 'Yours. It always pays a little.', x: -0.95, game: 'ring' },
+    { id: 'sweep', title: 'Spotlight sweep', short: 'The sweep', goal: 'Sweep the spotlight off the floor.', line: 'Sweep the spotlight off the floor until it is gone.', own: 'Free tonight.', x: 0.95, game: 'hold' },
     // session 24 (build plan 24.1): the night 2-3 acts; their routine after the cue is the fall's until the art pass (box and shape)
     { id: 'scale', title: 'The talking scale', short: 'The scale', goal: 'Step on the scale and take its verdict.', line: 'Step on the scale. It reads your weight out to the house, worse each time.', game: 'bar' },
     { id: 'drill', title: 'Soldier drill', short: 'The drill', goal: 'Copy the whiteface, beat for beat.', line: 'The whiteface barks the drill. Copy him, beat for beat.', game: 'call' },
@@ -1290,12 +1293,21 @@ const N1 = Object.freeze({
   fallLaughs: { perfect: 10, good: 5 }, fallPaint: 1,
   // the band leader (left) and the whiteface (right, nights with the early call) beside the play area, inside a phone portrait picture (half width about 5.6 m) (x, z m); the stick's length m and its angle down and up, radians
   fallLeader: [-4.5, 1.2], fallWhite: [4.5, 1.2], fallStickLen: 0.7, fallStickDown: -0.35, fallStickUp: 1.65,
+  // owner 25 Nov 09:12 (kid-reader record, item 1): a fall pressed in the light before the drum starts is graded 'wait' with its own words, not 'dark'; false = dark as before
+  fallWaitGrade: true,
+  // owner 25 Nov 09:12 (item 2, the crash seen without sound): the gold Fall button is dim until the drum starts, fills while it rolls and lights up (words fallText.btnNow) when to press, so he lands on the crash; false = the plain button
+  fallBeat: true,
+  // fill steps written to the button (a DOM write only when the step changes)
+  fallBeatSteps: 20,
+  // the button is lit while a press lands within this share of the night's Good window of the crash, each side (0.5: night 1 +-0.125 s of the 0.25 s), so a press while lit is never late or early; it is full just before
+  fallBeatLitShare: 0.5,
   // the words (prototype wording from fall_act.html, lead's; the owner edits): the board note, the goal line, the count, the hints, each result, the call, the act's end
+  // owner 25 Nov 09:12 (items 1-3): note and goal name the lit button; dark says "Not in the light."; wait for a press before the drum; btn / btnNow on the button
   fallText: {
-    note: 'Walk into the light. A drumroll starts; fall so you hit the floor on the crash. Watch the band leader\'s stick. Three falls, then a bow.',
-    goal: 'Fall in the light, on the crash.', count: 'Fall {f} of {t}',
+    note: 'Walk into the light. The drum starts. Tap Fall when the gold button lights up, and he hits the floor on the crash. Three falls, then a bow.',
+    goal: 'Stand in the light. Fall when the gold button lights up.', count: 'Fall {f} of {t}',
     hintKeys: 'Walk: {m}. Fall: {k}.', hintTouch: 'Walk: drag anywhere. Fall: the gold button.',
-    perfect: 'Perfect. He hits the floor with the crash.', good: 'Good. Close to the crash.', dark: 'Nobody saw it. He fell in the dark.',
+    perfect: 'Perfect. He hits the floor with the crash.', good: 'Good. Close to the crash.', dark: 'Not in the light.', wait: 'Too early: wait for the drum.', btn: 'Fall', btnNow: 'Fall now!',
     early: 'Too early. He was already down when the crash came.', lateFell: 'Too late. He fell into silence.', lateStood: 'Too late. The crash hit a clown still standing.',
     call: 'Now!', endOk: 'The act is over.', endCut: 'Two misses. The act ends.',
   },
@@ -2766,7 +2778,7 @@ function pickAct(id) {
   const tryBtn = N1.tryAct && !live ? `<button id="tryAct" class="back">${N1.tryLabel}</button>` : '';
   const body = `<p>${live ? N1.fallText.note : a.line}</p><small>${a.own}</small>${meters}`;
   const text = N1.noteShort ? `<p>${live ? N1.fallText.goal : a.goal}</p>${tried}<details class="more"><summary>${N1.noteMore}</summary>${body}</details>` : body + tried;
-  const d = show('note', `<div class="parchment"><h2>${a.title}</h2>${text}<div class="row"><button id="perform">Perform it</button>${tryBtn}<button id="noteBack" class="back">Back</button></div></div>`);
+  const d = show('note', `<div class="parchment"><h2>${a.title}</h2>${text}<div class="row"><button id="perform">Do it</button>${tryBtn}<button id="noteBack" class="back">Back</button></div></div>`);
   d.querySelector('#perform').addEventListener('click', () => performAct(id));
   if (tryBtn) d.querySelector('#tryAct').addEventListener('click', () => tryAct(id));
   d.querySelector('#noteBack').addEventListener('click', noteBack);
@@ -2836,7 +2848,7 @@ function n1Board() {
   S.running = false;
   crewQuiet();
   const d = show('board', `<h2>Tonight's board</h2><p>Choose an act.</p><div class="opts">
-    <button class="opt" data-act="fall"><b>The deliberate fall</b>Yours. The classic pratfall; it always pays a little.</button>
+    <button class="opt" data-act="fall"><b>The fall</b>Yours. The classic pratfall; it always pays a little.</button>
     <button class="opt" data-act="sweep"><b>Spotlight sweep</b>Lent for tonight, free. Sweep up the spotlight.</button></div>
     <p><small>Then press in time with the drum, when the ring closes onto the mask on his face.</small></p>`);
   d.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => startAct(b.dataset.act)));
@@ -3536,10 +3548,11 @@ function fallStep(A, dt) {
     if (N.fake && !F.fakeShown && r >= R - N1.fallLand - N1.fallFakeLead) { F.fakeShown = true; F.fakeAt = r; }
     if (!F.crashed && r >= R) { F.crashed = true; F.stick = 0; A.flash = 0.6; A.shake = N1.shakeM * 0.5; if (!F.audio) drum(actObj.crash); }
     if (F.on && F.landed && F.crashed) {
-      if (F.press < 0 || !F.inPool) fallGrade(A, 'dark');
+      if (!F.inPool || (F.press < 0 && !N1.fallWaitGrade)) fallGrade(A, 'dark');
+      else if (F.press < 0) fallGrade(A, 'wait');
       else { const err = F.press + N1.fallLand - R, e = Math.abs(err); fallGrade(A, e <= N.perfect ? 'perfect' : e <= N.good ? 'good' : err < 0 ? 'early' : 'late'); }
     } else if (!F.on && F.crashed && r >= R + N1.fallGiveUp) fallGrade(A, 'late');
-  } else if (F.on && F.landed && F.stage !== 'result' && F.stage !== 'done') fallGrade(A, 'dark');
+  } else if (F.on && F.landed && F.stage !== 'result' && F.stage !== 'done') fallGrade(A, F.inPool && N1.fallWaitGrade ? 'wait' : 'dark');
   // the fall: the trip clip's stagger, then the dive carries him N1.tripStep across the house's view
   if (F.on) {
     F.t += dt;
@@ -3562,7 +3575,7 @@ function fallStep(A, dt) {
   actObj.stick.rotation.z = N1.fallStickDown + (N1.fallStickUp - N1.fallStickDown) * F.stick;
 }
 // the act's words over the picture and the gold button, written only when they change
-const fallShown = { goal: null, cap: null, call: null, btn: null, x: -1, y: -1 };
+const fallShown = { goal: null, cap: null, call: null, btn: null, x: -1, y: -1, beat: null, fill: -1, word: null };
 function fallSet(node, key, s) { if (fallShown[key] === s) return; fallShown[key] = s; node.textContent = s; node.classList.toggle('hidden', !s); }
 function fallUi(A) {
   const F = A && A.F, live = !!F && A.phase === 'fall', T = N1.fallText;
@@ -3575,6 +3588,17 @@ function fallUi(A) {
     if (x !== fallShown.x || y !== fallShown.y) { fallShown.x = x; fallShown.y = y; el.fallCall.style.setProperty('--x', x); el.fallCall.style.setProperty('--y', y); }
   }
   if (fallShown.btn !== live) { fallShown.btn = live; el.fallBtn.classList.toggle('hidden', !live); }
+  if (N1.fallBeat && live) fallBeatUi(F);
+}
+// owner 25 Nov 09:12 item 2: dim before the drum, filling while it rolls, lit when a press lands him on the crash; class, fill and words written only on change
+function fallBeatUi(F) {
+  const T = N1.fallText, roll = F.stage === 'roll' && !F.on && !F.crashed, half = F.N.good * N1.fallBeatLitShare, at = F.N.roll - N1.fallLand - half, r = roll ? fallRollNow(F) : 0;
+  const lit = roll && r >= at && r <= at + 2 * half, beat = !roll ? 'dim' : lit ? 'lit' : 'fill';
+  const fill = beat === 'fill' ? Math.round(Math.min(1, r / at) * N1.fallBeatSteps) : beat === 'lit' ? N1.fallBeatSteps : 0;
+  if (fallShown.beat !== beat) { fallShown.beat = beat; el.fallBtn.classList.remove('dim', 'fill', 'lit'); el.fallBtn.classList.add('beat', beat); }
+  if (fallShown.fill !== fill) { fallShown.fill = fill; el.fallBtn.style.setProperty('--fill', Math.round(fill * 100 / N1.fallBeatSteps) + '%'); }
+  const word = lit ? T.btnNow : T.btn;
+  if (fallShown.word !== word) { fallShown.word = word; el.fallBtn.textContent = word; }
 }
 // a hidden tab stops the picture but not the sound: a roll not yet answered starts again when he comes back (he is still in the light)
 document.addEventListener('visibilitychange', () => {
@@ -3861,7 +3885,7 @@ function mirrorSetup(kind) {
   if (kind === 'paint') { NS.paintT = -1; NS.painted = false; c.face.material.uniforms.uPaintAmt.value = N1.paintHalf; }
   else {
     c.face.material.uniforms.uPaintAmt.value = paintFor(NS.mask);
-    if (kind === 'entry') setPrompt(N1.pressHand ? (NS.touch ? 'A pale form of him in the glass. Tap: press his hand to it.' : `A pale form of him in the glass. ${keyLabel('press', true)}: press his hand to it.`) : NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
+    if (kind === 'entry') setPrompt(N1.pressHand ? (NS.touch ? 'A pale form of him in the glass. Tap: put his hand on it.' : `A pale form of him in the glass. ${keyLabel('press', true)}: put his hand on it.`) : NS.touch ? 'He stands at the mirror. Tap to sit.' : 'He stands at the mirror. Press any key to sit.');
   }
   sizeCracks();
 }
@@ -4850,7 +4874,7 @@ function enterMW() {
   mwEnterLeg(NS.mw);
   el.mwHud.classList.remove('hidden'); el.pads.classList.toggle('hidden', !NS.touch); el.hint.classList.toggle('padded', NS.touch);
   el.shotName.textContent = '';
-  el.hint.textContent = NS.touch ? 'Stick: move. Gags cost Laughs. Stand still and they gnaw.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap -${N1.slap.cost}. ${keyLabel('pie', true)}: pie -${N1.pie.cost}. ${keyLabel('fall')}: ${CONFIG.binds.fall.label.toLowerCase()} -${N1.fall.cost}. Laughs are all you have. Stand still and they gnaw.`;
+  el.hint.textContent = NS.touch ? 'Drag: move. Each trick costs Laughs. Stand still and they bite.' : `${moveLabel()}: move. ${keyLabel('slap', true)}: slap -${N1.slap.cost}. ${keyLabel('pie', true)}: pie -${N1.pie.cost}. ${keyLabel('fall')}: ${CONFIG.binds.fall.label.toLowerCase()} -${N1.fall.cost}. Laughs are all you have. Stand still and they bite.`;
   el.padSlap.textContent = `SLAP -${N1.slap.cost}`; el.padPie.textContent = `PIE -${N1.pie.cost}`; el.padFall.textContent = `${CONFIG.binds.fall.label.toUpperCase()} -${N1.fall.cost}`;
   setPrompt('');
   S.running = true; startLoop();
@@ -4893,7 +4917,7 @@ function mwEnterLeg(M) {
   if (leg.style === 'corridor') {
     M.x = N1.mwCorStart[0]; M.z = N1.mwCorStart[1]; M.yaw = Math.PI; M.lookX = M.x * 0.5; M.lookZ = (M.z + N1.mwCorDoor) / 2;
     mwCam.position.fromArray(N1.mwCorCam);
-    tip(`The mirror corridor. The way to ${N1.mwSpaceName[next ? next.style : 'ring']} is the pale door.`);
+    tip(`The mirror hall. The way to ${N1.mwSpaceName[next ? next.style : 'ring']} is the pale door.`);
     mwBag(leg.group);
     return;
   }
@@ -5478,7 +5502,7 @@ function mwHud(M, dt) {
   const hl = Math.ceil(M.laughs), sp = M.spentT > 0 ? M.spent : 0;
   if (hl !== M.hudL || NS.pies !== M.hudP || M.shards !== M.hudS || sp !== M.hudSp) {
     M.hudL = hl; M.hudP = NS.pies; M.hudS = M.shards; M.hudSp = sp;
-    el.mwHud.textContent = `Laughs ${hl}${sp ? ' (-' + sp + ')' : ''} · Pies ${NS.pies} · Shards ${M.shards}`;
+    el.mwHud.textContent = `Laughs ${hl}${sp ? ' (-' + sp + ')' : ''} · Pies ${NS.pies} · Glass ${M.shards}`;
     el.mwHud.classList.toggle('low', hl <= N1.lowLaughs);
     el.padPie.disabled = NS.pies <= 0;
   }
@@ -5532,7 +5556,7 @@ function afterMirror() { if (N1.smallWin) smallWinCard(); else toShop(); }
 function toShop() {
   if (!N1.mergeKept) { keptCard(); return; }
   const lost = NS.result === 'lose';
-  NS.keptLine = (lost ? 'He woke at the mirror and kept half his shards: ' : 'He came out of the mirror with ') + NS.mwKept + ' shard' + (NS.mwKept === 1 ? '' : 's') + '.';
+  NS.keptLine = (lost ? 'He woke at the mirror and kept half his glass: ' : 'He came out of the mirror with ') + NS.mwKept + (NS.mwKept === 1 ? ' piece' : ' pieces') + ' of glass.';
   if (!N1.performerLearns) { if (S.mirror) leaveMirror(); S.running = false; }
   shopCard();
 }
@@ -5567,7 +5591,7 @@ function keptCard() {
   if (S.mirror) leaveMirror();
   S.running = false;
   const lost = NS.result === 'lose';
-  const d = show('kept', `<p>${lost ? 'He wakes at the mirror. He kept half his shards: ' : 'Out of the mirror, with '}${NS.mwKept} shard${NS.mwKept === 1 ? '' : 's'}.</p><button id="toShop">To the mirror</button>`);
+  const d = show('kept', `<p>${lost ? 'He wakes at the mirror. He kept half his glass: ' : 'Out of the mirror, with '}${NS.mwKept} ${NS.mwKept === 1 ? 'piece' : 'pieces'} of glass.</p><button id="toShop">To the mirror</button>`);
   d.querySelector('#toShop').addEventListener('click', shopCard);
 }
 function shardRow(n, cls) { let h = ''; for (let i = 0; i < n; i++) h += `<span class="shard ${cls || ''}"></span>`; return h; }
@@ -5635,7 +5659,7 @@ function shopCard() {
   }).join('');
   const d = show('shop', `<h2>The mirror shop</h2><p>The reflection keeps the shop. Prices are glass pieces on the ledge.</p>
     ${NS.keptLine ? `<p id="keptLine">${NS.keptLine}</p>` : ''}<div id="shards">${shardRow(NS.shards)}</div><div class="opts">${items}</div>
-    <p id="shopSay"><small>${NS.shopSay || 'Every purchase adds a paint layer, and the Performer learns it.'}</small></p><button id="endNight">End the night</button>`);
+    <p id="shopSay"><small>${NS.shopSay || 'Each thing you buy adds a paint layer, and the Performer learns it.'}</small></p><button id="endNight">End the night</button>`);
   d.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => {
     const it = N1.shop.find((x) => x.id === b.dataset.id);
     if (!it || NS.learn || NS.shards < it.price || NS.bought.indexOf(it.id) >= 0) return;

@@ -265,3 +265,23 @@ Cause: log steps 44-46 `TypeError: window.__kidMask is not a function` after "Go
 | 59 | paint | text | "He was a good child, like a god." | -0.7 |  |
 | 59 | paint | text | 神様みたいないい子でした |  |  |
 | 59 | paint | text | Dazai, No Longer Human, the madam's last words (our translation) | 7.2 | Dazai, Human, madam's, translation |
+
+## Batch 3: the owner's items 1-3 built, reruns (owner 25 Nov 09:12: items 1, 2, 3)
+
+Built in `web/step0/night1.html` (backup /tmp/night1_before_s40b3.html on the session box): (1) `N1.fallWaitGrade`: a press in the light before the drum is graded `wait`, "Too early: wait for the drum."; outside the light `dark`, "Not in the light."; (2) `N1.fallBeat`: the gold Fall button is dim until the drum starts, fills while it rolls, and is lit ("Fall now!") while a press lands within `fallBeatLitShare` 0.5 of the night's Good window of the crash (night 1: +-0.125 s), written only on change; goal "Stand in the light. Fall when the gold button lights up."; (3) easier words: Do it, The fall, hall, people, "The ring is past the red curtains", "Walk back down the screen", Fall over the rope, "Over the rope he goes", strong man, put his hand on it, "Drag: move. Each trick costs Laughs. Stand still and they bite.", Drop (was Dodge), mirror hall, Glass / pieces of glass (was shards), "Each thing you buy", Free tonight (was Lent).
+
+Probe `web/step0/probe_fall_beat.cjs` (phone, software GL, test-side placement): old page `FAIL button: dim before the drum ... {"order":"-"}`, `FAIL pressed in the light before the drum ... {"grade":"dark","cap":"Nobody saw it. He fell in the dark.","inPool":true}`; final page `RESULT fall beat 8 of 8 pass` (order dim>fill>lit>dim, a press on the first lit frame perfect, 23 button writes in a roll, wait and dark captions, page errors 0).
+
+| Run | Brief | Commands | Act | Result |
+| --- | --- | --- | --- | --- |
+| kid3 | kid reader, night 1 | 57 | chose The sweep (cue page) | "The act flops" yet Laughs +30 ("The trip got a bigger laugh than a clean beat"): it did not understand the sweep's ring cue; with 30 Laughs it reached the Mirror World's second space (Shame's paper) and was drained to 1; reached night 2 |
+| kid4 | kid reader, told "pick The fall" | 27 | the fall, first lit-button build | understood "fall when it lights up"; both falls tapped with the lit button on screen, both "Too late. He fell into silence." |
+| kid5 | same, final build | 49 | the fall | understood the goal ("I watch for the gold button to light up"); fall 1 lit during a drag, no tap, "still standing"; fall 2 stood 4 commands "in the light" with the button dim (no roll), then the roll ran during a watch; Laughs +15 from the trip; Mirror World 15 -> 3 at the first figure |
+
+What the reruns show:
+- The words now read: the act note, hall, rope, Drop, Glass and the room lines show no ??? (kid3-5). Still ???: "Ring ???" (entrance label), "He gets into the ???" (role), "He trips on ???" (purpose), the quotes, "??? sweep" (Spotlight) in the shop; kid3 did not know "Try it", kid5 did not know "sit" or "More".
+- Item 1 and 2 are read right: kid1 and kid2 pressed at once; kid4 and kid5 waited for the light.
+- kid4's "Too late" with the lit button seen had two causes, both changed: the lit time ran 0.35 s past the ideal moment while night 1's Good window is 0.25 s (now lit only inside half the Good window), and the tool tapped after the thaw while the roll runs on the audio clock (wall time); the tool now taps while frozen in the fall act.
+- Not proven: whether a kid can hit the lit moment. The tool is turn-based: a watch cannot tap and the lit time is 0.25 s on night 1, so kid5 never had a command end inside it. Needs a real person (owner's phone).
+- Not explained: kid5's fall 2, 4 commands "in the light" with no roll. The log had no pool position; the tool now logs the fall stage, pool (x, z, radius) and his position.
+- The sweep pays from the trip even when the act flops (kid3 +30): a newbie gets Laughs without understanding the act; the fall's 0 of 3 also paid +15 from the trip (kid5).

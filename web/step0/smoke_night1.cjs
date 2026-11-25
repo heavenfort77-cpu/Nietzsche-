@@ -92,7 +92,7 @@ const MUTS = {
   gnaw: ['night1.html', 'gnaw: { on: true,', 'gnaw: { on: false,'],
   lampgag: ['night1.html', "if (f.kind === 'light') { hitLamp(f); return; }", "if (f.kind === 'light') return;"],
   lightdark: ['night1.html', 'if (f.dark) mwLampDark(M, f, dt); else if (f.sink > 0) mwSink(f, dt);', 'if (f.sink > 0) mwSink(f, dt);'],
-  hints: ['night1.html', "Gags cost Laughs. Stand still and they gnaw.'", "SLAP, PIE, FALL. Lift your thumbs to stand still.'"],
+  hints: ['night1.html', "Each trick costs Laughs. Stand still and they bite.'", "SLAP, PIE, FALL. Lift your thumbs to stand still.'"],
   cost: ['night1.html', 'M.spent = n; M.spentT = N1.spendShow;', 'M.spent = n;'],
   musicsoft: ['night1.html', 'N1.musicVol * musicSoft() * M.duck', 'N1.musicVol * M.duck'],
   musicduck: ['night1.html', 'function openCue() {\n  musicDuck(true);', 'function openCue() {'],
@@ -307,7 +307,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
     await step('cable: Space pratfall over it, seen side-on in the wings (D)', async () => {
       await tp(0.4, 10.6); await sleep(500);
       const t0 = await pg.textContent('#verb');
-      if (!(await pg.isVisible('#verb')) || !/^Pratfall over the cable/.test(t0)) throw new Error('verb "' + t0 + '"');
+      if (!(await pg.isVisible('#verb')) || !/^(Pratfall over the cable|Fall over the rope)/.test(t0)) throw new Error('verb "' + t0 + '"');
       const at = () => pg.evaluate(() => { const N = window.__night, W = window.__walkTest, v = new W.camera.position.constructor(N.S.x, 0.9, -N.S.y).project(W.camera); return { x: (v.x + 1) / 2 * N.S.w, y: (1 - v.y) / 2 * N.S.h, h: N.S.h, shot: N.S.shot, sy: N.S.y }; });
       const a = await at();
       await pg.keyboard.press('Space');

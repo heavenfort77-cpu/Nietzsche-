@@ -27,7 +27,7 @@ async function toCorridor(pg) {
   for (let i = 0; i < 150 && (await pg.evaluate(() => window.__night.NS.scene)) !== 'boardwall'; i++) { await pg.keyboard.press('Space'); await pg.waitForTimeout(800); }
   await pg.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.innerText === 'The fall' && b.offsetParent), null, { timeout: 120000 });
   await click(/^The fall$/);
-  await click(/^Perform it$/);
+  await click(/^(Perform it|Do it)$/);
   await pg.waitForFunction(() => window.__night.NS.scene === 'walk' && window.__night.S.running, null, { timeout: 120000 });
 }
 
