@@ -213,3 +213,18 @@ Owner: "use klad for texture for asset. THREE.LOD geometry.dispose(), material.d
 - Nothing rebuilt: scenes, sets and pools are built once at load (rule 26); the static check fails object creation in per-frame code.
 - Dispose: what a page is done with is freed with `dispose()` (geometry, material, texture, skeleton, instance buffers), keeping anything a later scene still uses (`freeRoots`). Night 1: the walk and act sets after the walk back (`N1.freeAfterWalk`). Gates: smoke_night1 steps "sets freed" and "stay freed" (no re-upload by the end card; mutations `nofree`, `freechild`). Between nights the page reloads.
 - Textures for assets are painted in klad (klad-headless-cli skill; klad credited in CREDITS, only exported PNGs ship). Lead's reading: new assets from now on; an approved asset's texture is replaced only after a klad sample at play size is approved (rule 4). Not used yet: no new asset since the owner said it.
+
+## 9. Theme and the owner's intent carry every judgement (owner, 24 Nov 14:33 and 25 Nov 2026 10:22, 12:33)
+
+Owner: "theme and story is more important" (24 Nov), "run panel theme and core message more important", "panel judge i want the theme and intent to carry. ... i should not be repeating every fucking session" (25 Nov).
+- Every panel judges first whether a build or a change carries the theme (Dazai's *No Longer Human*, Nietzsche, the last episode of Evangelion; "the game is out to get you" read as life is out to get you) and the owner's stated intent (GDD "Concept and theme" and the owner decision lists). Clarity, fun and polish come after: a change that only makes the game clearer or easier passes only if it also carries the theme; where they conflict, the theme wins.
+- Rules in `design/PANEL-RULES.md` rule 7. Enforced by: `tools/check_panel.sh` (a panel doc without `## Theme and intent` quoting the owner's intent, or without `Weighting: theme and intent first`, fails), run in `tools/handoff.sh check` and `close` every session.
+- The same order holds for the lead's own proposals and the fault rule's fixes: a fix must not change what a scene says about the theme without the owner's choice.
+
+## 10. Browser checks run on GitHub runners, not the session box (owner, 25 Nov 2026 12:33)
+
+Owner: "if the check take [long] find a way to do better or better yet don't make mistake ... update the repo." Cause (session 42): every browser probe and smoke ran on the session box (software GL, 1-7 fps), about 15 min a probe, 20 min and more a smoke, one at a time; the project rule already said heavy work runs on CI runners.
+- Every browser probe, smoke or cold-play capture that is not an interactive session goes to CI: `tools/probe_ci.sh "<entry>,<entry>"` (workflow `.github/workflows/probe.yml`: one runner per entry, all at once, logs on `ci-out/probe-<run>-<i>`; prints only RESULT, FAIL and exit lines). Split long smokes by screen (`ONLY=desk`, `ONLY=phone`, `ONLY=land`) so they run side by side.
+- The session box only edits, runs static checks (`node --check`, `check-static.cjs`) and the cold-play tool (it needs a live agent).
+- Branch first, then main: a batch commit is pushed to `wip/s<session>-b<batch>`, `tools/probe_ci.sh "..." wip/s<session>-b<batch>` runs its probe and the checks covering what it touched there, and the same commit goes to `main` (fast-forward) only when they pass. The next batch waits for those lines.
+- "Don't make mistakes": a fix is written only after its probe FAILs on the old page in CI, and its side-effect list (the checks covering what it touched) is named before the edit, not after.

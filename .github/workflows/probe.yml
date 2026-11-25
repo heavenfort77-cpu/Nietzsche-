@@ -1,0 +1,65 @@
+# Session 42 (owner 25 Nov 12:33: the session box is too slow for browser checks): run any web/ probes and smokes on GitHub runners, one job
+# per entry, all at once. Started by tools/probe_ci.sh (REST dispatch), which waits and prints only PASS/FAIL/RESULT lines.
+# Each entry: optional VAR=value words, then a .cjs path under web/ (e.g. "ONLY=desk step0/smoke_night1.cjs"). Entries are separated by commas.
+# Each job commits its log to branch ci-out/probe-<run>-<index> (the proven route of route.yml).
+name: probe
+on:
+  workflow_dispatch:
+    inputs:
+      probes: { description: 'comma-separated entries', required: true }
+      ref: { description: 'commit to test (default: the dispatched branch head)', required: false, default: '' }
+permissions:
+  contents: write
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.m.outputs.list }}
+    steps:
+      - id: m
+        env: { P: '${{ inputs.probes }}' }
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os, re
+          items = [s.strip() for s in os.environ["P"].split(",") if s.strip()]
+          ok = re.compile(r"^([A-Z_]+=[A-Za-z0-9_.,=/-]* )*[A-Za-z0-9_./-]+\.cjs( [A-Za-z0-9_./-]+)*$")
+          bad = [s for s in items if not ok.match(s)]
+          if bad: raise SystemExit("bad entries: " + "; ".join(bad))
+          print("list=" + json.dumps([{"i": i, "e": s} for i, s in enumerate(items)]))
+          EOF
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        p: ${{ fromJson(needs.plan.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.ref }}', fetch-depth: 1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Probe
+        env: { ENTRY: '${{ matrix.p.e }}', IDX: '${{ matrix.p.i }}' }
+        run: |
+          npm i --prefix /tmp/n --no-save acorn acorn-walk playwright-core > /dev/null
+          mkdir -p web/node_modules && ln -sfn /tmp/n/node_modules/playwright-core web/node_modules/playwright-core
+          export NODE_PATH=/tmp/n/node_modules
+          git fetch -q --depth=1 origin ci-out/run-32
+          bash web/step0/cube25d/setup.sh > /dev/null
+          cd web
+          read -ra W <<< "$ENTRY"
+          vars=(); args=(); for w in "${W[@]}"; do if [ ${#args[@]} -eq 0 ] && [[ "$w" == *=* ]]; then vars+=("$w"); else args+=("$w"); fi; done
+          echo "entry $IDX: $ENTRY sha $(git rev-parse --short HEAD)" > ../probe.txt
+          start=$(date +%s)
+          rc=0; env "${vars[@]}" node "${args[@]}" >> ../probe.txt 2>&1 || rc=$?
+          echo "exit $rc, $(( $(date +%s) - start )) s" >> ../probe.txt
+      - name: Commit the log to ci-out/probe-<run>-<index>
+        if: always()
+        env: { IDX: '${{ matrix.p.i }}' }
+        run: |
+          mkdir out && cp probe.txt out/ && cd out
+          git init -q -b results && git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "probe ${GITHUB_RUN_NUMBER} entry ${IDX}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "results:ci-out/probe-${GITHUB_RUN_NUMBER}-${IDX}"

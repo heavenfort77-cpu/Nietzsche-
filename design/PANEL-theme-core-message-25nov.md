@@ -4,6 +4,11 @@ Owner, 25 Nov 10:22, session 42 first message: "run panel theme and core message
 
 Judgement by separate agents, not a playtest: one agent per seat on four Claude models (Opus: Story writer, Dazai, Chaplin, Clinical psychologist; Sonnet: Core gamer, Jam judge, Auguste clown, Mobile producer; Haiku: Casual phone player, Streamer; Fable: Nietzsche, Camus, Indie critic). Same roster and models as `design/PANEL-theme-nihilism-24nov.md`. Each seat saw only its role, the build facts and the stranger report in the blind round; the owner's intent (`intent.md`: his words above, his 24 Nov words, the project inspiration line, GDD lines 14-37 and 255-264) only from round 2. The lead counted and did not vote, merge or write compromises. Nothing is built from this until the owner decides.
 
+## Theme and intent
+
+Owner: "run panel theme and core message more important" (25 Nov 10:22); "theme and story is more important" (24 Nov 14:33); "this game is of nihilism and existentialism. gameplay to match that and the theme of the game is out to get you" (24 Nov 20:15). Inspiration: Dazai's *No Longer Human*, Nietzsche, the last episode of Evangelion; the jam theme read as life is out to get you. GDD "Concept and theme" lines 22-37 were given to every seat from round 2 (`intent.md`).
+Weighting: theme and intent first. Given to every seat in round 2: "Where theme and clarity or fun conflict, theme wins. A change that only makes the game clearer or easier counts only if it also strengthens the core message."
+
 ## Stranger report
 
 Source: design/STRANGER-night1-s42-coldplay.md

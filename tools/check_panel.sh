@@ -7,6 +7,8 @@
 set -uo pipefail
 cd "${1:-.}" || exit 2
 # written before the rules (22 Nov, sessions 13-16); kept as history
+# written before rule 7 (theme and intent carry, 25 Nov 2026): exempt from that one item only
+THEME_EXEMPT=" PANEL-light-22nov.md PANEL-ending-22nov.md PANEL-action-22nov.md PANEL-owner-play-22nov.md PANEL-owner-play-22nov-b.md PANEL-owner-play-22nov-c.md PANEL-player-feedback-23nov.md PANEL-theme-nihilism-24nov.md "
 EXEMPT=" PANEL-act-price.md PANEL-night1-gameplay.md PANEL-small-win.md PANEL-theme.md PANEL-harsh-review.md PANEL-RULES.md "
 fail=0; n=0
 for f in design/PANEL-*.md; do
@@ -14,7 +16,8 @@ for f in design/PANEL-*.md; do
   b=$(basename "$f")
   case "$EXEMPT" in *" $b "*) continue ;; esac
   n=$((n + 1))
-  out=$(python3 - "$f" <<'EOF'
+  te=0; case "$THEME_EXEMPT" in *" $b "*) te=1 ;; esac
+  out=$(THEME_EXEMPT_THIS=$te python3 - "$f" <<'EOF'
 import os, re, sys
 f = sys.argv[1]; t = open(f, encoding="utf-8").read()
 bad = []
@@ -37,6 +40,10 @@ if any(b and a / b >= 0.75 for a, b in votes) and section("Red team") is None: b
 d = section("Dissent")
 if d is None: bad.append("no '## Dissent'")
 elif not re.search(r"(?m)^- \S", d): bad.append("'## Dissent' is empty")
+if os.environ.get("THEME_EXEMPT_THIS") != "1":
+    th = section("Theme and intent")
+    if th is None: bad.append("no '## Theme and intent' (rule 7: theme and the owner's intent carry)")
+    elif not re.search(r"Weighting:\s*theme and intent first", th): bad.append("'## Theme and intent' has no line 'Weighting: theme and intent first'")
 for x in bad: print("FAIL " + f + ": " + x)
 if not bad: print("PASS " + f)
 EOF

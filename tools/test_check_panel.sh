@@ -13,6 +13,9 @@ Source: design/STRANGER-test-cold-read.md
 First vote: 8 of 13
 ## Dissent
 - Mobile producer: no.
+## Theme and intent
+Owner: "theme and story is more important".
+Weighting: theme and intent first
 EOF
 }
 case_() { # $1 name, $2 want pass|fail, $3 sed expression on the good doc ('' = none), $4 stranger file text ('' = none)
@@ -27,6 +30,8 @@ case_() { # $1 name, $2 want pass|fail, $3 sed expression on the good doc ('' = 
 K='Kind: cold-read'
 case_ "good doc passes" pass '' "$K"
 case_ "human stranger passes" pass '' 'Kind: human'
+case_ "no theme and intent section" fail '/^## Theme and intent/d' "$K"
+case_ "theme section without the weighting line" fail '/^Weighting:/d' "$K"
 case_ "no stranger section" fail '/^## Stranger report/d' "$K"
 case_ "no Source line" fail '/^Source:/d' "$K"
 case_ "stranger file missing" fail '' ''
