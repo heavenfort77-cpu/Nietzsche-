@@ -811,6 +811,9 @@ const N1 = Object.freeze({
   lodFar: 8,
   // owner 24 Nov 17:28 ("what is not shown don't render"): crew drawn on no pixel of a walk shot are hidden in it (session 33 pixel probe; smoke step "not drawn")
   crewHide: { corridor: ['rigger'], wings: ['stagehand', 'child'], entrance: ['stagehand', 'rigger', 'props_girl'] },
+  // session 42 (F48, stranger steps 32-33 "a giant fist"): crew standing outside a shot's zone whose body is cut by the frame edge (a hand with no body) are hidden in it;
+  // a hidden crew member offers no gold button. Measured by probe_s42_stranger.cjs on desk, phone and landscape, out and back
+  crewCut: { entrance: ['strongman'] },
   // owner 24 Nov 17:28 (dispose): after the walk back the walk and act sets are freed (geometry, material, texture dispose); figures used later are kept
   freeAfterWalk: true,
   // clown height in the Blender style units (build.py clown, bowler top); sets metres per unit for the whole cast
@@ -889,6 +892,8 @@ const N1 = Object.freeze({
   belongText: 'I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself.',
   // how long the thought stays on screen, s
   belongSecs: 7,
+  // session 42 (F48, stranger step 21): his thought waits until the gold button's caption has gone, so the two lines never share the screen's bottom; false = as before
+  thoughtAfterCap: true,
   // the floor contact for every fall pose (switch), and how long the posture lean takes to fade when a fall starts, s
   fallFloor: true, fallMoodFade: 0.15,
   // the act's missed-chain fall turns him side-on first (radians, 0 faces the house), and the bow that tips him over is played three-quarter on
@@ -1092,11 +1097,12 @@ const N1 = Object.freeze({
   // shop (prices are glass pieces on the ledge, never numbers)
   // act: an act from N1.acts, sold once it was tried on the board (NS.tried) or from night `from`; note on the night it was tried, later after.
   // others (abilities) are always sold. Prices for scale, drill and trade are the lead's starting values (session 24), to tune in play
+  // session 42 (F48, stranger steps 57-58): notes say only what is true whether or not he played the act (the shop sells an act once it was on the board, NS.tried)
   shop: [
-    { id: 'sweep', title: 'Light sweep', note: 'Free tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
-    { id: 'scale', title: 'The talking scale', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 6, move: 'slap', act: true },
-    { id: 'drill', title: 'Soldier drill', note: 'Tried out tonight. Buy it and it is yours.', later: 'You tried it. Buy it and it is yours.', price: 7, move: 'lunge', act: true },
-    { id: 'trade', title: 'Tit-for-tat', note: 'Never tried on the board. Buy it and it is yours.', later: 'Never tried on the board. Buy it and it is yours.', price: 8, move: 'slap', act: true, from: 2 },
+    { id: 'sweep', title: 'Light sweep', note: 'On the board tonight. Buy it and it is yours.', later: 'It was on the board. Buy it and it is yours.', price: 6, move: 'slap', act: true },
+    { id: 'scale', title: 'The talking scale', note: 'On the board tonight. Buy it and it is yours.', later: 'It was on the board. Buy it and it is yours.', price: 6, move: 'slap', act: true },
+    { id: 'drill', title: 'Soldier drill', note: 'On the board tonight. Buy it and it is yours.', later: 'It was on the board. Buy it and it is yours.', price: 7, move: 'lunge', act: true },
+    { id: 'trade', title: 'Tit-for-tat', note: 'Never on the board yet. Buy it and it is yours.', later: 'Never on the board yet. Buy it and it is yours.', price: 8, move: 'slap', act: true, from: 2 },
     { id: 'dash', title: 'Dash (Mirror)', note: 'A dash you buy is a dash the Performer gets.', price: 5, move: 'lunge' },
   ],
   // ----- theme panel fix 2 (owner agreed 22 Nov): the crowd pays most for what hurts him -----
@@ -1530,7 +1536,7 @@ function cutTo(name) {
   el.shotName.textContent = s.title;
   // owner 24 Nov: crew on no pixel of this shot are not drawn (hidden crew are not animated either, castAnim)
   if (n1 && (NS.scene === 'walk' || NS.scene === 'back')) walkGoal();
-  if (n1) { const hide = N1.crewHide[name] || NO_HIDE; for (let i = 0; i < crew.length; i++) crew[i].root.visible = !hide.includes(crew[i].cd.id); }
+  if (n1) { const hide = N1.crewHide[name] || NO_HIDE, cut = N1.crewCut[name] || NO_HIDE; for (let i = 0; i < crew.length; i++) crew[i].root.visible = !hide.includes(crew[i].cd.id) && !cut.includes(crew[i].cd.id); }
 }
 const NO_HIDE = [];
 
@@ -3704,11 +3710,11 @@ function updateCrew(dt) {
       m.root.rotation.x = N1.tripPitch * ease(p);
       if (k >= 1) { NS.riggerT = -1; m.root.rotation.x = 0; NS.jokes.rigger = true; }
     }
-    if (!S.back && !S.ended && m.cd.verb && !m.done && !NS.anim) {
+    if (!S.back && !S.ended && m.cd.verb && !m.done && !NS.anim && m.root.visible) {
       const a = m.cd.anchor || m.cd.at, dv = m.cd.across ? (S.y < N1.cableY && S.x > N1.cableX[0] && S.x < N1.cableX[1] ? (N1.cableY - S.y) * N1.verbDist / N1.cableReach : 1e9) : Math.hypot(S.x - a[0], S.y - a[1]);
       if (dv < N1.verbDist && dv < bestD) { best = m; bestD = dv; }
     }
-    if (NS.belong === 1 && m.cd.id === 'child' && m.saidT <= 0) {
+    if (NS.belong === 1 && m.cd.id === 'child' && m.saidT <= 0 && !(N1.thoughtAfterCap && NS.verbCapT > 0)) {
       NS.belong = 2; NS.belongT = N1.belongSecs;
       el.thought.textContent = N1.belongText; el.thought.classList.remove('hidden');
     }

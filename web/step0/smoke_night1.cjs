@@ -236,7 +236,8 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
             let n = 0; for (let i = 0; i < b.length; i += 4) if (b[i] !== all[i] || b[i + 1] !== all[i + 1] || b[i + 2] !== all[i + 2]) n++;
             px[m.cd.id] = n;
           }
-          out[name] = { hidden, px };
+          // session 42 (F48): N1.crewCut members are drawn only cut by the frame edge and are hidden on purpose (probe_s42_stranger.cjs proves the cut)
+          out[name] = { hidden, px, cut: (N.N1.crewCut || {})[name] || [] };
         }
         N.S.shot = ''; W.cutTo(was);
         return out;
@@ -246,7 +247,7 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
         console.log('    ' + name + ' crew pixels', JSON.stringify(v.px), '| hidden', v.hidden.join(',') || '-');
         for (const [id, n] of Object.entries(v.px)) {
           if (n === 0 && !v.hidden.includes(id)) bad.push(`${name}: ${id} draws on no pixel but is drawn`);
-          if (n > 0 && v.hidden.includes(id)) bad.push(`${name}: ${id} is seen (${n} px) but hidden`);
+          if (n > 0 && v.hidden.includes(id) && !v.cut.includes(id)) bad.push(`${name}: ${id} is seen (${n} px) but hidden`);
         }
       }
       if (bad.length) throw new Error(bad.join('; '));
