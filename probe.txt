@@ -1,0 +1,18 @@
+entry 0: step0/probe_s43_theme.cjs sha 9c93da6
+PASS live fall act reached | {"live":true}
+PASS fall 1 (lit press, wide window) is a Perfect | {"grade":"perfect"}
+FAIL C2: on the Perfect the caption is the child's "...on purpose." | {"cap":"Perfect. He hits the floor with the crash."}
+FAIL C2: the roar and popcorn come one beat after the Perfect, not at once | {"gradeT":1.916}
+FAIL C2: in that beat the crowd is still, no laugh starts, only the child's line shows | [{"t":1.916,"cap":"Perfect. He hits the floor with the crash.","flash":1,"srcs":4,"ex":0.8}]
+FAIL C2: after the beat the Perfect words and the crowd | null
+PASS a Good roars at once, no held beat | {"grade":"good","first":{"t":5.583,"cap":"Good. Close to the crash.","flash":2,"srcs":7,"ex":0.45}}
+FAIL C11: the end card has no "The shame of living:" heading, the list stays | {"t":"The shame of living:nothing bought tonight","heading":"The shame of living:"}
+PASS last night: the Performer down, the two ending buttons | {"ok":true}
+FAIL C10: the last act opens on its one line | {"prompt":""}
+FAIL C10: no fall, no drum and no gold button while the player does nothing (3.5 s) | {"step":"again","t":3.58,"falls":3,"prompt":"","gap":1.7,"btn":false}
+FAIL C10: a click on the picture falls once; a second click while he is down does nothing; the line goes | {"step":"again","t":3.7,"falls":3,"prompt":"","gap":1.7,"btn":false}
+FAIL C10: the crash follows his landing | {"step":"done","t":0,"falls":3,"prompt":"","gap":1.7,"btn":false}
+FAIL C10: Space falls too; three falls, three crashes, then the restart button | {"done":true,"falls":3,"step":"done"}
+PASS no page errors | []
+RESULT s43 theme 5 of 15 pass
+exit 1, 97 s
