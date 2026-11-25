@@ -102,11 +102,16 @@ const MUTS = {
 };
 const MUT = MUTS[process.env.MUTATE || ''];
 if (process.env.MUTATE && !MUT) { console.error('unknown MUTATE ' + process.env.MUTATE); process.exit(2); }
+// session 44: the Mirror World is an escape by default (N1.mwEscape, N1.lastNoExit; panel design/PANEL-mirror-escape-25nov.md, checked by probe_s44_escape.cjs).
+// This check's Mirror World, Light, Performer and ending steps test the fight, still in the game behind those switches: night1.html is served with both off
+// (rule 18: the game changed on purpose; checks session 45 adds escape steps to the real-play smoke)
+const fight = (t) => { for (const k of ['mwEscape', 'lastNoExit']) { if (t.split(`  ${k}: true,`).length !== 2) throw new Error('switch not found once: ' + k); t = t.replace(`  ${k}: true,`, `  ${k}: false,`); } return t; };
 const srv = http.createServer((q, r) => {
   const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; }
   r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
-  if (MUT && path.basename(f) === MUT[0]) { const t = fs.readFileSync(f, 'utf8'); if (t.split(MUT[1]).length !== 2) throw new Error('mutation anchor not found once: ' + MUT[1]); r.end(t.replace(MUT[1], MUT[2])); return; }
+  if (MUT && path.basename(f) === MUT[0]) { let t = fs.readFileSync(f, 'utf8'); if (t.split(MUT[1]).length !== 2) throw new Error('mutation anchor not found once: ' + MUT[1]); t = t.replace(MUT[1], MUT[2]); r.end(path.basename(f) === 'night1.html' ? fight(t) : t); return; }
+  if (path.basename(f) === 'night1.html') { r.end(fight(fs.readFileSync(f, 'utf8'))); return; }
   fs.createReadStream(f).pipe(r);
 });
 let nOk = 0, nAll = 0;
