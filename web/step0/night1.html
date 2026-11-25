@@ -675,12 +675,14 @@ const CONFIG = Object.freeze({
     // session 24 batch 3: the ending's two worded buttons
     quit: { keys: ['Digit1'], mouse: [], label: 'Bow, say "I quit" and walk out' },
     again: { keys: ['Digit2'], mouse: [], label: 'Perform one last act' },
+    // session 43 (theme panel C10): the last act's fall, when he chooses
+    lastFall: { keys: ['KeyE', 'Space', 'Enter'], mouse: [0], label: 'Fall' },
   },
   // which actions each scene listens to (the pause card lists these; a check fails if two share a key in one scene)
   bindScenes: {
     title: ['confirm'], paint: ['confirm', 'pause'], walk: ['up', 'down', 'left', 'right', 'interact', 'pause'], room: ['turnL', 'turnR', 'sit', 'pause'],
     board: ['act1', 'act2', 'act3', 'act4', 'act5', 'pause'], note: ['confirm', 'back'], rehearse: ['back'], mirror: ['press', 'pause'], act: ['up', 'down', 'left', 'right', 'drop', 'pause'], small: ['confirm', 'pause'],
-    mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'], ending: ['quit', 'again', 'pause'],
+    mw: ['up', 'down', 'left', 'right', 'slap', 'pie', 'fall', 'pause'], ending: ['quit', 'again', 'lastFall', 'pause'],
   },
   // idle and walk blend time, s
   blend: 0.2,
@@ -1017,6 +1019,10 @@ const N1 = Object.freeze({
   endQuitText: 'Bow, say "I quit" and walk out', endAgainText: 'Perform one last act',
   // after a choice: the bow s, his line, the walk out to (x, z) at the ring's edge where the child stands, the last act's falls, black and silence s before the restart button
   endBowSecs: 1.4, endQuitLine: 'I quit.', endExit: [0, -7.4], endFalls: 3, endFallGap: 1.7, endHoldSecs: 2.5,
+  // owner 25 Nov 13:01 (theme panel C10): the last act has no drum and no gold button: he falls when the player wills it (a tap on the picture, or E, Space, Enter) and the crash follows his landing; endFallGap is then the least time between presses; false = the timed falls
+  endFallOnWill: true,
+  // its one line until his first fall ('' = none; lead's wording), and the crash this long after the press (the prat clip's floor key), s
+  endWillLine: 'Fall when you choose.', endCrashAfter: 0.45,
   // owner 24 Nov, session 37 ("yes" to panel C1, design/PANEL-theme-nihilism-24nov.md): switch, his paint stays on in the warm light and through the last act; only "I quit" takes it off, faded out over s while the line shows; false = paint gone when the light opens, as before
   endPaintStays: true, endPaintOffSecs: 1.6,
   // owner 24 Nov, session 37 ("yes" to panel C3): switch, the Light's dark lamp stays in the ring through the ending, still turning to follow him with its click and glint; false = no lamp in the ending, as before
@@ -1130,6 +1136,8 @@ const N1 = Object.freeze({
   learnLunge: 1.0, learnLungeTempo: 2.6,
   // end card heading over the list of purchases (owner 22 Nov: "the shame of living", was "The Performer now knows:")
   endKnows: 'The shame of living:',
+  // owner 25 Nov 13:01 (theme panel C11): the end card drops that heading and keeps the list and "He got up."; true = the heading back
+  endKnowsOn: false,
   // panel item 3: while it performs the reflection wears this face cell (the clown's grin) at this paint amount, and a laugh comes from the glass at the move
   learnGrin: 'smile', learnGrinPaint: 1,
   // a short laugh (glass in the shop, offstage after the wipe): notes, gap s, first and last pitch Hz, note length s, volume
@@ -1309,6 +1317,10 @@ const N1 = Object.freeze({
   fallBeatSteps: 20,
   // the button is lit while a press lands within this share of the night's Good window of the crash, each side (0.5: night 1 +-0.125 s of the 0.25 s), so a press while lit is never late or early; it is full just before
   fallBeatLitShare: 0.5,
+  // owner 25 Nov 13:01 (theme panel C2, design/PANEL-theme-core-message-25nov.md): on a Perfect the roar, popcorn and crowd hold for one beat and the music drops; the child's line (fallText.hush) is the only thing shown; false = the roar at once
+  fallSeenBeat: true,
+  // that beat, s; the Perfect words stay fallResultSecs after it
+  fallHushSecs: 0.8,
   // the words (prototype wording from fall_act.html, lead's; the owner edits): the board note, the goal line, the count, the hints, each result, the call, the act's end
   // owner 25 Nov 09:12 (items 1-3): note and goal name the lit button; dark says "Not in the light."; wait for a press before the drum; btn / btnNow on the button
   fallText: {
@@ -1317,7 +1329,7 @@ const N1 = Object.freeze({
     hintKeys: 'Walk: {m}. Fall: {k}.', hintTouch: 'Walk: drag anywhere. Fall: the gold button.',
     perfect: 'Perfect. He hits the floor with the crash.', good: 'Good. Close to the crash.', dark: 'Not in the light.', wait: 'Too early: wait for the drum.', btn: 'Fall', btnNow: 'Fall now!',
     early: 'Too early. He was already down when the crash came.', lateFell: 'Too late. He fell into silence.', lateStood: 'Too late. The crash hit a clown still standing.',
-    call: 'Now!', endOk: 'The act is over.', endCut: 'Two misses. The act ends.',
+    hush: '...on purpose.', call: 'Now!', endOk: 'The act is over.', endCut: 'Two misses. The act ends.',
   },
   // the bowler (Blender style units, clown.py): cut line under the brim, brim radius just outside the head, top of the head
   hatCutU: 52.6, hatRU: 8.2, hatTopU: 55.4,
@@ -3470,7 +3482,7 @@ function fallInPool(A) { const F = A.F, dx = A.x - F.px, dz = A.z - F.pz, r = F.
 function fallRollNow(F) { return F.audio ? NS.audio.currentTime - F.rollAt : F.rollT; }
 // after the walk-on: the act's state, the first pool, the hint
 function fallStart(A) {
-  A.F = { N: fallNight(), rnd: actRand(1795 + NS.night), stage: 'settle', st: 0, n: 0, misses: 0, perfects: 0, goods: 0, laughs: 0, mask: 0, falls: 0, grades: [],
+  A.F = { N: fallNight(), rnd: actRand(1795 + NS.night), stage: 'settle', st: 0, n: 0, hush: 0, hushN: 0, duck0: 1, misses: 0, perfects: 0, goods: 0, laughs: 0, mask: 0, falls: 0, grades: [],
     px: 0, pz: 0, poolA: 0, rollT: 0, rollAt: 0, audio: false, crashed: false, fakeShown: false, fakeAt: 0, stick: 0,
     on: false, t: 0, x0: 0, dir: 1, press: -1, inPool: false, landed: false, up: 0, cap: '', count: '' };
   A.phase = 'fall'; A.t = 0; A.clip = 'idle'; A.excite = 0.1;
@@ -3516,10 +3528,20 @@ function fallPress(ts) {
 function fallGrade(A, kind) {
   const F = A.F, T = N1.fallText;
   F.grades.push(kind); F.stage = 'result'; F.st = 0;
-  if (kind === 'perfect') { F.perfects++; F.laughs += N1.fallLaughs.perfect; F.mask += N1.fallPaint; A.excite = N1.excitePerfect; actLaugh('crowd'); actFx(A, 'perfect'); }
+  if (kind === 'perfect') {
+    F.perfects++; F.laughs += N1.fallLaughs.perfect; F.mask += N1.fallPaint;
+    if (N1.fallSeenBeat) { F.hush = N1.fallHushSecs; F.hushN++; A.excite = 0; if (NS.music) { F.duck0 = NS.music.duck; NS.music.duck = 0; musicApply(0.05); } }
+    else { A.excite = N1.excitePerfect; actLaugh('crowd'); actFx(A, 'perfect'); }
+  }
   else if (kind === 'good') { F.goods++; F.laughs += N1.fallLaughs.good; A.excite = N1.exciteGood; actLaugh('small'); actFx(A, 'good'); }
   else { F.misses++; A.excite = 0.05; A.face = 'wince'; }
-  F.cap = T[kind === 'late' ? (F.on || F.landed ? 'lateFell' : 'lateStood') : kind];
+  F.cap = F.hush > 0 ? T.hush : T[kind === 'late' ? (F.on || F.landed ? 'lateFell' : 'lateStood') : kind];
+}
+// C2: the held beat ends: the roar, the popcorn, the crowd and the music come back, and the Perfect words
+function fallHushEnd(A) {
+  const F = A.F;
+  F.hush = 0; A.excite = N1.excitePerfect; actLaugh('crowd'); actFx(A, 'perfect'); F.cap = N1.fallText.perfect;
+  if (NS.music) { NS.music.duck = F.duck0; musicApply(0.3); }
 }
 // the act is over (three falls, or two misses): its result goes to the pay, then the hold and the bow as for every act
 function fallEnd(A, ok) {
@@ -3536,6 +3558,7 @@ function fallStep(A, dt) {
   const F = A.F, N = F.N, c = chars.clown;
   F.st += dt;
   if (F.up > 0) F.up = Math.max(0, F.up - dt);
+  if (F.hush > 0 && (F.hush -= dt) <= 0) fallHushEnd(A);
   if (F.stage === 'roll' && !F.audio) F.rollT += dt;
   // walking, not while falling, lying or getting up
   if (!F.on && F.up <= 0) {
@@ -3571,7 +3594,7 @@ function fallStep(A, dt) {
   // after a result: he gets up, then the next light, or the end
   if (F.stage === 'result') {
     if (F.on && F.landed && F.st > N1.fallLie) { F.on = false; F.up = GPCLIP.up.secs; gpStart(c, 'up'); A.face = 'smile'; }
-    if (F.st >= N1.fallResultSecs && F.up <= 0 && !F.on) {
+    if (F.st >= N1.fallResultSecs + (F.hushN && F.grades[F.grades.length - 1] === 'perfect' ? N1.fallHushSecs : 0) && F.hush <= 0 && F.up <= 0 && !F.on) {
       F.n++;
       if (F.misses >= N1.fallMissesEnd) fallEnd(A, false);
       else if (F.n >= N1.fallCount) fallEnd(A, true);
@@ -4203,6 +4226,7 @@ function n1Key(e) {
   if (NS.scene === 'bravado') return true;
   if (NS.scene === 'walk') { if (bound('interact', e.code)) { doVerb(); return true; } return false; }
   if (NS.scene === 'small') { if (bound('confirm', e.code)) smallPress(); return true; }
+  if (NS.scene === 'ending' && NS.end && NS.end.step === 'again') { if (bound('lastFall', e.code)) endFallPress(); return true; }
   if (NS.scene === 'ending') { if (bound('quit', e.code)) endChoose('quit'); else if (bound('again', e.code)) endChoose('again'); return true; }
   if (NS.scene === 'boardwall') { let i = -1; for (let k = 0; k < NS.acts.length && k < 5; k++) if (bound('act' + (k + 1), e.code)) i = k; if (NS.acts[i]) pickAct(NS.acts[i].id); return true; }
   if (NS.scene === 'note') { if (bound('confirm', e.code)) performAct(NS.noteAct); else if (bound('back', e.code)) noteBack(); return true; }
@@ -4232,6 +4256,8 @@ function n1Pointer(e) {
   if (NS.scene === 'small') { smallPress(); return true; }
   // the live fall act: a touch anywhere but a button starts the walk stick
   if (S.mode === 'act') return !fallPlaying();
+  // C10: in the last act a tap or click on the picture is his fall
+  if (S.mode === 'end' && NS.end && NS.end.step === 'again') { endFallPress(); return true; }
   if (S.mode === 'mw' && e.pointerType === 'mouse') {
     aimMouse(e);
     if (CONFIG.binds.slap.mouse.indexOf(e.button) >= 0) gag('slap', NS.mouse); else if (CONFIG.binds.pie.mouse.indexOf(e.button) >= 0) gag('pie', NS.mouse);
@@ -4642,7 +4668,7 @@ function endingStart(M) {
   if (NS.music) { NS.music.key = ''; musicApply(0.01); }
   el.mwHud.classList.add('hidden'); el.pads.classList.add('hidden'); el.mwTip.textContent = ''; el.hint.textContent = ''; el.hint.classList.remove('padded');
   endFade(true, 200);
-  NS.end = { t: 0, step: 'black', clapN: 0, clapT: 0, gap: N1.endClapGap, choice: '', walk: 0, falls: 0, x: M.x, z: M.z, yaw: M.yaw };
+  NS.end = { t: 0, step: 'black', clapN: 0, clapT: 0, gap: N1.endClapGap, choice: '', walk: 0, falls: 0, fallAt: -1, crashed: false, crashN: 0, popAt: 0, x: M.x, z: M.z, yaw: M.yaw };
   // the ending's own loop and scene from here (black under the fade until his light opens)
   S.mode = 'end';
 }
@@ -4714,6 +4740,15 @@ function endChoose(k) {
   const E = NS.end;
   if (!E || E.step !== 'choose') return;
   hideCard(); E.step = k; E.t = 0;
+  if (k === 'again' && N1.endFallOnWill) setPrompt(N1.endWillLine);
+}
+// C10: his fall in the last act, when the player chooses; not while he is still down or getting up
+function endFallPress() {
+  const E = NS.end, c = chars.clown;
+  if (!E || E.step !== 'again' || !N1.endFallOnWill || E.falls >= N1.endFalls) return;
+  if (E.fallAt >= 0 && E.t < E.fallAt + N1.endFallGap) return;
+  E.falls++; E.fallAt = E.t; E.crashed = false; E.popAt = E.t + 0.9;
+  gpStart(c, 'prat'); setFace(c, 'smile'); tone(220, 110, 0.15, 'triangle', 0.08); setPrompt('');
 }
 // 1: he bows, says "I quit" and walks out of the ring past the child at the exit, out of his light
 function endQuit(E, c, dt) {
@@ -4738,6 +4773,12 @@ function endQuit(E, c, dt) {
 }
 // 2: one last act, shown with no judgement: his falls in the light, the audience still, no laugh, no numbers
 function endAgain(E, c, dt) {
+  if (N1.endFallOnWill) {
+    if (E.fallAt >= 0 && !E.crashed && E.t >= E.fallAt + N1.endCrashAfter) { E.crashed = true; E.crashN++; drum(actObj.crash); }
+    if (E.popAt > 0 && E.t >= E.popAt) { E.popAt = 0; gpStart(c, 'pop'); }
+    if (E.falls >= N1.endFalls && E.crashed && E.t >= E.fallAt + N1.endFallGap) { E.step = 'done'; E.t = 0; endFade(true, 1500); }
+    return;
+  }
   const n = Math.floor(E.t / N1.endFallGap);
   if (n >= N1.endFalls) {
     E.step = 'done'; E.t = 0;
@@ -5689,7 +5730,7 @@ function endCard() {
   S.running = false;
   const v = NS.verbs, i = NS.actInfo || {};
   const titles = NS.bought.map((id) => (N1.shop.find((x) => x.id === id) || { title: id }).title);
-  const knows = N1.performerLearns ? `<p class="knows">${N1.endKnows}<br>${titles.length ? titles.join('<br>') + `<br><small>${N1.endLearned}</small>` : 'nothing bought tonight'}</p>` : '';
+  const knows = N1.performerLearns ? `<p class="knows">${N1.endKnowsOn ? N1.endKnows + '<br>' : ''}${titles.length ? titles.join('<br>') + `<br><small>${N1.endLearned}</small>` : 'nothing bought tonight'}</p>` : '';
   const best = NS.hurt && NS.hurt.bestN > (i.actLaughs || 0) ? NS.hurt.best : 'the act';
   const brief = N1.endBrief ? `<p class="facts">Laughs earned ${NS.laughs} &middot; They laughed hardest at ${best} &middot; Mask ${NS.mask}</p>${NS.smallDone ? `<p>${NS.smallDone}</p>` : ''}` : '';
   const d = show('end', `<h2>End of night ${NS.night}</h2>${knows}${brief}${N1.endBrief ? '<details id="endLog"><summary>Details</summary>' : ''}<div class="sum">

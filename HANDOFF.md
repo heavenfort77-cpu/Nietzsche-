@@ -1,7 +1,7 @@
 # Handoff (live state)
 
-Session start: d8e5541 (2026-11-25)
-Session: 42
+Session start: 2427254 (2026-11-25)
+Session: 43
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`; where they differ, `OWNER-REQUIREMENTS.md` section 6 (checks only every 5th session) and section 7 (zoom in / zoom out framings and the 2.5D methods: cube room, fixed-camera rooms, Mirror World turning camera) win (owner, 22 Nov: START-HERE.md cannot be edited from his side). This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
@@ -17,6 +17,8 @@ Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, n
 New session after 3 batch commits, after any context summary, or when the owner says "handoff", whichever comes first. `tools/handoff.sh` prints NEW SESSION NOW at the limit; `tools/handoff.sh close` must print PASS before handing over.
 
 ## Now
+
+- Session 43, batch 1 (game change, owner's choice). OWNER 25 Nov ~13:00, session 43 (answer to the theme-panel question, `design/PANEL-theme-core-message-25nov.md`): build C2, C10, C1, C11 (all four offered). This batch C2, C10, C11 in `web/step0/night1.html` (backup /tmp/night1_before_s43b1.html on the session box), each behind a CONFIG switch with the owner's choice in its comment: C2 `fallSeenBeat` (+ `fallHushSecs` 0.8, `fallText.hush` "...on purpose."): on a Perfect fall the roar, popcorn and crowd hold one beat and the music drops, the caption is the child's line, then the roar and the Perfect words (the next light waits the extra beat); a Good roars at once. C10 `endFallOnWill` (+ `endWillLine` "Fall when you choose." lead's wording, `endCrashAfter` 0.45, bind `lastFall` E/Space/Enter/click): "Perform one last act" has no drum, no button and no timer; a tap or click on the picture or the key falls him, not while he is down (`endFallGap` 1.7 s), the crash plays at his landing, three falls then black and the restart button. C11 `endKnowsOn` false: the end card drops "The shame of living:", list and "He got up." stay. Probe `web/step0/probe_s43_theme.cjs` (own commit 9c93da6 before this one, for the control run). Checks changed on purpose (rule 18): `smoke_night1.cjs` end-card step and its `endtext` mutation (now flips `endKnowsOn`); `smoke_nights.cjs` "one last act" presses Space three times, its `endagain` mutation re-anchored. Static check: same single FAIL as before the batch (`buildAct is 72 lines`), warns 14 = 14. Anchors 97 of 99, the same two stale before the batch (`tapskip`, `endquit`). CI lines in Next step.
 
 - Session 42, batch 3 (rules and CI tool, no game change). OWNER 25 Nov 12:33: "if the check take [long] find a way to do better or better yet don't make mistake. and panel judge i want the theme and intent to carry. update the repo. i should not be repeating every session". Written so `tools/handoff.sh start` prints them every session: `OWNER-REQUIREMENTS.md` section 9 (theme and the owner's intent carry every judgement) and section 10 (browser checks on GitHub runners; batch to `wip/s<n>-b<k>`, probe there, then main). `design/PANEL-RULES.md` rule 7 and `tools/check_panel.sh` (a panel doc needs `## Theme and intent` with `Weighting: theme and intent first`; older docs exempt from this item only); `tools/test_check_panel.sh` `RESULT check_panel 14 of 14 cases as intended`; the gate failed today's panel doc until its section was added. New `.github/workflows/probe.yml` + `tools/probe_ci.sh "<entry>,..." [ref]`: one runner per probe or smoke entry, all at once, logs on `ci-out/probe-<run>-<i>`, prints only RESULT/FAIL/exit lines. First run (route proof and batch 2's side-effect checks) in Next step.
 
@@ -276,6 +278,8 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
+Session 43 batch 1 on `wip/s43-b1`: CI probe lines pending (written here once read). Then batch 2: C1 (Mirror figures driven off for the night, never killed, back the next night; shards pay for lasting the night) behind a CONFIG switch, probe first in CI. Still open after that: the stale smoke steps (rows 7 want 6, act loop behind the cue page, Mirror hint wording, anchors `tapskip` and `endquit`) and the Light tell under 0.4 s by the fault rule; the owner's phone play of the fall act (session 41 questions).
+
 Session 42 closed at 3 batches. CI probe route proven (`tools/probe_ci.sh`, workflow `probe`): run 1 on 39831b1 (batch 2's game change on main), 5 entries side by side in about 6 min: `RESULT s42 stranger 45 of 45 pass`, `RESULT shop probe 264 of 264 pass`, smoke desk 62 of 68, phone 61 of 68, land 66 of 68. Control run 3 on d8e5541 (before session 42's game change): smoke desk 61 of 68, phone 62 of 68, land 66 of 68, the same steps failing: `Esc pauses with the controls list ... rows 7 want 6` (desk) / `rows 2 want 6` (phone, land) (goal line added session 38), `act: loop stopped behind the cue page` and the 3 steps after it (the live fall act replaced the cue, session 36), `hints say act, not stand still` (Mirror hint wording), and `Light: he outruns it ... chased after 0.37 s, tell 0.4` (desk in run 3, phone in run 1: a tell under the 0.4 s fairness floor that comes and goes; fault rule). So batch 2 adds no smoke failure (run 2 failed: wrong commit id given, no logs). Session 43 first: the owner's choices on the theme panel (Waiting on the owner) and the session-41 phone play; then these stale smoke steps and the Light tell by the fault rule, run through `tools/probe_ci.sh` (OWNER-REQUIREMENTS 10).
 
 Session 42 at 1 batch (stranger record and theme panel). Owner first: decide from `design/PANEL-theme-core-message-25nov.md` (lead's order by count: C2 yes/no; C10 yes/no; C1 and C11, each split 7 of 13; any of C4, C5, C6). On a yes to C2 (no owner rule reversed): one batch in `night1.html` behind a CONFIG switch (`fallSeenBeat`, lead's name): on a Perfect the roar and popcorn are held one beat and the child's "...on purpose." shows at the ring door; probe that a Perfect fires it and a Good does not. Still waiting from session 41: the owner's phone play of the fall act (lit window, roll waits until he stands, trip pay on a flop, Mirror World with few Laughs). No-owner items: the tool logs the Fall button's beat state; easy words left. Checks session 45 as below.
@@ -387,7 +391,7 @@ Owner, 22 Nov 10:13: "agree to all 3" (panel rounds 2, 3, 4) and hand over. All 
 
 ## Waiting on the owner
 
-- Session 42 theme panel (`design/PANEL-theme-core-message-25nov.md`): yes/no on C2 (12 of 13), C10 (9), C1 (7), C11 (7); optional C4 (9), C5 (8), C6 (7). Nothing built.
+- Session 42 theme panel: ANSWERED 25 Nov ~13:00 (session 43): yes to C2, C10, C1, C11 (C4, C5, C6 not offered this time, open).
 - OWNER 24 Nov 11:12: "approve" (Shame v2 APPROVED as built, `art/cast2/v2/shame_v2.glb`, source `clown_v2/chars/shame.py`; lead's reading). All 9 night-1 figures are now approved.
 - OWNER 23 Nov 23:43: "approve" (the Light v2 APPROVED as built, `art/cast2/v2/light_v2.glb`, source `clown_v2/chars/light.py`).
 - OWNER 23 Nov 22:52: "approval" (child v2, a girl, APPROVED as built, `art/cast2/v2/child_v2.glb`, source `clown_v2/chars/child.py`).

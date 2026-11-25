@@ -17,7 +17,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const MUTS = {
   hurt: ['night1.html', 'hurtPays: true,', 'hurtPays: false,'],
   learn: ['night1.html', 'performerLearns: true,', 'performerLearns: false,'],
-  endtext: ['night1.html', "endKnows: 'The shame of living:',", "endKnows: 'The Performer now knows:',"],
+  endtext: ['night1.html', 'endKnowsOn: false,', 'endKnowsOn: true,'],
   fallsound: ['night1.html', 'if (!NS.cue.contentWindow.__cueOpts) NS.cue.contentWindow.__cueOpts = { hurt: N1.hurtPays };', ''],
   lean: ['model_layer.js', 'parts.root.rotation.x = -pose.tilt * CFG.leanBack;', 'parts.root.rotation.z = -pose.tilt;'],
   smallwin: ['night1.html', 'smallWin: true,', 'smallWin: false,'],
@@ -725,11 +725,12 @@ const musicState = () => { const N = window.__night, M = N.NS.music; if (!M) ret
         if (r.cracks < 1) throw new Error('no crack when the reflection stood');
       }
     });
-    await step('end card: "' + 'the shame of living" over every purchase, nothing renders behind it', async () => {
+    // session 43 (owner 25 Nov 13:01, theme panel C11): the heading "The shame of living:" is cut on purpose; the list of purchases stays
+    await step('end card: every purchase listed with no "The shame of living:" heading, nothing renders behind it', async () => {
       if (!(await pg.$('#card_shop'))) { await pg.evaluate(() => { window.__night.NS.shards = 11; }); await pg.click('#toShop'); }
       await pg.click('#endNight'); await pg.waitForSelector('#card_end'); await shot('end');
       const r = await pg.evaluate(() => { const N = window.__night; return { t: (document.querySelector('#card_end .knows') || {}).textContent || '', want: N.N1.endKnows, titles: N.NS.bought.map((id) => N.N1.shop.find((x) => x.id === id).title), run: N.S.running, mirror: N.S.mirror }; });
-      if (r.want !== 'The shame of living:' || r.t.indexOf(r.want) !== 0) throw new Error('heading "' + r.t.slice(0, 40) + '", owner asked "The shame of living:"');
+      if (r.t.indexOf(r.want) >= 0) throw new Error('heading "' + r.t.slice(0, 40) + '", owner cut "' + r.want + '" (theme panel C11)');
       if (!r.titles.length || r.titles.some((x) => r.t.indexOf(x) < 0)) throw new Error('purchases not all listed: ' + r.titles);
       const learned = await pg.evaluate(() => window.__night.N1.endLearned);
       if (r.t.indexOf(learned) < 0) throw new Error('missing the line "' + learned + '" (item 4)');

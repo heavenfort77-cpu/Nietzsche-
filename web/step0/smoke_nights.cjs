@@ -30,7 +30,7 @@ const MUTS = {
   perftell: ['night1.html', "    dash: { name: 'the dash', kind: 'line', tell: 0.6,", "    dash: { name: 'the dash', kind: 'line', tell: 0.2,", 'Performer'],
   endclap: ['night1.html', '      endObj.crowd.count = E.clapN; clap();', '      clap();', 'ending: quit'],
   endquit: ['night1.html', "  if (E.t < b + 1.6) { setPrompt(N1.endQuitLine); return; }", "  if (E.t < b + 1.6) return;", 'ending: quit'],
-  endagain: ['night1.html', '  if (n >= N1.endFalls) {', '  if (n >= 1) {', 'ending: one last act'],
+  endagain: ['night1.html', '  if (!E || E.step !== \'again\' || !N1.endFallOnWill || E.falls >= N1.endFalls) return;', '  if (!E || E.step !== \'again\' || !N1.endFallOnWill || E.falls >= 1) return;', 'ending: one last act'],
 };
 const MUT = process.env.MUTATE && process.env.MUTATE !== 'all' ? MUTS[process.env.MUTATE] : null;
 if (process.env.MUTATE && process.env.MUTATE !== 'all' && !MUT) { console.error('unknown MUTATE ' + process.env.MUTATE); process.exit(2); }
@@ -332,10 +332,15 @@ async function suite(b, mut, only) {
     if (e.step !== 'done' || !(e.d < 0.25) || e.buttons.join(',') !== 'again1') throw new Error(JSON.stringify(e));
     await pg.close();
   });
-  await check('ending: one last act: three falls with no words, then the restart button', async () => {
+  // session 43 (owner 25 Nov 13:01, theme panel C10): changed on purpose: he falls only when the player acts (here Space, once he is up again); its line goes at the first fall
+  await check('ending: one last act: three falls on the player\'s presses, no words left, then the restart button', async () => {
     const pg = await perfFight('n=3&m=2&s=0&b=&t=&lo=0');
     await toChoice(pg);
     await press(pg, '#endAgain');
+    for (let i = 0; i < 3; i++) {
+      await pg.waitForFunction((i) => { const N = window.__night, E = N.NS.end; return E.falls === i && (E.fallAt < 0 || E.t >= E.fallAt + N.N1.endFallGap); }, i, { timeout: 180000 });
+      await pg.keyboard.press('Space');
+    }
     await pg.waitForSelector('#again1', { timeout: 180000 });
     const e = await pg.evaluate(() => ({ falls: window.__night.NS.end.falls, prompt: (document.getElementById('prompt') || {}).textContent || '' }));
     if (e.falls !== 3 || e.prompt.trim()) throw new Error(JSON.stringify(e));
