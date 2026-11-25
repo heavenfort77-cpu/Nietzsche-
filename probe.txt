@@ -1,0 +1,16 @@
+entry 0: step0/probe_s45_acts.cjs sha ea9a36b
+FAIL night 1, sweep: the note gives the act's line for the fall's timing game, no "Try it" | {"note":{"h":"Light sweep","text":"Light sweep\n\nSweep the light off the floor.\n\nMore\nDo it\nTry it\nBack","tryBtn":true}}
+PASS night 1: his thought after the child shows | {"night":1,"text":"I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself."}
+FAIL night 1, sweep: played as the live fall (walk into the light, Fall on the crash) | {"act":"sweep","live":false,"scene":"act","phase":"cue"}
+PASS night 1: no page errors | []
+FAIL night 2, scale: the note gives the act's line for the fall's timing game, no "Try it" | {"note":{"h":"The talking scale","text":"The talking scale\n\nStep on the scale and take its verdict.\n\nMore\nDo it\nTry it\nBack","tryBtn":true}}
+PASS night 2: his thought after the child shows | {"night":2,"text":"Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is \"me\"."}
+FAIL night 2, scale: played as the live fall (walk into the light, Fall on the crash) | {"act":"scale","live":false,"scene":"act","phase":"cue"}
+PASS night 2: no page errors | []
+FAIL night 3, drill: the note gives the act's line for the fall's timing game, no "Try it" | {"note":{"h":"Soldier drill","text":"Soldier drill\n\nCopy the whiteface, beat for beat.\n\nMore\nDo it\nTry it\nBack","tryBtn":true}}
+PASS night 3: his thought after the child shows | {"night":3,"text":"I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself."}
+FAIL night 3, drill: played as the live fall (walk into the light, Fall on the crash) | {"act":"drill","live":false,"scene":"act","phase":"cue"}
+PASS night 3: no page errors | []
+FAIL nights 1, 2 and 3: three different thoughts | ["I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself.","Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is \"me\".","I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself."]
+RESULT s45 acts 6 of 13 pass
+exit 1, 629 s
