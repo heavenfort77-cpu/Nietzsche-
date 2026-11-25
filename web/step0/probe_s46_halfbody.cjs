@@ -104,6 +104,12 @@ const SCREENS = { desk: { viewport: { width: 1280, height: 720 }, deviceScaleFac
     const errs = []; pg.on('pageerror', (e) => errs.push(String(e)));
     await pg.goto(`http://127.0.0.1:${srv.address().port}/${PAGE}`);
     await toCorridor(pg);
+    // F51: the hall's depth plate on the GPU is the file's bytes (read as data, rows bottom first), not a picture from the browser's image decoder
+    const tx = await pg.evaluate(() => { const t = window.__walkTest.plateMat.uniforms.uDepth.value, d = t && t.image && t.image.data;
+      return { data: !!(t && t.isDataTexture), w: t && t.image.width, h: t && t.image.height, rows: d ? [0, 100, 287, 575].map((y) => Array.from(d.subarray(y * t.image.width * 4, y * t.image.width * 4 + 4096))) : null }; });
+    let same = tx.data && tx.w === dp.w && tx.h === dp.h;
+    if (same) [0, 100, 287, 575].forEach((y, i) => { const fr = dp.h - 1 - y; for (let k = 0; k < 4096; k++) if (tx.rows[i][k] !== dp.px[fr * dp.w * 4 + k]) same = false; });
+    report(same, `${sc} hall depth plate on the GPU is the file's bytes, not decoded as a picture`, { dataTexture: tx.data, size: [tx.w, tx.h] });
     for (const s of SPOTS) {
       await pg.evaluate((s) => { const N = window.__night; N.S.x = s.x; N.S.y = s.y; }, s);
       await pg.waitForTimeout(2500);

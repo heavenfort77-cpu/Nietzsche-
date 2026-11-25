@@ -16,9 +16,9 @@ const report = (ok, name, info) => { all++; if (ok) pass++; console.log(`${ok ? 
   await pg.waitForFunction(() => document.getElementById('v').textContent.length > 0, null, { timeout: 120000 });
   const r = await pg.evaluate(() => ({ v: document.getElementById('v').textContent, rows: [...document.querySelectorAll('#t tr')].map((t) => t.innerText.replace(/\s+/g, ' ')), info: document.getElementById('info').textContent }));
   console.log(r.info); r.rows.forEach((x) => console.log('row ' + x));
-  report(/^PASS/.test(r.v), 'verdict on software GL', r.v);
-  report(/same as the file/.test(r.rows[0] || ''), 'texture bytes', r.rows[0]);
-  report(r.rows.length === 5, 'all four cases ran', r.rows.length);
+  report(/Itch build now: PASS.*The fix: PASS/.test(r.v), 'verdict on software GL (both pass here)', r.v);
+  report(/same as the file/.test(r.rows[0] || '') && /same as the file/.test(r.rows[1] || ''), 'texture bytes, decoder and fix', r.rows.slice(0, 2));
+  report(r.rows.length === 5, 'both texture rows and three cases ran', r.rows.length);
   report(errs.length === 0, 'no page errors', errs.slice(0, 2));
   console.log(`RESULT s46 diag ${pass} of ${all} pass`);
   await b.close(); srv.close();

@@ -71,14 +71,26 @@ in vec2 p; out vec2 vUv; void main() { vUv = p * 0.5 + 0.5; gl_Position = vec4(p
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rt, 0);
   const pc = prog(gl, VQ, `#version 300 es
 precision highp float; uniform sampler2D uDepth; in vec2 vUv; out vec4 o; void main() { o = texture(uDepth, vUv); }`);
-  gl.viewport(0, 0, truth.w, truth.h); gl.useProgram(pc); gl.bindTexture(gl.TEXTURE_2D, tex); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-  let loc = gl.getAttribLocation(pc, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  const got = new Uint8Array(truth.w * truth.h * 4); gl.readPixels(0, 0, truth.w, truth.h, gl.RGBA, gl.UNSIGNED_BYTE, got);
-  let bad = 0, worst = 0;
-  for (let y = 0; y < truth.h; y++) for (let x = 0; x < truth.w; x++) { const a = ((truth.h - 1 - y) * truth.w + x) * 4, b = (y * truth.w + x) * 4;
-    const za = (got[a] * 256 + got[a + 1]) / 65535 * SHOT.depthFar, zb = (truth.px[b] * 256 + truth.px[b + 1]) / 65535 * SHOT.depthFar; const e = Math.abs(za - zb); if (e > 0.01) bad++; if (e > worst) worst = e; }
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  const rows = [['Depth picture as the chip reads it', bad === 0 ? 'same as the file' : `${bad} pixels differ, worst ${worst.toFixed(2)} m`]];
+  // the fix (F51): the PNG's bytes read here and uploaded as data, rows bottom first, no image decoder
+  const tex2 = gl.createTexture(), flip = new Uint8Array(truth.px.length), st = truth.w * 4;
+  for (let y = 0; y < truth.h; y++) flip.set(truth.px.subarray(y * st, y * st + st), (truth.h - 1 - y) * st);
+  gl.bindTexture(gl.TEXTURE_2D, tex2); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, truth.w, truth.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, flip);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  let loc;
+  const texCheck = (tx) => {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.disable(gl.DEPTH_TEST);
+    gl.viewport(0, 0, truth.w, truth.h); gl.useProgram(pc); gl.bindTexture(gl.TEXTURE_2D, tx); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+    loc = gl.getAttribLocation(pc, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    const got = new Uint8Array(truth.w * truth.h * 4); gl.readPixels(0, 0, truth.w, truth.h, gl.RGBA, gl.UNSIGNED_BYTE, got);
+    let bad = 0, worst = 0;
+    for (let y = 0; y < truth.h; y++) for (let x = 0; x < truth.w; x++) { const a = ((truth.h - 1 - y) * truth.w + x) * 4, b = (y * truth.w + x) * 4;
+      const za = (got[a] * 256 + got[a + 1]) / 65535 * SHOT.depthFar, zb = (truth.px[b] * 256 + truth.px[b + 1]) / 65535 * SHOT.depthFar; const e = Math.abs(za - zb); if (e > 0.01) bad++; if (e > worst) worst = e; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return bad === 0 ? 'same as the file' : `${bad} pixels differ, worst ${worst.toFixed(2)} m`;
+  };
+  const rows = [['Depth picture through the image decoder (itch build now)', texCheck(tex)], ['Depth picture read as bytes (the fix)', texCheck(tex2)]];
   // 2. plate depth written by the game's shader, then test people (vertical boards standing on the hall floor near its far end), drawn with depth test
   const truthZ = (u, v) => { const x = Math.min(truth.w - 1, Math.max(0, Math.floor(u * truth.w))), y = Math.min(truth.h - 1, Math.max(0, Math.floor(v * truth.h))), i = (y * truth.w + x) * 4; return (truth.px[i] * 256 + truth.px[i + 1]) / 65535 * SHOT.depthFar; };
   const boards = []; for (const by of [6.5, 7.2, 7.8, 8.1]) for (let bx = -1.0; bx <= 1.0001; bx += 0.5) boards.push([bx, by]);
@@ -88,13 +100,13 @@ in vec3 p; uniform mat4 uPV; void main() { gl_Position = uPV * vec4(p, 1.0); }`;
 precision highp float; out vec4 o; void main() { o = vec4(1.0, 0.0, 0.0, 1.0); }`);
   const tri = []; for (const [bx, by] of boards) { const x0 = bx - 0.2, x1 = bx + 0.2, z = -by; tri.push(x0, 0, z, x1, 0, z, x0, 1.8, z, x1, 0, z, x1, 1.8, z, x0, 1.8, z); }
   const bbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bbuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(tri), gl.STATIC_DRAW);
-  const cases = [['game now', 0.1, gamePrec], ['near plane 0.25', 0.25, gamePrec], ['as mediump, near 0.1', 0.1, 'mediump'], ['as mediump, near 0.25', 0.25, 'mediump']];
+  const cases = [['itch build now', 0.1, gamePrec, tex], ['the fix: bytes read directly', 0.1, gamePrec, tex2], ['fix, as mediump', 0.1, 'mediump', tex2]];
   let verdict = '';
-  for (const [name, near, prec] of cases) {
+  for (const [name, near, prec, tx] of cases) {
     const pp = prog(gl, VQ, GLSL1(prec) + FRAG);
     gl.viewport(0, 0, BW, BH); gl.clearColor(0, 0, 0, 1); gl.clearDepth(1); gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.depthFunc(gl.ALWAYS); gl.useProgram(pp); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.depthFunc(gl.ALWAYS); gl.useProgram(pp); gl.bindTexture(gl.TEXTURE_2D, tx);
     gl.uniform1i(gl.getUniformLocation(pp, 'uDepth'), 0); gl.uniform1f(gl.getUniformLocation(pp, 'uNear'), near); gl.uniform1f(gl.getUniformLocation(pp, 'uFar'), FAR); gl.uniform1f(gl.getUniformLocation(pp, 'uDepthFar'), SHOT.depthFar);
     gl.bindBuffer(gl.ARRAY_BUFFER, quad); loc = gl.getAttribLocation(pp, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // projection x view, column-major
@@ -115,7 +127,8 @@ precision highp float; out vec4 o; void main() { o = vec4(1.0, 0.0, 0.0, 1.0); }
       want++; const k = ((BH - 1 - Math.floor(s * BH)) * BW + Math.floor(u * BW)) * 4;
       if (px[k] < 128) { lost++; lostH[Math.min(5, Math.floor(w[1] / 0.3))]++; } }
     rows.push([`${name} (${prec})`, `${lost} of ${want} board points hidden wrongly` + (lost ? ` · by height 0-1.8 m: ${lostH.join(' ')}` : '')]);
-    if (name === 'game now') verdict = lost ? `FAIL: this chip hides ${lost} of ${want} points the depth picture says show.` : `PASS: this chip draws every point that should show (${want}).`;
+    if (name === 'itch build now') verdict = (lost ? `Itch build now: FAIL, ${lost} of ${want} points hidden wrongly.` : `Itch build now: PASS (${want} points).`);
+    if (name === 'the fix: bytes read directly') verdict += lost ? ` The fix: FAIL, ${lost} of ${want}.` : ` The fix: PASS, all ${want} points drawn.`;
   }
   document.getElementById('v').textContent = verdict;
   document.getElementById('t').innerHTML = rows.map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
