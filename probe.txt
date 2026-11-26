@@ -1,0 +1,9 @@
+entry 0: step0/probe_walk_turn.cjs sha aae1cf0
+PASS corridor straight | {"x":-0.16,"y":8.76,"scene":"walk","frames":120,"shot":"wings","ok":true}
+PASS pole | {"x":-0.47,"y":8.76,"scene":"walk","frames":62,"shot":"wings","ok":true}
+FAIL entrance pocket | {"x":-2.69,"y":16.51,"scene":"walk","frames":401,"shot":"entrance","ok":false}
+INFO wings crates A (screen left, to the corridor): start moved from 2.98, 9.97 to the nearest walkable point 2.232, 9.838
+PASS wings crates A (screen left, to the corridor) | {"x":2.18,"y":9.85,"scene":"walk","frames":3,"shot":"wings","ok":true}
+errors 0 []
+RESULT walk turn 3 of 4 pass
+exit 0, 88 s
