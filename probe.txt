@@ -1,0 +1,15 @@
+entry 6: step0/probe_land_free.cjs sha 9f70fb6
+PASS pratfall at (-2.18, cable): lands on walkable floor | {"x":-1.53,"y":12,"ok":true}
+PASS pratfall at (-2.18, cable): he can walk away after it | {"ArrowUp":0.16,"ArrowDown":0.18,"ArrowLeft":0.18,"ArrowRight":0.16}
+PASS pratfall at (-2.18, cable): no page errors | []
+PASS pratfall at (-1.9, cable): lands on walkable floor | {"x":-1.55,"y":12,"ok":true}
+PASS pratfall at (-1.9, cable): he can walk away after it | {"ArrowUp":0.16,"ArrowDown":0.16,"ArrowLeft":0.18,"ArrowRight":0.2}
+PASS pratfall at (-1.9, cable): no page errors | []
+PASS pratfall at (0.4, cable): lands on walkable floor | {"x":0.4,"y":12,"ok":true}
+PASS pratfall at (0.4, cable): he can walk away after it | {"ArrowUp":0.16,"ArrowDown":0.18,"ArrowLeft":0.18,"ArrowRight":0.2}
+PASS pratfall at (0.4, cable): no page errors | []
+FAIL trip at (-2.66, 16.48): lands on walkable floor | {"x":-2.66,"y":16.48,"ok":false}
+FAIL trip at (-2.66, 16.48): he can walk away after it | {"ArrowUp":0,"ArrowDown":0,"ArrowLeft":0,"ArrowRight":0}
+PASS trip at (-2.66, 16.48): no page errors | []
+RESULT land free 10 of 12 pass
+exit 1, 548 s
