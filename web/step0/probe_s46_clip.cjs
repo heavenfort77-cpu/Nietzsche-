@@ -74,7 +74,10 @@ const MEASURE = async (shot) => {
     if (!f.root.visible) { out.push({ name: f.name, hidden: true }); continue; }
     const A = read(); f.root.visible = false; const B = read(); f.root.visible = true;
     // the same with the plate writing no depth: the figure's own outline in this pose, nothing of the set over it
+    // (other figures off too, so one standing in front of it is not counted as the set)
+    const others = figs.filter((g) => g !== f && g.root.visible); others.forEach((g) => { g.root.visible = false; });
     W.plateMat.depthWrite = false; const A2 = read(); f.root.visible = false; const B2 = read(); f.root.visible = true; W.plateMat.depthWrite = true;
+    others.forEach((g) => { g.root.visible = true; });
     const pj = (hh, dx) => { const p = new V(f.x + (dx || 0), hh, -f.y); const vz = -p.clone().applyMatrix4(cam.matrixWorldInverse).z; p.project(cam); return { u: p.x * 0.5 + 0.5, v: 0.5 - p.y * 0.5, vz }; };
     const bands = [];
     for (let k = 0; k < 8; k++) {
