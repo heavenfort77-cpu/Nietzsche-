@@ -43,9 +43,9 @@ const SPOTS = [{ n: 'corridor straight', x: 0, y: 2.4, key: 'KeyW', goal: (p) =>
   await toCorridor(pg);
   for (const s of SPOTS) {
     // session 46 (F52, crew radii from the bodies; rule 18, the game changed on purpose): the start is the walkable point nearest the spot
-    // (the game's own free(), out to 2 m; the old spot can be closed off by the larger circles), so a spot now inside a member's circle starts at the edge of the same pocket
+    // (the game's own free() with him already at the spot, as the cable rule reads his side of it; out to 2 m; the old spot can be closed off by the larger circles), so a spot now inside a member's circle starts at the edge of the same pocket
     if (s.fall) await pg.evaluate(() => { window.__night.NS.verbs.fall = true; });
-    const [sx, sy] = await pg.evaluate(`((x, y) => { const f = window.__walkTest.free; for (let r = 0; r <= 2.0001; r += 0.02) for (let a = 0; a < 72; a++) { const px = x + r * Math.cos(a * Math.PI / 36), py = y + r * Math.sin(a * Math.PI / 36); if (f(px, py)) return [+px.toFixed(3), +py.toFixed(3)]; } return [x, y]; })(${s.x}, ${s.y})`);
+    const [sx, sy] = await pg.evaluate(`((x, y) => { const f = window.__walkTest.free, S = window.__night.S; S.x = x; S.y = y; for (let r = 0; r <= 2.0001; r += 0.02) for (let a = 0; a < 72; a++) { const px = x + r * Math.cos(a * Math.PI / 36), py = y + r * Math.sin(a * Math.PI / 36); if (f(px, py)) return [+px.toFixed(3), +py.toFixed(3)]; } return [x, y]; })(${s.x}, ${s.y})`);
     if (sx !== s.x || sy !== s.y) console.log(`INFO ${s.n}: start moved from ${s.x}, ${s.y} to the nearest walkable point ${sx}, ${sy}`);
     await pg.evaluate((s) => { const N = window.__night; N.S.x = s.x; N.S.y = s.y; if (s.fall) N.NS.verbs.fall = true; }, { x: sx, y: sy, fall: !!s.fall });
     await pg.waitForTimeout(1500);
