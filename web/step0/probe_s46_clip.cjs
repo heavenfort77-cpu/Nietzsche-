@@ -3,8 +3,8 @@
 // drawn (clown, crew, wings performers), per height band (8 bands, feet to head), pixels it changes when drawn in flat magenta
 // (scene.overrideMaterial, so dark shoes on a dark floor still count), against what that shot's depth plate says shows (plate depth at
 // the band's centre column, decoded here from the PNG, farther than the figure by more than 0.1 m, and within 1.5 plate pixels).
-// FAIL when the plate says a band shows and the figure changes no pixel there (clipped), or a figure is cut where the plate says hidden
-// by less than 0.1 m both ways (left out). Crew and performers are measured at the shot's first spot.
+// FAIL (clipped) when the plate says a band shows and the figure draws under half the pixels it draws there with the plate writing no
+// depth (its own outline in its pose). Crew and performers are measured at the shot's first spot.
 // SCREEN=desk (1280x720) or land (866x400, dpr 2.7), default both. BUNDLE=1: the single-file build. Ends with RESULT s46 clip n of m pass.
 const path = require('path'), http = require('http'), fs = require('fs'), zlib = require('zlib'), cp = require('child_process');
 const pw = require(path.join(__dirname, '..', 'node_modules', 'playwright-core'));
@@ -73,16 +73,19 @@ const MEASURE = async (shot) => {
   for (const f of figs) {
     if (!f.root.visible) { out.push({ name: f.name, hidden: true }); continue; }
     const A = read(); f.root.visible = false; const B = read(); f.root.visible = true;
+    // the same with the plate writing no depth: the figure's own outline in this pose, nothing of the set over it
+    W.plateMat.depthWrite = false; const A2 = read(); f.root.visible = false; const B2 = read(); f.root.visible = true; W.plateMat.depthWrite = true;
     const pj = (hh, dx) => { const p = new V(f.x + (dx || 0), hh, -f.y); const vz = -p.clone().applyMatrix4(cam.matrixWorldInverse).z; p.project(cam); return { u: p.x * 0.5 + 0.5, v: 0.5 - p.y * 0.5, vz }; };
     const bands = [];
     for (let k = 0; k < 8; k++) {
       const h0 = f.h * k / 8, h1 = f.h * (k + 1) / 8, lo = pj(h0), hi = pj(h1), mid = pj((h0 + h1) / 2), side = pj((h0 + h1) / 2, 0.35);
       const half = Math.max(2, Math.abs(side.u - mid.u) * bw), cx = mid.u * bw;
       const r0 = Math.max(0, Math.floor(hi.v * bh)), r1 = Math.min(bh - 1, Math.ceil(lo.v * bh)), c0 = Math.max(0, Math.floor(cx - half)), c1 = Math.min(bw - 1, Math.ceil(cx + half));
-      let n = 0;
+      let n = 0, a = 0;
       for (let y = r0; y <= r1; y++) { const ry = bh - 1 - y; for (let x = c0; x <= c1; x++) { const i = (ry * bw + x) * 4;
-        if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 12) n++; } }
-      bands.push({ k, n, u: +mid.u.toFixed(4), v: +((hi.v + lo.v) / 2).toFixed(4), vz: +mid.vz.toFixed(2), onScreen: mid.u > 0.01 && mid.u < 0.99 && mid.v > 0.01 && mid.v < 0.99 });
+        if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 12) n++;
+        if (Math.abs(A2[i] - B2[i]) + Math.abs(A2[i + 1] - B2[i + 1]) + Math.abs(A2[i + 2] - B2[i + 2]) > 12) a++; } }
+      bands.push({ k, n, a, u: +mid.u.toFixed(4), v: +((hi.v + lo.v) / 2).toFixed(4), vz: +mid.vz.toFixed(2), onScreen: mid.u > 0.01 && mid.u < 0.99 && mid.v > 0.01 && mid.v < 0.99 });
     }
     out.push({ name: f.name, x: +f.x.toFixed(2), y: +f.y.toFixed(2), h: +f.h.toFixed(2), bands });
   }
@@ -119,8 +122,9 @@ const SCREENS = { desk: { viewport: { width: 1280, height: 720 }, deviceScaleFac
           if (f.name !== 'clown' && si !== 0) continue;
           const pz = f.bands.map((bd) => plateZ(dp, bd.u, bd.v));
           const want = f.bands.map((bd, i) => bd.onScreen && pz[i] > bd.vz + 0.1);
-          const lost = f.bands.filter((bd, i) => want[i] && bd.n === 0).map((bd) => bd.k);
-          const info = { at: [f.x, f.y], lost, px: f.bands.map((bd) => bd.n), want: want.map((w) => (w ? 1 : 0)).join(''), plateZ: pz.map((z) => +z.toFixed(2)), figZ: f.bands.map((bd) => bd.vz) };
+          // clipped: the plate says the band shows, the figure has pixels there with no set over it, and under half of them are drawn
+          const lost = f.bands.filter((bd, i) => want[i] && bd.a > 0 && bd.n < bd.a / 2).map((bd) => bd.k);
+          const info = { at: [f.x, f.y], lost, px: f.bands.map((bd) => bd.n), alone: f.bands.map((bd) => bd.a), want: want.map((w) => (w ? 1 : 0)).join(''), plateZ: pz.map((z) => +z.toFixed(2)), figZ: f.bands.map((bd) => bd.vz) };
           if (!want.some((w) => w)) { console.log(`INFO ${sc} ${shot} ${f.name} hidden by the set in this shot | ${JSON.stringify(info)}`); continue; }
           report(lost.length === 0, `${sc} ${shot} ${f.name}${f.name === 'clown' ? ' at ' + s : ''}: no band the plate shows is clipped (band 0 = feet)`, info);
         }
