@@ -18,7 +18,7 @@ let pass = 0, all = 0;
 const report = (ok, name, info) => { all++; if (ok) pass++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name} | ${JSON.stringify(info)}`); };
 // is (x, y) walkable by the game's own data (walk rects; obstacles grown by the clown radius; crew circles)
 const WALKABLE = `(x, y) => { const S = window.__night.S, r = ${CLOWN_R}, ins = (q, m) => x >= q[0] + m && x <= q[2] - m && y >= q[1] + m && y <= q[3] - m;
-  return S.data.walk.some((q) => ins(q, 0)) && !S.data.obstacles.some((q) => ins(q, -r)) && !window.__night.crew.some((c) => Math.hypot(x - c.x, y - c.y) < r + window.__night.N1.crewR); }`;
+  return S.data.walk.some((q) => ins(q, 0)) && !S.data.obstacles.some((q) => ins(q, -r)) && !window.__night.crew.some((c) => Math.hypot(x - c.x, y - c.y) < r + (window.__night.N1.crewRs[c.cd.id] ?? window.__night.N1.crewR)); }`;
 async function toCorridor(pg) {
   await pg.waitForFunction(() => !!window.__night, null, { timeout: 180000 });
   const click = async (re) => { await pg.waitForFunction((s) => [...document.querySelectorAll('button')].some((b) => new RegExp(s).test(b.innerText) && b.offsetParent), re.source, { timeout: 120000 }); await pg.evaluate((s) => [...document.querySelectorAll('button')].find((b) => new RegExp(s).test(b.innerText) && b.offsetParent).click(), re.source); };

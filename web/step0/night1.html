@@ -622,8 +622,8 @@ const CONFIG = Object.freeze({
   near: 0.1, far: 60,
   // clown collision radius, metres (walk areas in shots.json are already inset by it from the walls)
   clownR: 0.3,
-  // performer collision radius, metres
-  performerR: 0.35,
+  // performer collision radius, metres (F52, session 46: 0.35 let the clown's body touch the whiteface's; apart 0.72 m in run 45, plus 0.05 m)
+  performerR: 0.47,
   // how fast characters turn to face their way, radians per second
   turnRate: 10,
   // walk speed used if the walk clip cannot be measured, metres per second
@@ -879,6 +879,9 @@ const N1 = Object.freeze({
   walkSlideMin: 0.2,
   // crew collision radius, metres; verb reach from the member (or its anchor), metres; how long the child's words stay, s
   crewR: 0.35, verbDist: 1.5, saidSecs: 3,
+  // F52 (session 46): collision radius per crew member, metres (beats crewR): the clown's and the member's posed bodies touch nowhere at
+  // clownR + this; measured by probe_s46_touch.cjs (run 45: apart 0.72 / 1.02 / 0.82 / 0.72 / 0.67 m) plus 0.05 m for his walk swing
+  crewRs: { stagehand: 0.47, rigger: 0.77, props_girl: 0.57, strongman: 0.47, child: 0.42 },
   // the rigger's floor cable across the wings (Blender y, metres; owner 22 Nov 15:58: in the corridor shot "the player sees nothing", the wings camera films it side-on),
   // its x span over the walk area, its half thickness for the block; the verb shows within cableReach in front of it, anywhere along it
   cableY: 11.3, cableX: [-2.2, 3.0], cableGap: 0.34, cableReach: 1.4,
@@ -1918,6 +1921,7 @@ function landX(x, y) {
   for (let d = 0; d <= 3; d += 0.05) { if (free(x - d, y)) return x - d; if (free(x + d, y)) return x + d; }
   return x;
 }
+function crewRadius(m) { const r = N1.crewRs[m.cd.id]; return r === undefined ? N1.crewR : r; }
 function free(x, y) {
   const walk = S.data.walk, obs = S.data.obstacles;
   let ok = false;
@@ -1925,7 +1929,7 @@ function free(x, y) {
   if (!ok) return false;
   for (let i = 0; i < obs.length; i++) if (inRect(obs[i], x, y, -CONFIG.clownR)) return false;
   for (let i = 0; i < performers.length; i++) if (Math.hypot(x - performers[i].x, y - performers[i].y) < CONFIG.clownR + CONFIG.performerR) return false;
-  for (let i = 0; i < crew.length; i++) if (Math.hypot(x - crew[i].x, y - crew[i].y) < CONFIG.clownR + N1.crewR) return false;
+  for (let i = 0; i < crew.length; i++) if (Math.hypot(x - crew[i].x, y - crew[i].y) < CONFIG.clownR + crewRadius(crew[i])) return false;
   // the cable blocks the wings on the walk out until his pratfall over it
   if (!S.back && !NS.verbs.fall && S.y < N1.cableY && y > N1.cableY - N1.cableGap) return false;
   return true;

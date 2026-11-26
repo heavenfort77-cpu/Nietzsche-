@@ -53,7 +53,7 @@ const TOUCH = async () => {
   const settle = (ms) => new Promise((r) => setTimeout(r, ms));
   const clown = N.chars.clown.root;
   const res = [];
-  const others = N.crew.map((m) => ({ name: m.cd.id, root: m.root, x: m.x, y: m.y, r: N.N1 ? N.N1.crewR : 0.35 }))
+  const others = N.crew.map((m) => ({ name: m.cd.id, root: m.root, x: m.x, y: m.y, r: N.N1.crewRs[m.cd.id] ?? N.N1.crewR }))
     .concat(W.performers.map((p) => ({ name: 'performer ' + p.c.name, root: p.c.root, x: p.x, y: p.y, r: W.CONFIG.performerR })));
   const cR = W.CONFIG.clownR;
   for (const o of others) {
