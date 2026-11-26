@@ -1,0 +1,8 @@
+entry 5: step0/probe_walk_turn.cjs sha 9f70fb6
+PASS corridor straight | {"x":-0.16,"y":8.76,"scene":"walk","frames":120,"shot":"wings","ok":true}
+PASS pole | {"x":-0.48,"y":8.72,"scene":"walk","frames":64,"shot":"wings","ok":true}
+FAIL entrance pocket | {"x":-2.69,"y":16.51,"scene":"walk","frames":401,"shot":"entrance","ok":false}
+FAIL wings crates A (screen left, to the corridor) | {"x":2.98,"y":9.97,"scene":"walk","frames":401,"shot":"wings","ok":false}
+errors 0 []
+RESULT walk turn 2 of 4 pass
+exit 0, 125 s
