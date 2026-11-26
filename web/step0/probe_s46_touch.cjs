@@ -67,6 +67,19 @@ const TOUCH = async () => {
       for (const c of A.set) if (B.set.has(c)) { shared++; const [i, j, k] = c.split(',').map(Number); cx += i; cy += j; cz += k; }
       row.dirs.push({ d, shared, where: shared ? [+(cx / shared * CELL).toFixed(2), +(cy / shared * CELL).toFixed(2), +(-cz / shared * CELL).toFixed(2)] : null, shown: shown(o.root) });
     }
+    // how far apart they must stand to touch nowhere: per direction, the distance from 0 to 1 m past contact in 0.05 m steps (walkable or not)
+    row.need = 0;
+    for (let d = 0; d < 8; d++) {
+      const a = d * Math.PI / 4;
+      for (let dist = cR + o.r + 0.02; dist < cR + o.r + 1.05; dist += 0.05) {
+        const x = o.x + Math.cos(a) * dist, y = o.y + Math.sin(a) * dist;
+        S.x = x; S.y = y; S.yaw = Math.atan2(o.x - x, -(o.y - y)); await settle(700); S.x = x; S.y = y; S.yaw = Math.atan2(o.x - x, -(o.y - y)); await settle(150);
+        W.renderFrame();
+        const A = cells(clown), B = cells(o.root); let shared = 0; for (const c of A.set) if (B.set.has(c)) { shared++; break; }
+        if (!shared) { row.need = Math.max(row.need, dist); break; }
+      }
+    }
+    row.need = +row.need.toFixed(2);
     res.push(row);
   }
   // obstacles: his surface below 0.5 m inside the rectangle, standing at each side's middle as close as the walk allows
@@ -97,7 +110,7 @@ const TOUCH = async () => {
   const t = await pg.evaluate(TOUCH);
   for (const r of t.res) {
     const hit = r.dirs.filter((d) => d.shared > 0);
-    report(hit.length === 0, `the clown at the closest walkable spot to ${r.name} does not pass into it (8 directions)`, { at: r.at, hits: hit, walkable: r.dirs.filter((d) => !d.skip).length });
+    report(hit.length === 0, `the clown at the closest walkable spot to ${r.name} does not pass into it (8 directions)`, { at: r.at, hits: hit, walkable: r.dirs.filter((d) => !d.skip).length, apartNeeded: r.need });
   }
   for (const o of t.obs) {
     const hit = o.sides.filter((s) => s.inside > 0);
