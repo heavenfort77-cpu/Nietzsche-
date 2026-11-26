@@ -297,7 +297,7 @@ New session after 3 batch commits, after any context summary, or when the owner 
 
 ## Next step
 
-Session 46 batch 2 (F52, owner 27 Nov 06:37, a player's screenshot of the clown inside the stagehand's coat): per-member crew radii `N1.crewRs` and `performerR` 0.47 from `probe_s46_touch.cjs` (backup /tmp/night1_before_s46b2.html). Proof runs on `wip/s46-b2` before main.
+Session 46 batch 2 (F52, owner 27 Nov 06:37, a player's screenshot of the clown inside the stagehand's coat): per-member crew radii `N1.crewRs` and `performerR` 0.47 from `probe_s46_touch.cjs` (backup /tmp/night1_before_s46b2.html). Proof: runs 46 and 50 (FAULTS.md F52). Itch zip `clown_s46_ca6d9d5_itch.zip` sent 27 Nov. Not swept for touching: the Mirror World and the ring (other scenes).
 
 Session 46, 27 Nov (owner 06:23: "check the game only and fix only clipping issue"): clipping sweep `web/step0/probe_s46_clip.cjs` (all three walk shots, clown at three spots each, all crew and wings performers, desk, land, single file): probe run 43 (cdbef5f) 17 of 17 on each; no clipping by the set left on the runners after F51. The strongman feet item below is closed (the clown stood in front of him). Not in this sweep: the cube room views and the Mirror World. Owner still to confirm F51 on his phone (itch zip of db8f5f1).
 
