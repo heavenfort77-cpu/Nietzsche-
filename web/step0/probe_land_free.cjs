@@ -37,12 +37,15 @@ async function toCorridor(pg) {
 (async () => {
   await new Promise((r) => srv.listen(0, r));
   const b = await pw.chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
-  for (const cs of CASES) {
+  for (const cs0 of CASES) {
+    let cs = cs0;
     const x = cs.x, name = `${cs.verb.toLowerCase()} at (${x}, ${cs.y === null ? 'cable' : cs.y})`;
     const pg = await b.newPage({ viewport: { width: 1280, height: 720 } });
     const errs = []; pg.on('pageerror', (e) => errs.push(String(e)));
     await pg.goto(`http://127.0.0.1:${srv.address().port}/${PAGE}`);
     await toCorridor(pg);
+    // session 46 (F52, crew radii from the bodies; rule 18): a fixed spot now inside a member's circle starts at the nearest walkable point (out to 1 m)
+    if (cs.y !== null) { const [sx, sy] = await pg.evaluate(`((x, y) => { const f = window.__walkTest.free; for (let r = 0; r <= 1.0001; r += 0.02) for (let a = 0; a < 72; a++) { const px = x + r * Math.cos(a * Math.PI / 36), py = y + r * Math.sin(a * Math.PI / 36); if (f(px, py)) return [+px.toFixed(3), +py.toFixed(3)]; } return [x, y]; })(${cs.x}, ${cs.y})`); if (sx !== cs.x || sy !== cs.y) { console.log(`INFO ${name}: start moved to the nearest walkable point ${sx}, ${sy}`); cs = { ...cs, x: sx, y: sy }; } }
     // in front of the cable at x (the cold player's spot was x -2.18, y 10.16); the rigger's pratfall prompt shows there
     const y = await pg.evaluate((c) => { const N = window.__night; N.S.x = c.x; N.S.y = c.y === null ? N.N1.cableY - 0.9 : c.y; return N.S.y; }, cs);
     // a short step so the walk cuts to this spot's shot (crew unseen in the old shot are hidden and offer no prompt), then back to the spot
