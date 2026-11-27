@@ -1,0 +1,24 @@
+entry 2: step0/probe_s44_escape.cjs sha 78541d6
+PASS route has the photograph room | {"route":["corridor","photo","ring"],"leg":1}
+PASS E1/X5: the way out is open on entry and the line says "Get out" | {"space":"photo","open":true,"door":[3.1,-49],"guard":"stare","guardD":1.6,"want":1.6,"doorShown":false,"tip":"Get out: the pale door."}
+PASS X4: a figure stands in front of the way out | {"space":"photo","open":true,"door":[3.1,-49],"guard":"stare","guardD":1.6,"want":1.6,"doorShown":false,"tip":"Get out: the pale door."}
+PASS X3/E1: a gag does not beat it: it is held, alive, unhurt | {"k":"whisper","hp":4,"hpNow":4,"alive":true,"held":2}
+PASS X3: it is knocked over (tipped back) | {"tip":-1.22,"alive":true}
+PASS X3: it gets up and comes again | {"tip":0,"alive":true,"held":0,"inScene":true}
+PASS E1: out of the room with its figures standing, the space pays | {"glass":4,"want":4}
+PASS E1/X4: the arena has a pale door, a figure in front of it | {"space":"ring","open":false,"door":[0,-6.9],"guard":"stare","guardD":1.6,"want":1.6,"doorShown":true,"tip":"Get out: the pale door."}
+PASS E1: through the arena door with them still standing, he is out and keeps two spaces' pay | {"over":"win","kept":8,"want":8,"alive":2}
+PASS E1: the end card says he got out and they followed him | "Mirror: got out in 4 s; met stare, whisper, light; they followed him out; Laughs left 887 Shop: nothing bought; shards left 8; Mask 0"
+PASS night 1: no page errors | []
+PASS last night: in the arena | {"route":["corridor","photo","ring"],"leg":2}
+PASS E2/X2: the door leads back into the ring, the Performer nearer each time, the door behind it | [{"over":"","returns":1,"perf":true,"d":6,"doorBehind":true},{"over":"","returns":2,"perf":true,"d":4.5,"doorBehind":true}]
+PASS X1a: he stands, his Laughs run out, the Performer walks up and its touch starts the ending (not a loss) | {"over":"ending","result":"ending","up":true}
+PASS last night (stand): no page errors | []
+PASS cap: after the third return the Performer walks up even while he moves | {"returns":3,"up":true,"over":"","still":0}
+PASS last night (cap): no page errors | []
+PASS night 2: his thought after the child is the night's own line | {"text":"Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is \"me\".","night":2,"want":"Night after night, as I fall, the line between me and the clown blurs till I am no longer sure who is \"me\"."}
+PASS night 2 thought: no page errors | []
+PASS night 1: his thought after the child is the night's own line | {"text":"I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself.","night":1,"want":"I do it to feel I belong. But when the act ends, whether it went well or not, I always feel I have lost a part of myself."}
+PASS night 1 thought: no page errors | []
+RESULT s44 escape 21 of 21 pass
+exit 0, 110 s
