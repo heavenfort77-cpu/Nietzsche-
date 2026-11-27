@@ -79,9 +79,9 @@ const TOUCH = async (kinds) => {
       }
       row.need = +row.need.toFixed(2);
       if (kind === 'shame' || kind === 'weigher') {
-        hold(1.4, 0); f.x = 0; f.z = 0; let secs = 0, hit = false;
-        for (let i = 0; i < 250 && !hit; i++) { M.laughs = 900; M.over = ''; N.stepFrame(1 / 60); secs += 1 / 60; hit = kind === 'shame' ? !!f.cling : f.ph === 1; }
-        row.engage = { hit, secs: +secs.toFixed(2), apart: +Math.hypot(M.x - f.x, M.z - f.z).toFixed(2) };
+        hold(1.4, 0); f.x = 0; f.z = 0; let secs = 0, hit = false, minD = 9;
+        for (let i = 0; i < 250 && !hit; i++) { M.laughs = 900; M.over = ''; N.stepFrame(1 / 60); secs += 1 / 60; hit = kind === 'shame' ? !!f.cling : f.ph === 1; minD = Math.min(minD, Math.hypot(M.x - f.x, M.z - f.z)); }
+        row.engage = { hit, secs: +secs.toFixed(2), minD: +minD.toFixed(3), ph: f.ph, reach: f.cfg.reach, grab: f.cfg.grab, apart: +Math.hypot(M.x - f.x, M.z - f.z).toFixed(2) };
       }
     } catch (e) { row.error = String(e && e.stack || e).slice(0, 300); }
     out.push(row);
