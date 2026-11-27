@@ -51,6 +51,7 @@ const TOUCH = async (kinds) => {
       for (const f of N.foes) { f.alive = false; f.root.visible = false; }
       N.foes.length = 0;
       M.space = 'ring'; M.cutting = false; M.over = ''; M.fall = null; M.tip = ''; M.tips.length = 0;
+      if (kind === 'performer') N.cast.performer = N.chars.performer.root;
       N.addFoe(kind);
       const f = N.foes[N.foes.length - 1];
       const hold = (x, z) => { M.laughs = 900; M.over = ''; M.x = x; M.z = z; M.yaw = Math.atan2(f.x - x, -(f.z - z)); f.x = 0; f.z = 0; f.cling = false; f.reach = 0; f.stun = 0; f.hold = ''; f.holdT = 0; f.ph = 0; f.phT = 0; f.alive = true; };
