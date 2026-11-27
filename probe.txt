@@ -1,0 +1,11 @@
+entry 1: BUNDLE=1 step0/probe_s47_mwtouch.cjs sha 78541d6
+wrote /home/runner/work/Nietzsche-/Nietzsche-/web/step0/_s47_bundle.html 31641 KB, 53 files packed
+PASS the clown walked into the whisper does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the clown walked into the stare does not pass into it (8 directions) | {"hits":[],"apartNeeded":1.05}
+PASS the clown walked into the shame does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the clown walked into the sergeant does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the clown walked into the weigher does not pass into it (8 directions) | {"hits":[],"apartNeeded":1.15}
+PASS the clown walked into the performer does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS no page errors | []
+RESULT s47 mwtouch 7 of 7 pass
+exit 0, 20 s
