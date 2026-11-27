@@ -1,0 +1,12 @@
+entry 0: MUT=oldreach step0/probe_s47_mwtouch.cjs sha af1c02c
+PASS the clown walked into the whisper does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the clown walked into the stare does not pass into it (8 directions) | {"hits":[],"apartNeeded":1.05}
+FAIL the shame still grabs on a clown standing still 1.4 m away | {"hit":false,"secs":4.17,"minD":0.835,"ph":0,"grab":0.8,"apart":0.83}
+PASS the clown walked into the shame does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the clown walked into the sergeant does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the weigher still rises on a clown standing still 1.4 m away | {"hit":true,"secs":3.45,"minD":1.083,"ph":1,"reach":1.1,"apart":1.08}
+PASS the clown walked into the weigher does not pass into it (8 directions) | {"hits":[],"apartNeeded":1.15}
+PASS the clown walked into the performer does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS no page errors | []
+RESULT s47 mwtouch 8 of 9 pass
+exit 0, 65 s
