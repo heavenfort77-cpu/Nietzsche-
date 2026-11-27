@@ -1,0 +1,13 @@
+entry 3: step0/probe_s43_driveoff.cjs sha 78541d6
+PASS route has the photograph room | {"route":["corridor","photo","ring"],"leg":1}
+PASS in the photograph room with its group | {"ok":true}
+PASS C1: a figure put down does not sink into the floor | [{"k":"stare","sink":0,"off":1.2},{"k":"whisper","sink":0,"off":1.2}]
+PASS C1: it walks away from him, on its feet | {"before":[{"k":"stare","d":5.011985634456671},{"k":"whisper","d":3.440930106817054}],"mid":[{"k":"stare","d":6.44,"y":0},{"k":"whisper","d":4.87,"y":0}]}
+PASS C1: no glass for putting them down (Glass 0 after the room opens) | {"glass":0,"open":true,"gone":[{"k":"stare","inScene":false},{"k":"whisper","inScene":false}]}
+PASS C1: driven off figures have left the space | [{"k":"stare","inScene":false},{"k":"whisper","inScene":false}]
+PASS C1: getting out of the room pays its glass, with the tip | {"glass":4,"want":4,"tip":"He got through. +4 glass. / ","tipWant":"He got through. +4 glass."}
+PASS C1: he comes out of the night and keeps two spaces' pay | {"over":"win","kept":8,"want":8}
+PASS C1: the end card says "driven off", not "beaten" | "Mirror: came out in 5 s; met stare, whisper, light, stare; driven off stare, whisper, stare; the Light put out; Laughs left 900 Shop: nothing bought; shards lef"
+PASS no page errors | []
+RESULT s43 driveoff 10 of 10 pass
+exit 0, 26 s
