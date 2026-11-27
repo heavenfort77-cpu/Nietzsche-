@@ -989,16 +989,24 @@ const N1 = Object.freeze({
   gnaw: { on: true, warn: 1.0, drain: 2, climb: 1, max: 8, vol: 0.05 },
   // F24: a stick drag this share of its radius or more is full speed (a phone thumb rarely drags the whole radius); walk and Mirror World
   stickFull: 0.35,
+  // F53 (session 47): the Mirror World had no stand-off between the clown and its figures: he walked into and through every one (probe_s47_mwtouch.cjs, control runs 51 and 53:
+  // 641 to 4,204 shared 0.025 m cells at 0.05 m apart, every direction, all six figures). On: he is stood off each figure by this distance, centre to centre, m. Each is the
+  // distance at which the posed bodies first touch nowhere (0.8 whisper, 1.0 stare, 0.8 shame, 0.8 sergeant, 1.1 weigher, 0.8 performer) plus 0.05 m for his walk swing.
+  // The Light is a lamp overhead and is not in it; a figure that clings (the Shame on his back) is the game's own contact and is left alone
+  mwApartOn: true,
+  mwApart: { whisper: 0.85, stare: 1.05, shame: 0.85, sergeant: 0.85, weigher: 1.15, performer: 0.85 },
   whisper: { h: 2.6, hp: 4, shards: 4, at: [-4, 2], speed: 0.8, keep: 2.5, tell: 0.4, strikeR: 1.0, strike: 8, near: 1.6, nearDrain: 1 },
   stare: { h: 1.1, hp: 4, shards: 4, at: [4, 1], turn: 35, cone: 22, tell: 0.4, judge: 4, every: 1.0 },
-  shame: { h: 1.85, hp: 3, shards: 3, at: [0, 4], speed: 0.9, grab: 0.8, tell: 0.4, slow: 0.5, drain: 3, push: 2, stun: 1.0 },
+  // F53 (session 47): the Shame's grab distance is 0.87 (was 0.8) so it still grabs from outside mwApart.shame (0.85); the clown is stood off it, never inside it
+  shame: { h: 1.85, hp: 3, shards: 3, at: [0, 4], speed: 0.9, grab: 0.87, tell: 0.4, slow: 0.5, drain: 3, push: 2, stun: 1.0 },
   // ----- session 24 batch 2 (build plan 24.2; GDD monster table, pitch B rows): the Sergeant (soldier drill) and the Weigher (talking scale), box and shape -----
   // the Sergeant marches to a drum: one stride toward him on each beat (beat s, stride m); every `every` beats it shouts and marks a line on the floor for tell beats
   // (tell 2 x 0.6 = 1.2 s), then thrusts along it (len, width m): caught on the line costs strike Laughs. Gags landed within onBeat s of a drum beat are parried; between beats they land
   sergeant: { h: 2.1, hp: 4, shards: 4, at: [3.2, -1.5], beat: 0.6, stride: 0.32, every: 4, tell: 2, len: 3.2, width: 0.8, strike: 8, onBeat: 0.12, keep: 1.4 },
   // the Weigher slides toward him faster the more Laughs he holds (speed m/s x (lean + Laughs / ref), at most heavy); in reach m it rises for tell s, then if he is still within crushR m
   // it drops: crush + crushHeavy x (Laughs / ref) Laughs; rest s before the next weigh-in
-  weigher: { h: 1.4, hp: 5, shards: 4, at: [-3.2, -1.5], speed: 0.9, lean: 0.25, ref: 60, heavy: 1.6, reach: 1.1, tell: 0.6, crushR: 1.2, crush: 4, crushHeavy: 8, rest: 1.0 },
+  // F53 (session 47): reach 1.17 (was 1.1) so it still rises from outside mwApart.weigher (1.15), where the clown is now stood off it
+  weigher: { h: 1.4, hp: 5, shards: 4, at: [-3.2, -1.5], speed: 0.9, lean: 0.25, ref: 60, heavy: 1.6, reach: 1.17, tell: 0.6, crushR: 1.2, crush: 4, crushHeavy: 8, rest: 1.0 },
   // their box-and-shape figures: ramp names (N1.ramps) for body, dark parts and the trim
   sergeantLook: { body: 'M_MID', dark: 'M_DARK', trim: 'CRIMSON', hat: 'BLACK', plume: 'PAINT' },
   weigherLook: { body: 'SILVER', dark: 'M_DARK', dial: 'PAINT', needle: 'CRIMSON' },
@@ -5560,6 +5568,16 @@ function mwFall(M, c, dt) {
     w.tell = w.cfg.tell; w.tx = M.x; w.tz = M.z; pool.ring.position.set(w.tx, 0.03, w.tz); mwScene.add(pool.ring);
   }
 }
+// F53: the clown stood off every figure in the space by its mwApart distance; before the walls, so he never leaves the room (a figure against a wall can still touch him there)
+function mwApart(M) {
+  for (let i = 0; i < foes.length; i++) {
+    const f = foes[i], r = N1.mwApart[f.kind];
+    if (!r || !f.alive || f.gone || f.cling) continue;
+    const dx = M.x - f.x, dz = M.z - f.z, d = Math.hypot(dx, dz);
+    if (d >= r) continue;
+    if (d > 0.001) { M.x = f.x + dx / d * r; M.z = f.z + dz / d * r; } else M.z = f.z + r;
+  }
+}
 function mwClown(M, dt) {
   const c = chars.clown;
   const ix = input.tx || input.kx, iy = input.ty || input.ky, raw = Math.min(1, Math.hypot(ix, iy)), mag = raw > CONFIG.deadzone ? stickCurve(raw) : raw;
@@ -5573,6 +5591,7 @@ function mwClown(M, dt) {
     M.x += ix / n * sp * dt; M.z -= iy / n * sp * dt;
     M.yaw = turnToward(M.yaw, Math.atan2(ix / n, -iy / n), CONFIG.turnRate, dt);
   }
+  if (N1.mwApartOn) mwApart(M);
   if (M.space === 'corridor') {
     M.x = THREE.MathUtils.clamp(M.x, -N1.mwCorX, N1.mwCorX); M.z = THREE.MathUtils.clamp(M.z, N1.mwCorZ[1], N1.mwCorZ[0]);
     if (M.z <= N1.mwCorDoor && !M.cutting) { if (mwGroupLeft(M)) M.z = N1.mwCorDoor + 0.01; else mwCut(); }

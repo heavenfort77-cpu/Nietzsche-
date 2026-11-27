@@ -1,7 +1,7 @@
 # Handoff (live state)
 
-Session start: e249970 (2026-11-25)
-Session: 46
+Session start: 3cd3a65 (2026-11-27)
+Session: 47
 
 Owner requirements: `OWNER-REQUIREMENTS.md` (handoff, density with frame rate, natural movement). Rules, design and history: Project doc `claude/START-HERE.md`; where they differ, `OWNER-REQUIREMENTS.md` section 6 (checks only every 5th session) and section 7 (zoom in / zoom out framings and the 2.5D methods: cube room, fixed-camera rooms, Mirror World turning camera) win (owner, 22 Nov: START-HERE.md cannot be edited from his side). This file is only the live state. Update it in every "Batch " commit (CI gate `tools/check_handoff.sh`).
 
