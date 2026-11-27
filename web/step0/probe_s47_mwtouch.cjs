@@ -78,15 +78,21 @@ const TOUCH = async (kinds) => {
 (async () => {
   await new Promise((r) => srv.listen(0, r));
   const b = await pw.chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
-  const pg = await b.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-  const errs = []; pg.on('pageerror', (e) => errs.push(String(e)));
-  await pg.goto(`http://127.0.0.1:${srv.address().port}/${PAGE}`);
-  await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 300000 });
-  const rows = await pg.evaluate(TOUCH, ['whisper', 'stare', 'shame', 'sergeant', 'weigher', 'performer']);
-  for (const r of rows) {
-    if (r.error) { report(false, `the clown walked into the ${r.kind} does not pass into it`, { error: r.error }); continue; }
-    const hit = r.dirs.filter((d) => d.walkedInShared > 0);
-    report(hit.length === 0, `the clown walked into the ${r.kind} does not pass into it (8 directions)`, { hits: hit.map((d) => ({ d: d.d, shared: d.walkedInShared, stoppedAt: d.stoppedAt })), apartNeeded: r.need });
+  const errs = [];
+  // the Performer is loaded only on the last night (the run hash of probe_s44_escape.cjs)
+  const LAST = '#n=3&m=6&s=60&b=&t=sweep.scale.drill&lo=1';
+  for (const [hash, kinds] of [['', ['whisper', 'stare', 'shame', 'sergeant', 'weigher']], [LAST, ['performer']]]) {
+    const pg = await b.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    pg.on('pageerror', (e) => errs.push(String(e)));
+    await pg.goto(`http://127.0.0.1:${srv.address().port}/${PAGE}${hash}`); if (hash) await pg.reload();
+    await pg.waitForFunction(() => window.__night && window.__night.S.ready, null, { timeout: 300000 });
+    const rows = await pg.evaluate(TOUCH, kinds);
+    for (const r of rows) {
+      if (r.error) { report(false, `the clown walked into the ${r.kind} does not pass into it`, { error: r.error }); continue; }
+      const hit = r.dirs.filter((d) => d.walkedInShared > 0);
+      report(hit.length === 0, `the clown walked into the ${r.kind} does not pass into it (8 directions)`, { hits: hit.map((d) => ({ d: d.d, shared: d.walkedInShared, stoppedAt: d.stoppedAt })), apartNeeded: r.need });
+    }
+    await pg.close();
   }
   report(errs.length === 0, 'no page errors', errs.slice(0, 2));
   console.log(`RESULT s47 mwtouch ${pass} of ${all} pass`);
