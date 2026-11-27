@@ -1,0 +1,12 @@
+entry 0: step0/probe_s47_mwtouch.cjs sha 7d7187b
+PASS the clown walked into the whisper does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the clown walked into the stare does not pass into it (8 directions) | {"hits":[],"apartNeeded":1.05}
+PASS the shame still grabs on a clown standing still 1.4 m away | {"hit":true,"secs":1.05,"apart":0.86}
+PASS the clown walked into the shame does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the clown walked into the sergeant does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS the weigher still rises on a clown standing still 1.4 m away | {"hit":true,"secs":0.2,"apart":1.15}
+PASS the clown walked into the weigher does not pass into it (8 directions) | {"hits":[],"apartNeeded":1.15}
+PASS the clown walked into the performer does not pass into it (8 directions) | {"hits":[],"apartNeeded":0.85}
+PASS no page errors | []
+RESULT s47 mwtouch 9 of 9 pass
+exit 0, 33 s
