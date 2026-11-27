@@ -4,6 +4,8 @@
 // and the surfaces of both bodies as drawn (skinned, posed, shown) are sampled every 0.02 m into 0.025 m cells. FAIL when any direction shares a cell
 // after the step (the game's own movement code decides where he ends up). Also the distance each direction needs before the bodies touch nowhere.
 // The Shame clinging on his back is the game's own contact (cling, 0.45 m behind him): not walked into here (f.cling held false).
+// Side effects (the same batch): with the clown standing still 1.4 m away, the Shame still grabs (cling) and the Weigher still rises (ph 1) within 4 s of game
+// time; MUT=oldreach serves the page with the old grab 0.8 and reach 1.1 (both steps must FAIL: the stand-off then holds them out of range).
 // BUNDLE=1: the single-file build. Ends with RESULT s47 mwtouch n of m pass.
 const path = require('path'), http = require('http'), fs = require('fs'), cp = require('child_process');
 const pw = require(path.join(__dirname, '..', 'node_modules', 'playwright-core'));
@@ -17,7 +19,13 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
 const srv = http.createServer((q, r) => {
   const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); r.end(); return; }
-  r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); r.end(fs.readFileSync(f));
+  r.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
+  if (process.env.MUT === 'oldreach' && path.basename(f) === 'night1.html') {
+    let h = fs.readFileSync(f, 'utf8');
+    for (const [a, b] of [['grab: 0.87,', 'grab: 0.8,'], ['reach: 1.17,', 'reach: 1.1,']]) { if (h.split(a).length !== 2) throw new Error('not found once: ' + a); h = h.replace(a, b); }
+    r.end(h); return;
+  }
+  r.end(fs.readFileSync(f));
 });
 let pass = 0, all = 0;
 const report = (ok, name, info) => { all++; if (ok) pass++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name} | ${JSON.stringify(info)}`); };
@@ -70,6 +78,11 @@ const TOUCH = async (kinds) => {
         row.need = Math.max(row.need, need);
       }
       row.need = +row.need.toFixed(2);
+      if (kind === 'shame' || kind === 'weigher') {
+        hold(1.4, 0); f.x = 0; f.z = 0; let secs = 0, hit = false;
+        for (let i = 0; i < 80 && !hit; i++) { M.laughs = 900; M.over = ''; N.stepFrame(0.05); secs += 0.05; hit = kind === 'shame' ? !!f.cling : f.ph === 1; }
+        row.engage = { hit, secs: +secs.toFixed(2), apart: +Math.hypot(M.x - f.x, M.z - f.z).toFixed(2) };
+      }
     } catch (e) { row.error = String(e && e.stack || e).slice(0, 300); }
     out.push(row);
   }
@@ -90,6 +103,7 @@ const TOUCH = async (kinds) => {
     for (const r of rows) {
       if (r.error) { report(false, `the clown walked into the ${r.kind} does not pass into it`, { error: r.error }); continue; }
       const hit = r.dirs.filter((d) => d.walkedInShared > 0);
+      if (r.engage) report(r.engage.hit, `the ${r.kind} still ${r.kind === 'shame' ? 'grabs' : 'rises'} on a clown standing still 1.4 m away`, r.engage);
       report(hit.length === 0, `the clown walked into the ${r.kind} does not pass into it (8 directions)`, { hits: hit.map((d) => ({ d: d.d, shared: d.walkedInShared, stoppedAt: d.stoppedAt })), apartNeeded: r.need });
     }
     await pg.close();
